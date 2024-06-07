@@ -1,0 +1,44 @@
+[
+    {
+        "domain": ".x.com",
+        "expirationDate": 1750819136.74316,
+        "hostOnly": false,
+        "httpOnly": false,
+        "name": "_ga",
+        "path": "/",
+        "sameSite": "unspecified",
+        "secure": false,
+        "session": false,
+        "storeId": "0",
+        "value": "GA1.2.300564058.1716259137",
+        "id": 1
+    },
+    {
+        "domain": ".x.com",
+        "expirationDate": 1747795134.538575,
+        "hostOnly": false,
+        "httpOnly": true,
+        "name": "auth_token",
+        "path": "/",
+        "sameSite": "no_restriction",
+        "secure": true,
+        "session": false,
+        "storeId": "0",
+        "value": "5d571cec60dcbf730581df24ecb5325f8efbfc87",
+        "id": 2
+    },
+    {
+        "domain": ".x.com",
+        "expirationDate": 1750819134.674773,
+        "hostOnly": false,
+        "httpOnly": false,
+        "name": "ct0",
+        "path": "/",
+        "sameSite": "lax",
+        "secure": true,
+        "session": false,
+        "storeId": "0",
+        "value": "ea0f80cb666ec857187d0cec28a865c9ca2d147d48abb6840fec2b74a91fe29b4cbc8e0723d1ec2d089fcf58dbe060f55aa82bfb70c939c53b9977963409ee1a31f6b92f714f9ac20d46623fdc126889",
+        "id": 3
+    }
+]

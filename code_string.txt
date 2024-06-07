@@ -1,0 +1,27 @@
+def is_point_in_rectangles(point: Tuple[int, int], rectangles: List[Tuple[int, int, int, int]]) -> List[bool]:
+    x, y = point
+    results = []
+    for rect in rectangles:
+        x1, y1, x2, y2 = rect
+        if x1 <= x <= x2 and y1 <= y <= y2:
+            results.append(True)
+        else:
+            results.append(False)
+    return results
+
+def plot_rectangles(rectangles: List[Tuple[int, int, int, int]], point: Tuple[int, int]) -> None:
+    fig, ax = plt.subplots()
+    for rect in rectangles:
+        x1, y1, x2, y2 = rect
+        width = x2 - x1
+        height = y2 - y1
+        rectangle = plt.Rectangle((x1, y1), width, height, edgecolor='black', facecolor='none')
+        ax.add_patch(rectangle)
+    ax.plot(point[0], point[1], 'ro')  # Point in red
+    plt.xlim(0, max(x2 for x1, y1, x2, y2 in rectangles) + 1)
+    plt.ylim(0, max(y2 for x1, y1, x2, y2 in rectangles) + 1)
+    plt.xlabel('X')
+    plt.ylabel('Y')
+    plt.title('Rectangles and Point')
+    plt.grid(True)
+    plt.show()
