@@ -17,11 +17,14 @@ def get_base64_font(filepath):
 
 @app.route('/')
 def index():
-    background_base64 = get_base64_image('uglygif.gif')
-    logo_base64 = get_base64_image('uglylogo.png')
-    font_base64 = get_base64_font('PORKH___.TTF.ttf')
+    try:
+        background_base64 = get_base64_image('uglygif.gif')
+        logo_base64 = get_base64_image('uglylogo.png')
+        font_base64 = get_base64_font('PORKH___.TTF.ttf')
 
-    return render_template_string('''
+        print("Rendering index page")
+        
+        html_content = '''
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -183,7 +186,7 @@ def index():
                     border: none;
                     cursor: pointer;
                     position: absolute;
-                    left: 779px;
+                    left: 778px;
                     font-family: "Poppins", sans-serif;
                 }
 
@@ -282,7 +285,11 @@ def index():
             </footer>
         </body>
         </html>
-    ''', background_base64=background_base64, font_base64=font_base64)
+        '''
+        return render_template_string(html_content, background_base64=background_base64, font_base64=font_base64)
+    except Exception as e:
+        return f"Error rendering page: {str(e)}"
+
 
 @app.route('/download', methods=['POST'])
 def download():
