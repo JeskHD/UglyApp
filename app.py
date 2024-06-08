@@ -34,194 +34,240 @@ def index():
             <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
             <style>
-                @font-face {
-                    font-family: 'Porkys';
-                    src: url(data:font/ttf;base64,{{ font_base64 }}) format('truetype');
-                }
+               @font-face {
+font-family: 'Gleg';
+src: url('PORKH___.TTF.ttf') format('truetype');
+url('../fonts/Glegoo-Regular.woff') format('woff'),
+url('PORKH___.TTF.ttf') format('truetype');
 
-                * {
-                    box-sizing: border-box;
-                    margin: 0;
-                    padding: 0;
-                }
+}
 
-                body {
-                    font-family: "Poppins", sans-serif;
-                    width: 100%;
-                    overflow-x: hidden;
-                }
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
 
-                .topbar {
-                    font-family: "Montserrat", "Poppins", "Avenir";
-                    width: 100%;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 10px 50px;
-                    background: rgba(0, 0, 0, 0.5);
-                    position: absolute;
-                    top: 1px;
-                }
+body {
+    font-family: "Poppins", sans-serif;
+    width: 100%;
+    overflow-x: hidden;
+}
 
-                .topbar nav {
-                    display: flex;
-                    align-items: center;
-                    width: 100%;
-                }
+.topbar {
+    font-family: "Montserrat", "Poppins", "Avenir";
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 50px;
+    background: rgba(0, 0, 0, 0.5); /* Optional: background color or image for the topbar */
+    position: absolute;
+    top: 1px;
+}
 
-                .topbar ul {
-                    list-style-type: none;
-                    padding: 0;
-                    margin: 0;
-                    display: flex;
-                    gap: 20px;
-                    position: absolute;
-                    left: 780px;
-                }
+.topbar nav {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
 
-                .topbar ul li {
-                    color: white;
-                }
+.topbar ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    gap: 20px; /* Adjust spacing between items as needed */
+    position: absolute;
+    left: 780px;
 
-                .topbar ul li:hover {
-                    color: rgb(255, 120, 223);
-                    cursor: grab;
-                }
+}
 
-                .poppins-medium-italic {
-                    font-family: "Poppins", sans-serif;
-                    font-weight: 500;
-                    font-style: italic;
-                }
+.topbar ul li {
+    color: white;
+}
 
-                .topbar img {
-                    height: 65px;
-                    width: auto;
-                    position: relative;
-                    top: 2px;
-                }
+.topbar ul li:hover {
+    color: rgb(255, 120, 223);
+    cursor: grab;
+}
 
-                .bimage {
-                    background: linear-gradient(rgba(255, 7, 156, 0.585), rgba(104, 97, 97, 0.5)), url("data:image/gif;base64,{{ background_base64 }}");
-                    height: 800px;
-                    width: 100%;
-                    background-repeat: no-repeat;
-                    background-position: center;
-                    background-size: cover;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    align-items: center;
-                    text-align: center;
-                }
+.poppins-medium-italic {
+    font-family: "Poppins", sans-serif;
+    font-weight: 500;
+    font-style: italic;
+}
 
-                .Wrapper {
-                    text-align: center;
-                }
+.topbar img {
+    height: 65px;
+    width: auto;
+    position: relative;
+    top: 2px;
+}
 
-                .UglyStay {
-                    position: absolute;
-                    top: 225px;
-                    right: 350px;
-                    color: rgb(255, 136, 237);
-                    font-size: 50px;
-                    font-weight: 800;
-                    font-style: italic;
-                }
+.bimage {
+    background: linear-gradient(rgba(255, 7, 156, 0.585), rgba(104, 97, 97, 0.5)), url("uglygif.gif");
+    height: 800px;
+    width: 100%;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
 
-                .uglydesc {
-                    position: absolute;
-                    top: 310px;
-                    left: 240px;
-                    color: whitesmoke;
-                }
+.Wrapper {
+    text-align: center;
+}
 
-                .form-container {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 10px;
-                    margin-top: 20px;
-                }
+.UglyStay {
+    position: absolute;
+    top: 225px;
+    right: 350px;
+    color: rgb(255, 136, 237);
+    font-size: 50px;
+    font-weight: 800;
+    font-style: italic;
+}
 
-                .searchbox {
-                    width: 300px;
-                    height: 40px;
-                    background-color: black;
-                    border-radius: 50px 0 0 50px;
-                    color: white;
-                    font-family: "Poppins", sans-serif;
-                    text-align: center;
-                    border: none;
-                    padding-left: 20px;
-                    position: absolute;
-                    left: 410px;
-                }
+.uglydesc {
+    position: absolute;
+    top: 310px;
+    left: 240px;
+    color: whitesmoke;
+}
 
-                .searchbox:hover {
-                    border: 1px solid #ff78df;
-                }
+.form-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+}
 
-                .dropdown1, .dropdown2 {
-                    height: 38px;
-                    border-radius: 0;
-                    padding: 0 9px;
-                    border: none;
-                    font-family: "Poppins", sans-serif;
-                    background-color: #ff78df;
-                    color: white;
-                    position: absolute;
-                    right: 571px;
-                }
+.searchbox {
+    width: 300px;
+    height: 40px;
+    background-color: black;
+    border-radius: 50px 0 0 50px;
+    color: white;
+    font-family: "Poppins", sans-serif;
+    text-align: center;
+    border: none;
+    padding-left: 20px;
+    position: absolute;
+    left: 410px;
+}
 
-                .btn1, .btn2 {
-                    height: 38px;
-                    border-radius: 0 50px 50px 0;
-                    padding: 0 7px;
-                    background-color: #fa50d3;
-                    color: white;
-                    border: none;
-                    cursor: pointer;
-                    position: absolute;
-                    left: 778px;
-                    font-family: "Poppins", sans-serif;
-                }
+.searchbox:hover {
+    border: 1px solid  #ff78df;
+}
 
-                .btn1:active, .btn2:active {
-                    color: #fb85df;
-                    background-color: #f8a1e4;
-                }
+.searchbox:link {
+    border: 1px solid  #ff78df;
+}
 
-                .btn1:hover, .btn2:hover {
-                    background-color: #e767c7;
-                }
 
-                .or {
-                    position: relative;
-                    top: 20px;
-                    right: 10px;
-                    color: white;
-                }
+.dropdown1 {
+    height: 38px;
+    border-radius: 0;
+    padding: 0 9px;
+    border: none;
+    position: absolute;
+    right: 571px;
+    font-family: "Poppins", sans-serif;
+    background-color: #ff78df;
+    color: white;
+    
+}
 
-                .url {
-                    position: absolute;
-                    top: 540px;
-                    left: 555px;
-                    text-shadow: 0px 3px 5px 0 #c255a7;
-                    color: white;
-                    font-size: 11px;
-                }
+.dropdown2 {
+    height: 38px;
+    border-radius: 0;
+    padding: 0 9px;
+    border: none;
+    position: absolute;
+    right: 571px;
+    font-family: "Poppins", sans-serif;
+    background-color: #ff78df;
+    color: white;
+    
+    
+}
 
-                .sp li:hover {
-                    color: #1d9bf0 !important;
-                }
+.btn1 {
+    height: 38px;
+    border-radius: 0 50px 50px 0;
+    padding: 0 7px;
+    background-color: #fa50d3;
+    color: white;
+    border: none;
+    cursor: pointer;
+    position: absolute;
+    left: 778px;
+    font-family: "Poppins", sans-serif;
 
-                .ua {
-                    font-family: "Porkys";
-                    color: #f50da1;
-                    font-size: 40px;
-                    text-shadow: 1px 1px 2px #27f1e6;
-                }
+}
+
+.btn1:active {
+    color: #fb85df;
+    background-color: #f8a1e4;
+}
+
+
+.btn2:active {
+    color: #fb85df;
+    background-color: #f8a1e4;
+}
+.btn2 {
+    height: 38px;
+    border-radius: 0 50px 50px 0;
+    padding: 0 7px;
+    background-color: #fa50d3;
+    color: white;
+    border: none;
+    cursor: pointer;
+    position: absolute;
+    left: 778px;
+    font-family: "Poppins", sans-serif;
+}
+
+.btn1:hover, .btn2:hover {
+    background-color: #e767c7;
+}
+
+.or {
+    position: relative;
+    top: 20px;
+    right: 10px;
+    color: white;
+
+}
+
+.url {
+    position: absolute;
+    top: 540px;
+    left: 555px;
+    text-shadow: 0px 3px 5px 0 #c255a7;
+    color: white;
+    font-size: 11px;
+}
+
+.sp li:hover {
+  color: #1d9bf0 !important;
+
+}
+
+.ua{
+    font-family: "Porky's";
+    color:#f50da1 ;
+    font-size: 40px;
+    text-shadow: 1px 1px 2px #27f1e6;
+    
+}
             </style>
         </head>
         <body>
