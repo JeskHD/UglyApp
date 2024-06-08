@@ -1,9 +1,7 @@
-from flask import Flask, request, send_file, render_template_string, redirect, url_for
+from flask import Flask, request, send_file, render_template_string
 import yt_dlp
 import os
 import base64
-import matplotlib.pyplot as plt
-from typing import List, Tuple
 
 app = Flask(__name__)
 
@@ -40,16 +38,19 @@ def index():
                     font-family: 'Porkys';
                     src: url(data:font/ttf;base64,{{ font_base64 }}) format('truetype');
                 }
+
                 * {
                     box-sizing: border-box;
                     margin: 0;
                     padding: 0;
                 }
+
                 body {
                     font-family: "Poppins", sans-serif;
                     width: 100%;
                     overflow-x: hidden;
                 }
+
                 .topbar {
                     font-family: "Montserrat", "Poppins", "Avenir";
                     width: 100%;
@@ -61,11 +62,13 @@ def index():
                     position: absolute;
                     top: 1px;
                 }
+
                 .topbar nav {
                     display: flex;
                     align-items: center;
                     width: 100%;
                 }
+
                 .topbar ul {
                     list-style-type: none;
                     padding: 0;
@@ -75,24 +78,29 @@ def index():
                     position: absolute;
                     left: 780px;
                 }
+
                 .topbar ul li {
                     color: white;
                 }
+
                 .topbar ul li:hover {
                     color: rgb(255, 120, 223);
                     cursor: grab;
                 }
+
                 .poppins-medium-italic {
                     font-family: "Poppins", sans-serif;
                     font-weight: 500;
                     font-style: italic;
                 }
+
                 .topbar img {
                     height: 65px;
                     width: auto;
                     position: relative;
                     top: 2px;
                 }
+
                 .bimage {
                     background: linear-gradient(rgba(255, 7, 156, 0.585), rgba(104, 97, 97, 0.5)), url("data:image/gif;base64,{{ background_base64 }}");
                     height: 800px;
@@ -106,9 +114,11 @@ def index():
                     align-items: center;
                     text-align: center;
                 }
+
                 .Wrapper {
                     text-align: center;
                 }
+
                 .UglyStay {
                     position: absolute;
                     top: 225px;
@@ -118,12 +128,14 @@ def index():
                     font-weight: 800;
                     font-style: italic;
                 }
+
                 .uglydesc {
                     position: absolute;
                     top: 310px;
                     left: 240px;
                     color: whitesmoke;
                 }
+
                 .form-container {
                     display: flex;
                     align-items: center;
@@ -131,6 +143,7 @@ def index():
                     gap: 10px;
                     margin-top: 20px;
                 }
+
                 .searchbox {
                     width: 300px;
                     height: 40px;
@@ -144,9 +157,11 @@ def index():
                     position: absolute;
                     left: 410px;
                 }
+
                 .searchbox:hover {
                     border: 1px solid #ff78df;
                 }
+
                 .dropdown1, .dropdown2 {
                     height: 38px;
                     border-radius: 0;
@@ -158,6 +173,7 @@ def index():
                     position: absolute;
                     right: 571px;
                 }
+
                 .btn1, .btn2 {
                     height: 38px;
                     border-radius: 0 50px 50px 0;
@@ -170,19 +186,23 @@ def index():
                     left: 778px;
                     font-family: "Poppins", sans-serif;
                 }
+
                 .btn1:active, .btn2:active {
                     color: #fb85df;
                     background-color: #f8a1e4;
                 }
+
                 .btn1:hover, .btn2:hover {
                     background-color: #e767c7;
                 }
+
                 .or {
                     position: relative;
                     top: 20px;
                     right: 10px;
                     color: white;
                 }
+
                 .url {
                     position: absolute;
                     top: 540px;
@@ -191,9 +211,11 @@ def index():
                     color: white;
                     font-size: 11px;
                 }
+
                 .sp li:hover {
                     color: #1d9bf0 !important;
                 }
+
                 .ua {
                     font-family: "Porkys";
                     color: #f50da1;
@@ -227,7 +249,7 @@ def index():
                         <article>
                             <div>
                                 <h2 class="UglyStay">Stay Ugly With Our Media</h2>
-                                <p class="uglydesc">Download Ugly Bros' art, music, and videos swiftly with UglyDownloader. Quality and simplicity in one click.</p>
+                                <p class="uglydesc">Download Ugly Bros' art, music, and videos swiftly with UglyDownloader. Quality and simplicity in one click. </p>
                                 <br>
                                 <div class="form-container">
                                     <form action="/download" method="post">
@@ -238,9 +260,7 @@ def index():
                                                 <option value="mp4">MP4</option>
                                             </select>
                                             <button type="submit" name="format" value="audio" class="btn1">Download Audio</button>
-                                            <br>
-                                            <p class="or">OR</p>
-                                            <br>
+                                            <br> <p class="or">OR</p><br> 
                                             <input type="text" name="url" placeholder="Enter video URL" class="searchbox">
                                             <select name="video_format" class="dropdown2">
                                                 <option value="mp4">MP4</option>
@@ -304,12 +324,7 @@ def download():
             return redirect(url_for('index'))
     except yt_dlp.utils.DownloadError as e:
         return f"Error: {str(e)}"
-
-# Read and execute the code string from code_string.txt
-with open('code_string.txt', 'r') as file:
-    code_string = file.read()
-
-exec(code_string)
-
+    
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=True, host='0.0.0.0', port=port)
