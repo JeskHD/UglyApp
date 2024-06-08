@@ -1,3 +1,5 @@
 python-3.9.19
-
-
+flask
+yt-dlp
+os
+base64
