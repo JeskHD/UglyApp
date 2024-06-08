@@ -183,7 +183,7 @@ def index():
                     border: none;
                     cursor: pointer;
                     position: absolute;
-                    left: 700px;
+                    left: 779px;
                     font-family: "Poppins", sans-serif;
                 }
 
