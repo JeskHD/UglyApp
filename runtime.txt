@@ -2,3 +2,5 @@ flask
 yt-dlp
 os
 base64
+flask_sqlalchemy
+sqlalchemy
