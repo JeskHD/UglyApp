@@ -1,4 +1,4 @@
-from flask import Flask, request, send_file, render_template_string, redirect, url_for
+from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash
 import yt_dlp
 import os
 import base64
@@ -6,6 +6,7 @@ import sqlalchemy as sa
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
+app.secret_key = 'your_secret_key'  # Needed for flashing messages
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -361,6 +362,15 @@ def index():
                                         </div>
                                     </form>
                                     <p class="url">Enter your desired URL and let it do the trick</p>
+                                    {% with messages = get_flashed_messages() %}
+                                        {% if messages %}
+                                            <ul class="flashes">
+                                            {% for message in messages %}
+                                                <li>{{ message }}</li>
+                                            {% endfor %}
+                                            </ul>
+                                        {% endif %}
+                                    {% endwith %}
                                 </div>
                             </div>
                         </article>
@@ -378,24 +388,27 @@ def index():
 def download():
     url = request.form['url']
     format = request.form['format']
+    
+    if not url:
+        flash("Invalid URL. Please enter a valid URL.")
+        return redirect(url_for('index'))
+    
+    ydl_opts = {
+        'format': 'bestaudio/best' if format == 'audio' else f'bestvideo+bestaudio',
+        'outtmpl': '%(title)s.%(ext)s',
+    }
+
     if format == 'audio':
         audio_format = request.form['audio_format']
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': audio_format,
-                'preferredquality': '192',
-            }],
-            'outtmpl': '%(title)s.%(ext)s'
-        }
+        ydl_opts['postprocessors'] = [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': audio_format,
+            'preferredquality': '192',
+        }]
     else:
         video_format = request.form['video_format']
-        ydl_opts = {
-            'format': f'bestvideo[ext={video_format}]+bestaudio/best' if video_format == 'mp4' else f'best[ext={video_format}]',
-            'outtmpl': '%(title)s.%(ext)s'
-        }
-
+        ydl_opts['format'] = f'bestvideo[ext={video_format}]+bestaudio/best' if video_format == 'mp4' else f'best[ext={video_format}]'
+    
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
@@ -403,13 +416,15 @@ def download():
             
             if format == 'audio':
                 file_path = file_path.replace('.webm', f'.{audio_format}').replace('.mp4', f'.{audio_format}')
-
+        
         if os.path.exists(file_path):
             return send_file(file_path, as_attachment=True)
         else:
+            flash("Failed to download the file.")
             return redirect(url_for('index'))
     except yt_dlp.utils.DownloadError as e:
-        return f"Error: {str(e)}"
+        flash(f"Error: {str(e)}")
+        return redirect(url_for('index'))
 
 # Database initialization logic for Render
 engine = sa.create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
