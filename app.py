@@ -235,7 +235,7 @@ def index():
                 }
 
                 .ua {
-                    font-family: "Porkys";
+                    font-family: 'Porkys';
                     color: #f50da1;
                     font-size: 40px;
                     text-shadow: 1px 1px 2px #27f1e6;
