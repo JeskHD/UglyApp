@@ -242,6 +242,11 @@ def index():
                     text-shadow: 1px 1px 2px #27f1e6;
                 }
 
+                .flashes {
+                    color: red;
+                    list-style: none;
+                }
+
                 /* Responsive Design */
                 @media (max-width: 800px) {
                     .topbar {
@@ -343,7 +348,7 @@ def index():
                                 <p class="uglydesc">Download Ugly Bros' art, music, and videos swiftly with UglyDownloader. Quality and simplicity in one click.</p>
                                 <br>
                                 <div class="form-container">
-                                    <form action="/download" method="post">
+                                    <form action="/download" method="post" enctype="multipart/form-data">
                                         <div class="AllC">
                                             <input type="text" name="url" placeholder="Enter audio URL" class="searchbox">
                                             <select name="audio_format" class="dropdown1">
@@ -359,6 +364,9 @@ def index():
                                                 <option value="mov">MOV</option>
                                             </select>
                                             <button type="submit" name="format" value="video" class="btn2">Download Video</button>
+                                            <br><br>
+                                            <label for="cookies_file">Upload Cookies File (for Twitter Spaces):</label>
+                                            <input type="file" name="cookies_file" id="cookies_file">
                                         </div>
                                     </form>
                                     <p class="url">Enter your desired URL and let it do the trick</p>
@@ -398,6 +406,13 @@ def download():
         'outtmpl': '%(title)s.%(ext)s',
     }
 
+    # Handle cookies file upload
+    cookies_file = request.files.get('cookies_file')
+    if cookies_file:
+        cookies_file_path = os.path.join('cookies', cookies_file.filename)
+        cookies_file.save(cookies_file_path)
+        ydl_opts['cookiefile'] = cookies_file_path
+    
     if format == 'audio':
         audio_format = request.form['audio_format']
         ydl_opts['postprocessors'] = [{
