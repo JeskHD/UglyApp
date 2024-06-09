@@ -2,8 +2,19 @@ from flask import Flask, request, send_file, render_template_string, redirect, u
 import yt_dlp
 import os
 import base64
+import sqlalchemy as sa
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+# Example model for demonstration
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), unique=True, nullable=False)
 
 # Function to read and encode image files to base64
 def get_base64_image(filepath):
@@ -23,7 +34,7 @@ def index():
         font_base64 = get_base64_font('PORKH___.TTF.ttf')
 
         print("Rendering index page")
-        
+
         html_content = '''
         <!DOCTYPE html>
         <html lang="en">
@@ -290,7 +301,6 @@ def index():
     except Exception as e:
         return f"Error rendering page: {str(e)}"
 
-
 @app.route('/download', methods=['POST'])
 def download():
     url = request.form['url']
@@ -327,6 +337,17 @@ def download():
             return redirect(url_for('index'))
     except yt_dlp.utils.DownloadError as e:
         return f"Error: {str(e)}"
+
+# Database initialization logic for Render
+engine = sa.create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
+inspector = sa.inspect(engine)
+if not inspector.has_table("user"):
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+        app.logger.info('Initialized the database!')
+else:
+    app.logger.info('Database already contains the users table.')
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
