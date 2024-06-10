@@ -412,7 +412,6 @@ def index():
 def is_valid_url(url):
     parsed = urlparse(url)
     return bool(parsed.netloc) and bool(parsed.scheme)
-
 @app.route('/download', methods=['POST'])
 def download():
     audio_url = request.form.get('audio_url')
@@ -427,8 +426,8 @@ def download():
     
     ydl_opts = {
         'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
-        'cookiefile': r'C:\Users\Windows 11\Desktop\PYTHON FLASK WEBSITE\descargador_videos\cookies_netscape.txt',  # Path to the cookies file
-        'ffmpeg_location': r'C:\ffmpeg\bin'  # Path to ffmpeg
+        'cookiefile': '/path/to/your/cookies_netscape.txt',  # Update the path as needed
+        'ffmpeg_location': '/tmp/ffmpeg-*/'  # Ensure this path matches the extracted ffmpeg directory
     }
 
     if format == 'audio':
