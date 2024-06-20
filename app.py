@@ -5,18 +5,19 @@ import base64
 import sqlalchemy as sa
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
-import subprocess
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Needed for flashing messages
+app.secret_key = os.getenv('SECRET_KEY', 'your_secret_key')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Ensure the downloads directory exists
+# Ensure the downloads and cookies directories exist
 DOWNLOADS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'downloads')
+COOKIES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cookies')
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
+os.makedirs(COOKIES_DIR, exist_ok=True)
 
 # Example model for demonstration
 class User(db.Model):
@@ -37,11 +38,12 @@ def get_base64_font(filepath):
 def index():
     try:
         background_base64 = get_base64_image('uglygif.gif')
-        logo_base64 = get_base64_image('uglylogo.png')
         font_base64 = get_base64_font('PORKH___.TTF.ttf')
 
+        print("Rendering index page")
+
         html_content = '''
-       <!DOCTYPE html>
+   <!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
@@ -426,8 +428,7 @@ def download():
     
     ydl_opts = {
         'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
-        'cookiefile': r'C:\Users\Windows 11\Desktop\PYTHON FLASK WEBSITE\descargador_videos\cookies_netscape.txt',  # Path to the cookies file
-        'ffmpeg_location': r'C:\ffmpeg\bin'  # Path to ffmpeg
+        'ffmpeg_location': '/usr/bin/ffmpeg'
     }
 
     if format == 'audio':
@@ -476,5 +477,5 @@ else:
     app.logger.info('Database already contains the users table.')
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port)
