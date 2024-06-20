@@ -2,11 +2,9 @@ mutagen==1.47.0
 numpy==1.26.4
 packaging==24.0
 pillow==10.3.0
-# Removed prolog as it was not found
 pycryptodome==3.20.0
 pyparsing==3.1.2
 python-dateutil==2.9.0.post0
-pytubes==15.0.0
 requests==2.33.2
 setuptools==70.0.0
 six==1.16.0
@@ -21,4 +19,3 @@ imageio==2.34.1
 imageio[ffmpeg]==2.34.1
 gunicorn==20.1.0
 ffmpeg-python==0.2.0
-
