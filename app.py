@@ -5,18 +5,17 @@ import base64
 import sqlalchemy as sa
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
-import tempfile
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = 'downloads'
 
 db = SQLAlchemy(app)
 
-# Ensure the downloads directory exists
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+# Ensure the downloads directory exists in the user's Downloads folder
+DOWNLOADS_DIR = os.path.join(os.path.expanduser("~"), 'Downloads')
+os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
 # Example model for demonstration
 class User(db.Model):
@@ -97,7 +96,6 @@ def index():
                     position: absolute;
                     right: 40px;
                 }
-
                 .message {
                     position: absolute;
                     top: 565px;
@@ -304,7 +302,7 @@ def index():
                     }
 
                     .uglydesc {
-                    position: absolute;
+                        position: absolute;
                         top: 200px;
                         left: 10px;
                         right: 10px;
@@ -409,7 +407,7 @@ def is_valid_url(url):
     return bool(parsed.netloc) and bool(parsed.scheme)
 
 @app.route('/download', methods=['POST'])
-def download_file():
+def download():
     audio_url = request.form.get('audio_url')
     video_url = request.form.get('video_url')
     format = request.form['format']
@@ -420,11 +418,9 @@ def download_file():
         flash("Invalid URL. Please enter a valid URL.")
         return redirect(url_for('index'))
     
-    temp_dir = tempfile.gettempdir()
     ydl_opts = {
-        'outtmpl': os.path.join(temp_dir, '%(title)s.%(ext)s'),
-        'cookiefile': r'C:\Users\Windows 11\Desktop\PYTHON FLASK WEBSITE\descargador_videos\cookies_netscape.txt',  # Path to the cookies file
-        'ffmpeg_location': r'C:\ffmpeg\bin'  # Path to ffmpeg
+        'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
+        'cookiefile': 'cookies_netscape.txt'
     }
 
     if format == 'audio':
@@ -455,14 +451,14 @@ def download_file():
         if os.path.exists(file_path):
             return send_file(file_path, as_attachment=True)
         else:
-            flash("File not found after download.")
+            flash("Successful Download")
             return redirect(url_for('index'))
     except yt_dlp.utils.DownloadError as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
 
 @app.route('/uploads/<path:filename>', methods=['GET', 'POST'])
-def serve_uploaded_file(filename):
+def upload(filename):
     uploads = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
     return send_from_directory(uploads, filename)
 
@@ -480,5 +476,6 @@ else:
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+
 
 
