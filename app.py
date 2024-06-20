@@ -1,18 +1,22 @@
-from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash
+from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory
 import yt_dlp
 import os
-import tempfile
 import base64
 import sqlalchemy as sa
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
+import tempfile
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['UPLOAD_FOLDER'] = 'downloads'
 
 db = SQLAlchemy(app)
+
+# Ensure the downloads directory exists
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Example model for demonstration
 class User(db.Model):
@@ -94,6 +98,12 @@ def index():
                     right: 40px;
                 }
 
+                .message {
+                    position: absolute;
+                    top: 565px;
+                    right: 575px;
+                }
+
                 .topbar ul {
                     list-style-type: none;
                     padding: 0;
@@ -146,7 +156,7 @@ def index():
                 }
 
                 .UglyStay {
-                    position: absolute;
+                    position: fixed;
                     top: 225px;
                     right: 350px;
                     color: rgb(255, 136, 237);
@@ -156,7 +166,7 @@ def index():
                 }
 
                 .uglydesc {
-                    position: absolute;
+                    position: fixed;
                     top: 310px;
                     left: 240px;
                     color: whitesmoke;
@@ -219,103 +229,103 @@ def index():
                 .or {
                     position: relative;
                     top: 15px;
-                    color: white.
+                    color: white;
                 }
 
                 .url {
-                    position: absolute.
-                    top: 540px.
-                    left: 555px.
-                    text-shadow: 0px 3px 5px 0 #c255a7.
-                    color: white.
-                    font-size: 11px.
+                    position: absolute;
+                    top: 540px;
+                    left: 555px;
+                    text-shadow: 0px 3px 5px 0 #c255a7;
+                    color: white;
+                    font-size: 11px;
                 }
 
                 .sp li:hover {
-                    color: #1d9bf0 !important.
+                    color: #1d9bf0 !important;
                 }
 
                 .ua {
-                    font-family: 'Porkys'.
-                    color: #f50da1.
-                    font-size: 40px.
-                    text-shadow: 1px 1px 2px #27f1e6.
+                    font-family: 'Porkys';
+                    color: #f50da1;
+                    font-size: 40px;
+                    text-shadow: 1px 1px 2px #27f1e6;
                 }
 
                 .flashes {
-                    color: red.
-                    list-style: none.
-                    text-align: center.
-                    margin-top: 10px.
+                    color: red;
+                    list-style: none;
+                    text-align: center;
+                    margin-top: 10px;
                 }
 
                 /* Responsive Design */
                 @media (max-width: 800px) {
                     .topbar {
-                        flex-direction: row.
-                        align-items: center.
-                        padding: 10px 10px.
+                        flex-direction: row;
+                        align-items: center;
+                        padding: 10px 10px;
                     }
 
                     .topbar .menu-toggle {
-                        display: block.
+                        display: block;
                     }
 
                     .topbar ul {
-                        display: none.
-                        flex-direction: column.
-                        align-items: center.
-                        width: 100%.
-                        margin-top: 10px.
+                        display: none;
+                        flex-direction: column;
+                        align-items: center;
+                        width: 100%;
+                        margin-top: 10px;
                     }
 
                     .topbar ul.active {
-                        display: flex.
-                        font-size: 10px.
-                        top: 11px.
-                        border: 1px solid white.
-                        flex-direction: column.
-                        position: absolute.
-                        background-color: rgba(0, 0, 0, 0.8).
-                        right: 10px.
-                        top: 60px.
-                        width: 200px.
-                        padding: 10px.
+                        display: flex;
+                        font-size: 10px;
+                        top: 11px;
+                        border: 1px solid white;
+                        flex-direction: column;
+                        position: absolute;
+                        background-color: rgba(0, 0, 0, 0.8);
+                        right: 10px;
+                        top: 60px;
+                        width: 200px;
+                        padding: 10px;
                     }
 
                     .topbar h2 {
-                        font-size: 24px.
+                        font-size: 24px;
                     }
 
                     .UglyStay {
-                        font-size: 30px.
-                        top: 110px.
-                        right: 40px.
+                        font-size: 30px;
+                        top: 110px;
+                        right: 40px;
                     }
 
                     .uglydesc {
-                        position: absolute.
-                        top: 200px.
-                        left: 10px.
-                        right: 10px.
-                        font-size: 14px.
+                    position: absolute;
+                        top: 200px;
+                        left: 10px;
+                        right: 10px;
+                        font-size: 14px;
                     }
 
                     .form-container {
-                        flex-direction: column.
-                        align-items: center.
+                        flex-direction: column;
+                        align-items: center;
                     }
 
                     .searchbox, .dropdown1, .dropdown2, .btn1, .btn2 {
-                        width: 100%.
-                        margin-bottom: 10px.
-                        position: relative.
+                        width: 100%;
+                        margin-bottom: 10px;
+                        position: relative;
                     }
 
                     .url {
-                        top: 650px.
-                        left: 50%.
-                        transform: translateX(-50%).
+                        top: 650px;
+                        left: 50%;
+                        transform: translateX(-50%);
                     }
                 }
             </style>
@@ -399,7 +409,7 @@ def is_valid_url(url):
     return bool(parsed.netloc) and bool(parsed.scheme)
 
 @app.route('/download', methods=['POST'])
-def download():
+def download_file():
     audio_url = request.form.get('audio_url')
     video_url = request.form.get('video_url')
     format = request.form['format']
@@ -410,9 +420,11 @@ def download():
         flash("Invalid URL. Please enter a valid URL.")
         return redirect(url_for('index'))
     
+    temp_dir = tempfile.gettempdir()
     ydl_opts = {
-        'outtmpl': os.path.join(tempfile.gettempdir(), '%(title)s.%(ext)s'),
-        'cookiefile': 'cookies_netscape.txt',  # Path to the cookies file in Render
+        'outtmpl': os.path.join(temp_dir, '%(title)s.%(ext)s'),
+        'cookiefile': r'C:\Users\Windows 11\Desktop\PYTHON FLASK WEBSITE\descargador_videos\cookies_netscape.txt',  # Path to the cookies file
+        'ffmpeg_location': r'C:\ffmpeg\bin'  # Path to ffmpeg
     }
 
     if format == 'audio':
@@ -449,6 +461,11 @@ def download():
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
 
+@app.route('/uploads/<path:filename>', methods=['GET', 'POST'])
+def serve_uploaded_file(filename):
+    uploads = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
+    return send_from_directory(uploads, filename)
+
 # Database initialization logic for Render
 engine = sa.create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
 inspector = sa.inspect(engine)
@@ -463,3 +480,5 @@ else:
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+
+
