@@ -1,23 +1,22 @@
-# Use the official lightweight Python image.
-FROM python:3.11-slim
+# Use the official Python image from the Docker Hub
+FROM python:3.11.4
 
-# Set the working directory in the container
+# Set the working directory
 WORKDIR /app
 
-# Copy the current directory contents into the container at /app
-COPY . /app
-
-# Install any needed packages specified in requirements.txt
+# Copy the requirements file and install the dependencies
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Make port 10000 available to the world outside this container
-EXPOSE 10000
+# Install FFmpeg
+RUN apt-get update && \
+    apt-get install -y ffmpeg
 
-# Ensure the binaries are executable
-RUN chmod +x /app/bin/ffmpeg /app/bin/ffplay /app/bin/ffprobe
+# Copy the application code
+COPY . .
 
-# Set environment variables
-ENV PATH="/app/bin:${PATH}"
+# Expose the port the app runs on
+EXPOSE 5000
 
-# Run app.py when the container launches
-CMD ["gunicorn", "--bind", "0.0.0.0:10000", "app:app"]
+# Command to run the application
+CMD ["python", "app.py"]
