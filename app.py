@@ -61,13 +61,13 @@ def index():
                 * {
                     box-sizing: border-box;
                     margin: 0;
-                    padding: 0.
+                    padding: 0;
                 }
 
                 body {
                     font-family: "Poppins", sans-serif;
                     width: 100%;
-                    overflow-x: hidden.
+                    overflow-x: hidden;
                 }
 
                 .topbar {
@@ -85,8 +85,8 @@ def index():
 
                 .topbar nav {
                     display: flex;
-                    align-items: center.
-                    width: 100%.
+                    align-items: center;
+                    width: 100%;
                 }
 
                 .topbar .menu-toggle {
@@ -95,39 +95,39 @@ def index():
                     color: white;
                     cursor: pointer;
                     position: absolute;
-                    right: 40px.
+                    right: 40px;
                 }
 
                 .topbar ul {
-                    list-style-type: none.
-                    padding: 0.
-                    margin: 0.
+                    list-style-type: none;
+                    padding: 0;
+                    margin: 0;
                     display: flex;
                     gap: 20px;
                     position: absolute;
-                    right: 50px.
+                    right: 50px;
                 }
 
                 .topbar ul li {
-                    color: white.
+                    color: white;
                 }
 
                 .topbar ul li:hover {
                     color: rgb(255, 120, 223);
-                    cursor: grab.
+                    cursor: grab;
                 }
 
                 .poppins-medium-italic {
                     font-family: "Poppins", sans-serif;
                     font-weight: 500;
-                    font-style: italic.
+                    font-style: italic;
                 }
 
                 .topbar img {
                     height: 65px;
                     width: auto;
                     position: relative;
-                    top: 2px.
+                    top: 2px;
                 }
 
                 .bimage {
@@ -146,32 +146,32 @@ def index():
                 }
 
                 .Wrapper {
-                    text-align: center.
+                    text-align: center;
                 }
 
                 .UglyStay {
-                    position: absolute.
+                    position: absolute;
                     top: 225px;
                     right: 350px;
                     color: rgb(255, 136, 237);
                     font-size: 50px;
                     font-weight: 800;
-                    font-style: italic.
+                    font-style: italic;
                 }
 
                 .uglydesc {
-                    position: absolute.
+                    position: absolute;
                     top: 310px;
                     left: 240px;
-                    color: whitesmoke.
+                    color: whitesmoke;
                 }
 
                 .form-container {
                     display: flex;
-                    align-items: center.
-                    justify-content: center.
+                    align-items: center;
+                    justify-content: center;
                     gap: 10px;
-                    margin-top: 20px.
+                    margin-top: 20px;
                 }
 
                 .searchbox {
@@ -182,144 +182,144 @@ def index():
                     color: white;
                     font-family: "Poppins", sans-serif;
                     text-align: center;
-                    border: none.
-                    padding-left: 20px.
+                    border: none;
+                    padding-left: 20px;
                 }
 
                 .searchbox:hover {
-                    border: 1px solid #ff78df.
+                    border: 1px solid #ff78df;
                 }
 
                 .dropdown1, .dropdown2 {
                     height: 38px;
-                    border-radius: 0.
-                    padding: 0 9px.
-                    border: none.
+                    border-radius: 0;
+                    padding: 0 9px;
+                    border: none;
                     font-family: "Poppins", sans-serif;
                     background-color: #ff78df;
-                    color: white.
+                    color: white;
                 }
 
                 .btn1, .btn2 {
-                    height: 38px.
-                    border-radius: 0 50px 50px 0.
-                    padding: 0 7px.
+                    height: 38px;
+                    border-radius: 0 50px 50px 0;
+                    padding: 0 7px;
                     background-color: #fa50d3;
-                    color: white.
-                    border: none.
-                    cursor: pointer.
-                    font-family: "Poppins", sans-serif.
+                    color: white;
+                    border: none;
+                    cursor: pointer;
+                    font-family: "Poppins", sans-serif;
                 }
 
                 .btn1:active, .btn2:active {
                     color: #fb85df;
-                    background-color: #f8a1e4.
+                    background-color: #f8a1e4;
                 }
 
                 .btn1:hover, .btn2:hover {
-                    background-color: #e767c7.
+                    background-color: #e767c7;
                 }
 
                 .or {
-                    position: relative.
-                    top: 15px.
-                    color: white.
+                    position: relative;
+                    top: 15px;
+                    color: white;
                 }
 
                 .url {
-                    position: absolute.
-                    top: 540px.
-                    left: 555px.
-                    text-shadow: 0px 3px 5px 0 #c255a7.
-                    color: white.
-                    font-size: 11px.
+                    position: absolute;
+                    top: 540px;
+                    left: 555px;
+                    text-shadow: 0px 3px 5px 0 #c255a7;
+                    color: white;
+                    font-size: 11px;
                 }
 
                 .sp li:hover {
-                    color: #1d9bf0 !important.
+                    color: #1d9bf0 !important;
                 }
 
                 .ua {
                     font-family: 'Porkys';
                     color: #f50da1;
-                    font-size: 40px.
-                    text-shadow: 1px 1px 2px #27f1e6.
+                    font-size: 40px;
+                    text-shadow: 1px 1px 2px #27f1e6;
                 }
 
                 .flashes {
                     color: red;
-                    list-style: none.
-                    text-align: center.
-                    margin-top: 10px.
+                    list-style: none;
+                    text-align: center;
+                    margin-top: 10px;
                 }
 
                 /* Responsive Design */
                 @media (max-width: 800px) {
                     .topbar {
-                        flex-direction: row.
-                        align-items: center.
-                        padding: 10px 10px.
+                        flex-direction: row;
+                        align-items: center;
+                        padding: 10px 10px;
                     }
 
                     .topbar .menu-toggle {
-                        display: block.
+                        display: block;
                     }
 
                     .topbar ul {
-                        display: none.
-                        flex-direction: column.
-                        align-items: center.
-                        width: 100%.
-                        margin-top: 10px.
+                        display: none;
+                        flex-direction: column;
+                        align-items: center;
+                        width: 100%;
+                        margin-top: 10px;
                     }
 
                     .topbar ul.active {
-                        display: flex.
-                        font-size: 10px.
-                        top: 11px.
-                        border: 1px solid white.
-                        flex-direction: column.
-                        position: absolute.
-                        background-color: rgba(0, 0, 0, 0.8).
-                        right: 10px.
-                        top: 60px.
-                        width: 200px.
-                        padding: 10px.
+                        display: flex;
+                        font-size: 10px;
+                        top: 11px;
+                        border: 1px solid white;
+                        flex-direction: column;
+                        position: absolute;
+                        background-color: rgba(0, 0, 0, 0.8);
+                        right: 10px;
+                        top: 60px;
+                        width: 200px;
+                        padding: 10px;
                     }
 
                     .topbar h2 {
-                        font-size: 24px.
+                        font-size: 24px;
                     }
 
                     .UglyStay {
-                        font-size: 30px.
-                        top: 110px.
-                        right: 40px.
+                        font-size: 30px;
+                        top: 110px;
+                        right: 40px;
                     }
 
                     .uglydesc {
-                        position: absolute.
-                        top: 200px.
-                        left: 10px.
-                        right: 10px.
-                        font-size: 14px.
+                    position: absolute;
+                        top: 200px;
+                        left: 10px;
+                        right: 10px;
+                        font-size: 14px;
                     }
 
                     .form-container {
-                        flex-direction: column.
-                        align-items: center.
+                        flex-direction: column;
+                        align-items: center;
                     }
 
                     .searchbox, .dropdown1, .dropdown2, .btn1, .btn2 {
-                        width: 100%.
-                        margin-bottom: 10px.
-                        position: relative.
+                        width: 100%;
+                        margin-bottom: 10px;
+                        position: relative;
                     }
 
                     .url {
-                        top: 650px.
-                        left: 50%.
-                        transform: translateX(-50%).
+                        top: 650px;
+                        left: 50%;
+                        transform: translateX(-50%);
                     }
                 }
             </style>
@@ -467,4 +467,3 @@ else:
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-
