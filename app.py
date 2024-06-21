@@ -1,5 +1,5 @@
 from io import BytesIO
-from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory
+from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash
 import yt_dlp
 import os
 import base64
@@ -421,7 +421,7 @@ def download():
         return redirect(url_for('index'))
     
     ydl_opts = {
-        'outtmpl': '%(title)s.%(ext)s',
+        'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
         'cookiefile': 'cookies_netscape.txt'
     }
 
@@ -447,16 +447,17 @@ def download():
             info_dict = ydl.extract_info(url, download=True)
             file_path = ydl.prepare_filename(info_dict)
             
-            # Read the file into memory and send it directly to the client
+            # Ensure the correct extension for audio and video files
             if format == 'audio':
                 file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
             else:
-                file_path = file_path.replace('.mp4', f'.{video_format}')
+                file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
                 
-            with open(file_path, 'rb') as f:
-                file_data = f.read()
-
-        return send_file(BytesIO(file_data), as_attachment=True, download_name=os.path.basename(file_path))
+            if os.path.exists(file_path):
+                return send_file(file_path, as_attachment=True, download_name=os.path.basename(file_path))
+            else:
+                flash("File not found after download.")
+                return redirect(url_for('index'))
 
     except yt_dlp.utils.DownloadError as e:
         flash(f"Error: {str(e)}")
