@@ -1,3 +1,4 @@
+from io import BytesIO
 from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory
 import yt_dlp
 import os
@@ -17,10 +18,11 @@ db = SQLAlchemy(app)
 DOWNLOADS_DIR = os.path.join(os.path.expanduser("~"), 'Downloads')
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
-# Example model for demonstration
-class User(db.Model):
+# Create table for file uploads
+class Upload(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80), unique=True, nullable=False)
+    filename = db.Column(db.String(50))
+    data = db.Column(db.LargeBinary)
 
 # Function to read and encode image files to base64
 def get_base64_image(filepath):
@@ -419,7 +421,7 @@ def download():
         return redirect(url_for('index'))
     
     ydl_opts = {
-        'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
+        'outtmpl': '%(title)s.%(ext)s',
         'cookiefile': 'cookies_netscape.txt'
     }
 
@@ -445,14 +447,17 @@ def download():
             info_dict = ydl.extract_info(url, download=True)
             file_path = ydl.prepare_filename(info_dict)
             
+            # Read the file into memory and send it directly to the client
             if format == 'audio':
-                file_path = file_path.replace('.webm', f'.{audio_format}').replace('.mp4', f'.{audio_format}')
-        
-        if os.path.exists(file_path):
-            return send_file(file_path, as_attachment=True)
-        else:
-            flash("Successful Download")
-            return redirect(url_for('index'))
+                file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
+            else:
+                file_path = file_path.replace('.mp4', f'.{video_format}')
+                
+            with open(file_path, 'rb') as f:
+                file_data = f.read()
+
+        return send_file(BytesIO(file_data), as_attachment=True, download_name=os.path.basename(file_path))
+
     except yt_dlp.utils.DownloadError as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
@@ -461,6 +466,21 @@ def download():
 def upload(filename):
     uploads = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
     return send_from_directory(uploads, filename)
+
+@app.route('/file_upload', methods=['GET', 'POST'])
+def file_upload():
+    if request.method == 'POST':
+        file = request.files['file']
+        upload = Upload(filename=file.filename, data=file.read())
+        db.session.add(upload)
+        db.session.commit()
+        return f'Uploaded: {file.filename}'
+    return render_template('index.html')
+
+@app.route('/file_download/<upload_id>')
+def file_download(upload_id):
+    upload = Upload.query.filter_by(id=upload_id).first()
+    return send_file(BytesIO(upload.data), download_name=upload.filename, as_attachment=True)
 
 # Database initialization logic for Render
 engine = sa.create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
@@ -476,6 +496,7 @@ else:
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+
 
 
 
