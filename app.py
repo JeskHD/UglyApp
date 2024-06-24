@@ -16,8 +16,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Ensure the downloads directory exists in the user's Downloads folder
-DOWNLOADS_DIR = os.path.join(os.path.expanduser("~"), 'Downloads')
+# Ensure the downloads directory exists
+DOWNLOADS_DIR = '/opt/render/Downloads'
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
 # Example model for demonstration
