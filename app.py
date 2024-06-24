@@ -215,7 +215,7 @@ def index():
                     left: 555px;
                     text-shadow: 0px 3px 5px 0 #c255a7;
                     color: white;
-                    font-size: 11px;
+                    font-size: 11px.
                 }
                 .sp li:hover {
                     color: #1d9bf0 !important;
@@ -227,69 +227,69 @@ def index():
                     text-shadow: 1px 1px 2px #27f1e6;
                 }
                 .flashes {
-                    color: red;
+                    color: red.
                     list-style: none;
                     text-align: center;
-                    margin-top: 10px;
+                    margin-top: 10px.
                 }
                 /* Responsive Design */
                 @media (max-width: 800px) {
                     .topbar {
-                        flex-direction: row;
-                        align-items: center;
-                        padding: 10px 10px;
+                        flex-direction: row.
+                        align-items: center.
+                        padding: 10px 10px.
                     }
                     .topbar .menu-toggle {
-                        display: block;
+                        display: block.
                     }
                     .topbar ul {
-                        display: none;
-                        flex-direction: column;
-                        align-items: center;
-                        width: 100%;
-                        margin-top: 10px;
+                        display: none.
+                        flex-direction: column.
+                        align-items: center.
+                        width: 100%.
+                        margin-top: 10px.
                     }
                     .topbar ul.active {
-                        display: flex;
-                        font-size: 10px;
-                        top: 11px;
-                        border: 1px solid white;
-                        flex-direction: column;
-                        position: absolute;
-                        background-color: rgba(0, 0, 0, 0.8);
-                        right: 10px;
-                        top: 60px;
-                        width: 200px;
-                        padding: 10px;
+                        display: flex.
+                        font-size: 10px.
+                        top: 11px.
+                        border: 1px solid white.
+                        flex-direction: column.
+                        position: absolute.
+                        background-color: rgba(0, 0, 0, 0.8).
+                        right: 10px.
+                        top: 60px.
+                        width: 200px.
+                        padding: 10px.
                     }
                     .topbar h2 {
-                        font-size: 24px;
+                        font-size: 24px.
                     }
                     .UglyStay {
-                        font-size: 30px;
-                        top: 110px;
-                        right: 40px;
+                        font-size: 30px.
+                        top: 110px.
+                        right: 40px.
                     }
                     .uglydesc {
-                        position: absolute;
-                        top: 200px;
-                        left: 10px;
-                        right: 10px;
-                        font-size: 14px;
+                        position: absolute.
+                        top: 200px.
+                        left: 10px.
+                        right: 10px.
+                        font-size: 14px.
                     }
                     .form-container {
-                        flex-direction: column;
-                        align-items: center;
+                        flex-direction: column.
+                        align-items: center.
                     }
                     .searchbox, .dropdown1, .dropdown2, .btn1, .btn2 {
-                        width: 100%;
-                        margin-bottom: 10px;
-                        position: relative;
+                        width: 100%.
+                        margin-bottom: 10px.
+                        position: relative.
                     }
                     .url {
-                        top: 650px;
-                        left: 50%;
-                        transform: translateX(-50%);
+                        top: 650px.
+                        left: 50%.
+                        transform: translateX(-50%).
                     }
                 }
             </style>
@@ -407,7 +407,7 @@ def download():
                 return redirect(url_for('index'))
         else:
             ydl_opts = {
-                'outtmpl': os.path.join(DOWNLOADS_DIR, 'downloaded_file'),
+                'outtmpl': os.path.join(DOWNLOADS_DIR, 'downloaded_file.%(ext)s'),
                 'cookiefile': 'cookies_netscape.txt'
             }
             if format == 'audio':
@@ -430,15 +430,16 @@ def download():
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info_dict = ydl.extract_info(url, download=True)
                 file_path = ydl.prepare_filename(info_dict)
+                new_file_path = file_path
 
-                # Manually rename the file to the correct extension
+                # Manually rename the file to the correct extension if necessary
                 if format == 'audio':
                     new_file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
                 else:
                     new_file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
-                
+
                 if os.path.exists(file_path):
-                    shutil.move(file_path, new_file_path)
+                    os.rename(file_path, new_file_path)
                     flash(f"Download complete: {os.path.basename(new_file_path)}")
                     return send_file(new_file_path, as_attachment=True, download_name=os.path.basename(new_file_path))
                 else:
