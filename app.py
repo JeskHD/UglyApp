@@ -228,8 +228,8 @@ def index():
                 }
                 .flashes {
                     color: red.
-                    list-style: none;
-                    text-align: center;
+                    list-style: none.
+                    text-align: center.
                     margin-top: 10px.
                 }
                 /* Responsive Design */
