@@ -407,12 +407,15 @@ def download():
                 '-o', output_template
             ]
             subprocess.run(command, check=True)
+            # Find the most recently modified file in the DOWNLOADS_DIR
             list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
             latest_file = max(list_of_files, key=os.path.getmtime)
             if os.path.exists(latest_file):
+                # If the file format is m4a, leave it as m4a
                 if format == 'audio' and request.form['audio_format'] == 'm4a':
                     file_to_send = latest_file
                 else:
+                    # Convert m4a to mp3
                     mp3_file = latest_file.replace('.m4a', '.mp3')
                     convert_command = [
                         'ffmpeg',
@@ -424,6 +427,7 @@ def download():
                     subprocess.run(convert_command, check=True)
                     file_to_send = mp3_file
                 
+                # Notify the user via flash message
                 flash(f"Download complete: {os.path.basename(file_to_send)}")
                 socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
                 return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
@@ -448,8 +452,8 @@ def download():
             else:
                 video_format = request.form['video_format']
                 ydl_opts.update({
-                    'format': 'bestvideo+bestaudio/best',
-                    'merge_output_format': 'mp4'
+                    'format': 'bestvideo+bestaudio/best' if video_format == 'mp4' else f'best[ext={video_format}]',
+                    'merge_output_format': video_format
                 })
 
             try:
@@ -457,16 +461,15 @@ def download():
                     info_dict = ydl.extract_info(url, download=True)
                     file_path = ydl.prepare_filename(info_dict)
                     
+                    # Ensure the correct extension for audio and video files
                     if format == 'audio':
                         file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
                     else:
-                        if video_format == 'mov':
-                            file_path = file_path.replace('.mp4', f'.mp4')
-                        else:
-                            file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
+                        file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
                         
                     if os.path.exists(file_path):
                         if format == 'audio' and audio_format == 'mp3':
+                            # Convert m4a to mp3
                             mp3_file = file_path.replace('.m4a', '.mp3')
                             convert_command = [
                                 'ffmpeg',
@@ -478,14 +481,13 @@ def download():
                             subprocess.run(convert_command, check=True)
                             file_to_send = mp3_file
                         elif format == 'video' and video_format == 'mov':
+                            # Convert mp4 to mov
                             mov_file = file_path.replace('.mp4', '.mov')
                             convert_command = [
                                 'ffmpeg',
                                 '-i', file_path,
-                                '-c:v', 'libx264',  # Convert to H.264
-                                '-c:a', 'aac',  # Convert audio to AAC
-                                '-strict', 'experimental',
-                                '-y',  # Overwrite without prompt
+                                '-c:v', 'copy',
+                                '-c:a', 'copy',
                                 mov_file
                             ]
                             subprocess.run(convert_command, check=True)
@@ -509,7 +511,6 @@ def download():
     except yt_dlp.utils.DownloadError as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
-
 
 @app.route('/uploads/<path:filename>', methods=['GET', 'POST'])
 def upload(filename):
