@@ -19,6 +19,6 @@ imageio==2.34.1
 imageio[ffmpeg]==2.34.1
 gunicorn==20.1.0
 ffmpeg-python==0.2.0
-flask_socketio
-
+flask_socketio==5.3.4
+eventlet==0.33.0
 
