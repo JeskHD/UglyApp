@@ -1,4 +1,4 @@
-# Use the official Python runtime as a parent image
+# Use an official Python runtime as a parent image
 FROM python:3.11-slim
 
 # Install ffmpeg
