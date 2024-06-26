@@ -1,4 +1,5 @@
-from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory
+from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory, jsonify
+from flask_socketio import SocketIO, emit
 import yt_dlp
 import os
 import base64
@@ -7,12 +8,13 @@ from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
 import subprocess
 import glob
-import shutil
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+socketio = SocketIO(app)
 
 db = SQLAlchemy(app)
 
@@ -215,7 +217,7 @@ def index():
                     left: 555px;
                     text-shadow: 0px 3px 5px 0 #c255a7;
                     color: white;
-                    font-size: 11px.
+                    font-size: 11px;
                 }
                 .sp li:hover {
                     color: #1d9bf0 !important;
@@ -227,72 +229,82 @@ def index():
                     text-shadow: 1px 1px 2px #27f1e6;
                 }
                 .flashes {
-                    color: red.
-                    list-style: none.
-                    text-align: center.
-                    margin-top: 10px.
+                    color: red;
+                    list-style: none;
+                    text-align: center;
+                    margin-top: 10px;
                 }
                 /* Responsive Design */
                 @media (max-width: 800px) {
                     .topbar {
-                        flex-direction: row.
-                        align-items: center.
-                        padding: 10px 10px.
+                        flex-direction: row;
+                        align-items: center;
+                        padding: 10px 10px;
                     }
                     .topbar .menu-toggle {
-                        display: block.
+                        display: block;
                     }
                     .topbar ul {
-                        display: none.
-                        flex-direction: column.
-                        align-items: center.
-                        width: 100%.
-                        margin-top: 10px.
+                        display: none;
+                        flex-direction: column;
+                        align-items: center;
+                        width: 100%;
+                        margin-top: 10px;
                     }
                     .topbar ul.active {
-                        display: flex.
-                        font-size: 10px.
-                        top: 11px.
-                        border: 1px solid white.
-                        flex-direction: column.
-                        position: absolute.
-                        background-color: rgba(0, 0, 0, 0.8).
-                        right: 10px.
-                        top: 60px.
-                        width: 200px.
-                        padding: 10px.
+                        display: flex;
+                        font-size: 10px;
+                        top: 11px;
+                        border: 1px solid white;
+                        flex-direction: column;
+                        position: absolute;
+                        background-color: rgba(0, 0, 0, 0.8);
+                        right: 10px;
+                        top: 60px;
+                        width: 200px;
+                        padding: 10px;
                     }
                     .topbar h2 {
-                        font-size: 24px.
+                        font-size: 24px;
                     }
                     .UglyStay {
-                        font-size: 30px.
-                        top: 110px.
-                        right: 40px.
+                        font-size: 30px;
+                        top: 110px;
+                        right: 40px;
                     }
                     .uglydesc {
-                        position: absolute.
-                        top: 200px.
-                        left: 10px.
-                        right: 10px.
-                        font-size: 14px.
+                        position: absolute;
+                        top: 200px;
+                        left: 10px;
+                        right: 10px;
+                        font-size: 14px;
                     }
                     .form-container {
-                        flex-direction: column.
-                        align-items: center.
+                        flex-direction: column;
+                        align-items: center;
                     }
                     .searchbox, .dropdown1, .dropdown2, .btn1, .btn2 {
-                        width: 100%.
-                        margin-bottom: 10px.
-                        position: relative.
+                        width: 100%;
+                        margin-bottom: 10px;
+                        position: relative;
                     }
                     .url {
-                        top: 650px.
-                        left: 50%.
-                        transform: translateX(-50%).
+                        top: 650px;
+                        left: 50%;
+                        transform: translateX(-50%);
                     }
                 }
             </style>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+            <script>
+                var socket = io();
+                socket.on('connect', function() {
+                    console.log('Connected to server');
+                });
+                socket.on('download_complete', function(data) {
+                    alert('Download complete: ' + data.filename);
+                });
+            </script>
         </head>
         <body>
             <div class="topbar">
@@ -387,7 +399,7 @@ def download():
     try:
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
             cookie_file = 'cookies_netscape.txt'
-            output_template = os.path.join(DOWNLOADS_DIR, 'downloaded_file')
+            output_template = os.path.join(DOWNLOADS_DIR, 'Downloaded_File')
             command = [
                 'twspace_dl',
                 '-i', url,
@@ -395,19 +407,32 @@ def download():
                 '-o', output_template
             ]
             subprocess.run(command, check=True)
-            # Find the most recently modified file in the DOWNLOADS_DIR
             list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
             latest_file = max(list_of_files, key=os.path.getmtime)
             if os.path.exists(latest_file):
-                # Notify the user via flash message
-                flash(f"Download complete: {os.path.basename(latest_file)}")
-                return send_file(latest_file, as_attachment=True, download_name=os.path.basename(latest_file))
+                if format == 'audio' and request.form['audio_format'] == 'm4a':
+                    file_to_send = latest_file
+                else:
+                    mp3_file = latest_file.replace('.m4a', '.mp3')
+                    convert_command = [
+                        'ffmpeg',
+                        '-i', latest_file,
+                        '-codec:a', 'libmp3lame',
+                        '-qscale:a', '2',
+                        mp3_file
+                    ]
+                    subprocess.run(convert_command, check=True)
+                    file_to_send = mp3_file
+                
+                flash(f"Download complete: {os.path.basename(file_to_send)}")
+                socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
+                return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
             else:
                 flash("File not found after download.")
                 return redirect(url_for('index'))
         else:
             ydl_opts = {
-                'outtmpl': os.path.join(DOWNLOADS_DIR, 'downloaded_file.%(ext)s'),
+                'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
                 'cookiefile': 'cookies_netscape.txt'
             }
             if format == 'audio':
@@ -423,34 +448,68 @@ def download():
             else:
                 video_format = request.form['video_format']
                 ydl_opts.update({
-                    'format': f'bestvideo+bestaudio/best' if video_format == 'mp4' else f'best[ext={video_format}]',
-                    'merge_output_format': video_format
+                    'format': 'bestvideo+bestaudio/best',
+                    'merge_output_format': 'mp4'
                 })
 
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info_dict = ydl.extract_info(url, download=True)
-                file_path = ydl.prepare_filename(info_dict)
-                new_file_path = file_path
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info_dict = ydl.extract_info(url, download=True)
+                    file_path = ydl.prepare_filename(info_dict)
+                    
+                    if format == 'audio':
+                        file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
+                    else:
+                        if video_format == 'mov':
+                            file_path = file_path.replace('.mp4', f'.mp4')
+                        else:
+                            file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
+                        
+                    if os.path.exists(file_path):
+                        if format == 'audio' and audio_format == 'mp3':
+                            mp3_file = file_path.replace('.m4a', '.mp3')
+                            convert_command = [
+                                'ffmpeg',
+                                '-i', file_path,
+                                '-codec:a', 'libmp3lame',
+                                '-qscale:a', '2',
+                                mp3_file
+                            ]
+                            subprocess.run(convert_command, check=True)
+                            file_to_send = mp3_file
+                        elif format == 'video' and video_format == 'mov':
+                            mov_file = file_path.replace('.mp4', '.mov')
+                            convert_command = [
+                                'ffmpeg',
+                                '-i', file_path,
+                                '-c:v', 'libx264',  # Convert to H.264
+                                '-c:a', 'aac',  # Convert audio to AAC
+                                '-strict', 'experimental',
+                                '-y',  # Overwrite without prompt
+                                mov_file
+                            ]
+                            subprocess.run(convert_command, check=True)
+                            file_to_send = mov_file
+                        else:
+                            file_to_send = file_path
 
-                # Manually rename the file to the correct extension if necessary
-                if format == 'audio':
-                    new_file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
-                else:
-                    new_file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
+                        socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
+                        return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
+                    else:
+                        flash("File not found after download.")
+                        return redirect(url_for('index'))
 
-                if os.path.exists(file_path):
-                    os.rename(file_path, new_file_path)
-                    flash(f"Download complete: {os.path.basename(new_file_path)}")
-                    return send_file(new_file_path, as_attachment=True, download_name=os.path.basename(new_file_path))
-                else:
-                    flash("File not found after download.")
-                    return redirect(url_for('index'))
+            except yt_dlp.utils.DownloadError as e:
+                flash(f"Error: {str(e)}")
+                return redirect(url_for('index'))
+
     except subprocess.CalledProcessError as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
     except yt_dlp.utils.DownloadError as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
+
 
 @app.route('/uploads/<path:filename>', methods=['GET', 'POST'])
 def upload(filename):
@@ -470,4 +529,4 @@ else:
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    socketio.run(app, host='0.0.0.0', port=port)
