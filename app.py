@@ -412,7 +412,7 @@ def download():
             if os.path.exists(latest_file):
                 if format == 'audio' and request.form['audio_format'] == 'm4a':
                     file_to_send = latest_file
-                elif format == 'audio' and request.form['audio_format'] == 'mp3':
+                else:
                     mp3_file = latest_file.replace('.m4a', '.mp3')
                     convert_command = [
                         'ffmpeg',
@@ -423,19 +423,6 @@ def download():
                     ]
                     subprocess.run(convert_command, check=True)
                     file_to_send = mp3_file
-                elif format == 'video' and request.form['video_format'] == 'mov':
-                    mov_file = latest_file.replace('.mp4', '.mov')
-                    convert_command = [
-                        'ffmpeg',
-                        '-i', latest_file,
-                        '-c:v', 'copy',
-                        '-c:a', 'copy',
-                        mov_file
-                    ]
-                    subprocess.run(convert_command, check=True)
-                    file_to_send = mov_file
-                else:
-                    file_to_send = latest_file
                 
                 flash(f"Download complete: {os.path.basename(file_to_send)}")
                 socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
@@ -446,8 +433,7 @@ def download():
         else:
             ydl_opts = {
                 'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
-                'cookiefile': 'cookies_netscape.txt',
-                'hls_use_mpegts': True  # Ensure HLS processing for all formats
+                'cookiefile': 'cookies_netscape.txt'
             }
             if format == 'audio':
                 audio_format = request.form['audio_format']
@@ -496,8 +482,10 @@ def download():
                             convert_command = [
                                 'ffmpeg',
                                 '-i', file_path,
-                                '-c:v', 'copy',
-                                '-c:a', 'copy',
+                                '-c:v', 'libx264',  # Convert to H.264
+                                '-c:a', 'aac',  # Convert audio to AAC
+                                '-strict', 'experimental',
+                                '-y',  # Overwrite without prompt
                                 mov_file
                             ]
                             subprocess.run(convert_command, check=True)
@@ -521,6 +509,7 @@ def download():
     except yt_dlp.utils.DownloadError as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
+
 
 @app.route('/uploads/<path:filename>', methods=['GET', 'POST'])
 def upload(filename):
