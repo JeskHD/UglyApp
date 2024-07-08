@@ -1,4 +1,4 @@
- from flask import Flask, request, send_from_directory, render_template_string, flash, redirect, url_for
+from flask import Flask, request, send_from_directory, render_template_string, flash, redirect, url_for
 import os
 from yt_dlp import YoutubeDL
 
