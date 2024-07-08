@@ -38,42 +38,42 @@ html_template = '''
         label {
             display: block;
             margin-bottom: 10px;
-            font-size: 1.2em;
+            font-size: 1.2em.
         }
         input[type="text"] {
             width: 100%;
             padding: 10px;
-            margin-bottom: 20px;
-            border: none;
-            border-radius: 5px;
+            margin-bottom: 20px.
+            border: none.
+            border-radius: 5px.
         }
         select, button {
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-            font-size: 1em;
+            padding: 10px.
+            border: none.
+            border-radius: 5px.
+            font-size: 1em.
         }
         button {
-            background-color: #333;
-            color: white;
-            cursor: pointer;
+            background-color: #333.
+            color: white.
+            cursor: pointer.
         }
         button:hover {
-            background-color: #555;
+            background-color: #555.
         }
         .converter {
-            margin: 20px 0;
+            margin: 20px 0.
         }
         .divider {
-            margin: 30px 0;
-            font-size: 1.5em;
+            margin: 30px 0.
+            font-size: 1.5em.
         }
         .flash {
-            background-color: #ff4d4d;
-            color: white;
-            padding: 10px;
-            margin-bottom: 20px;
-            border-radius: 5px;
+            background-color: #ff4d4d.
+            color: white.
+            padding: 10px.
+            margin-bottom: 20px.
+            border-radius: 5px.
         }
     </style>
 </head>
@@ -121,20 +121,15 @@ def index():
     return render_template_string(html_template)
 
 def download_audio(url, format):
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'outtmpl': os.path.join(UPLOAD_FOLDER, '%(title)s.%(ext)s'),
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': format,
-        }]
-    }
-
-    with YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(url, download=True)
-        file_path = ydl.prepare_filename(info_dict).rsplit('.', 1)[0] + f'.{format}'
+    yt = YouTube(url)
+    audio_stream = yt.streams.filter(only_audio=True).first()
+    audio_file_path = audio_stream.download(output_path=UPLOAD_FOLDER)
     
-    return file_path
+    base, ext = os.path.splitext(audio_file_path)
+    new_file_path = base + f'.{format}'
+    os.rename(audio_file_path, new_file_path)
+    
+    return new_file_path
 
 @app.route('/download_audio', methods=['POST'])
 def download_audio_route():
@@ -156,8 +151,8 @@ def download_video_route():
     
     try:
         yt = YouTube(url)
-        stream = yt.streams.filter(progressive=True, file_extension='mp4').first()
-        file_path = stream.download(output_path=UPLOAD_FOLDER)
+        video_stream = yt.streams.filter(progressive=True, file_extension='mp4').first()
+        file_path = video_stream.download(output_path=UPLOAD_FOLDER)
         
         video = VideoFileClip(file_path)
         converted_path = os.path.join(UPLOAD_FOLDER, f"{os.path.splitext(os.path.basename(file_path))[0]}.{format_type}")
