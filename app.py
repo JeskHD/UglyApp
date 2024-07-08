@@ -1,7 +1,7 @@
 from flask import Flask, request, send_from_directory, render_template_string, flash, redirect, url_for
 import os
-from pytube import YouTube, exceptions
 import ffmpeg
+import youtube_dl
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for flash messages
@@ -121,22 +121,20 @@ def index():
     return render_template_string(html_template)
 
 def download_audio(url, format):
-    try:
-        yt = YouTube(url)
-        audio_stream = yt.streams.filter(only_audio=True, file_extension='mp4').first()
-        file_path = audio_stream.download(output_path=UPLOAD_FOLDER)
-        
-        converted_path = os.path.join(UPLOAD_FOLDER, f"{os.path.splitext(os.path.basename(file_path))[0]}.{format}")
-        
-        # Convert the audio using ffmpeg
-        ffmpeg.input(file_path).output(converted_path, **{'codec:a': format}).run(overwrite_output=True)
-        
-        os.remove(file_path)
-        return converted_path
-    except exceptions.VideoUnavailable:
-        raise Exception('The audio is unavailable.')
-    except Exception as e:
-        raise Exception(f'An error occurred while downloading the audio: {str(e)}')
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'outtmpl': os.path.join(UPLOAD_FOLDER, '%(title)s.%(ext)s'),
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': format,
+        }],
+    }
+
+    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        info_dict = ydl.extract_info(url, download=True)
+        file_path = ydl.prepare_filename(info_dict).rsplit('.', 1)[0] + f'.{format}'
+    
+    return file_path
 
 @app.route('/download_audio', methods=['POST'])
 def download_audio_route():
@@ -152,22 +150,22 @@ def download_audio_route():
         return redirect(url_for('index'))
 
 def download_video(url, format):
-    try:
-        yt = YouTube(url)
-        stream = yt.streams.filter(progressive=True, file_extension='mp4').first()
-        file_path = stream.download(output_path=UPLOAD_FOLDER)
-        
-        converted_path = os.path.join(UPLOAD_FOLDER, f"{os.path.splitext(os.path.basename(file_path))[0]}.{format}")
-        
-        # Convert the video using ffmpeg
-        ffmpeg.input(file_path).output(converted_path).run(overwrite_output=True)
-        
-        os.remove(file_path)
-        return converted_path
-    except exceptions.VideoUnavailable:
-        raise Exception('The video is unavailable.')
-    except Exception as e:
-        raise Exception(f'An error occurred while downloading the video: {str(e)}')
+    ydl_opts = {
+        'format': 'best',
+        'outtmpl': os.path.join(UPLOAD_FOLDER, '%(title)s.%(ext)s')
+    }
+
+    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        info_dict = ydl.extract_info(url, download=True)
+        file_path = ydl.prepare_filename(info_dict)
+    
+    converted_path = os.path.splitext(file_path)[0] + f'.{format}'
+    
+    # Convert the video using ffmpeg
+    ffmpeg.input(file_path).output(converted_path).run(overwrite_output=True)
+    
+    os.remove(file_path)
+    return converted_path
 
 @app.route('/download_video', methods=['POST'])
 def download_video_route():
