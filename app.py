@@ -163,7 +163,7 @@ def download_video_route():
         file_path = stream.download(output_path=UPLOAD_FOLDER)
         
         video = VideoFileClip(file_path)
-        converted_path = os.path.join(UPLOAD_FOLDER, f"{os.path.splitext(os.path.basename(file_path))[0]}.{format_type}")
+        converted_path = os.path.join(UPLOAD_FOLDER, f"{file_path}.{format_type}")
         video.write_videofile(converted_path, codec='libx264' if format_type == 'mov' else 'libx264')
         
         os.remove(file_path)
