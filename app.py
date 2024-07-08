@@ -1,7 +1,6 @@
 from flask import Flask, request, send_from_directory, render_template_string, flash, redirect, url_for
 import os
 from pytube import YouTube
-from moviepy.editor import VideoFileClip
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for flash messages
@@ -38,42 +37,42 @@ html_template = '''
         label {
             display: block;
             margin-bottom: 10px;
-            font-size: 1.2em.
+            font-size: 1.2em;
         }
         input[type="text"] {
             width: 100%;
             padding: 10px;
-            margin-bottom: 20px.
-            border: none.
-            border-radius: 5px.
+            margin-bottom: 20px;
+            border: none;
+            border-radius: 5px;
         }
         select, button {
-            padding: 10px.
-            border: none.
-            border-radius: 5px.
-            font-size: 1em.
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
         }
         button {
-            background-color: #333.
-            color: white.
-            cursor: pointer.
+            background-color: #333;
+            color: white;
+            cursor: pointer;
         }
         button:hover {
-            background-color: #555.
+            background-color: #555;
         }
         .converter {
-            margin: 20px 0.
+            margin: 20px 0;
         }
         .divider {
-            margin: 30px 0.
-            font-size: 1.5em.
+            margin: 30px 0;
+            font-size: 1.5em;
         }
         .flash {
-            background-color: #ff4d4d.
-            color: white.
-            padding: 10px.
-            margin-bottom: 20px.
-            border-radius: 5px.
+            background-color: #ff4d4d;
+            color: white;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
         }
     </style>
 </head>
@@ -131,6 +130,17 @@ def download_audio(url, format):
     
     return new_file_path
 
+def download_video(url, format):
+    yt = YouTube(url)
+    video_stream = yt.streams.filter(progressive=True, file_extension='mp4').first()
+    file_path = video_stream.download(output_path=UPLOAD_FOLDER)
+    
+    base, ext = os.path.splitext(file_path)
+    new_file_path = base + f'.{format}'
+    os.rename(file_path, new_file_path)
+    
+    return new_file_path
+
 @app.route('/download_audio', methods=['POST'])
 def download_audio_route():
     url = request.form['url']
@@ -150,16 +160,8 @@ def download_video_route():
     format_type = request.form['format']
     
     try:
-        yt = YouTube(url)
-        video_stream = yt.streams.filter(progressive=True, file_extension='mp4').first()
-        file_path = video_stream.download(output_path=UPLOAD_FOLDER)
-        
-        video = VideoFileClip(file_path)
-        converted_path = os.path.join(UPLOAD_FOLDER, f"{os.path.splitext(os.path.basename(file_path))[0]}.{format_type}")
-        video.write_videofile(converted_path, codec='libx264' if format_type == 'mp4' else 'libx264', audio_codec='aac')
-        
-        os.remove(file_path)
-        return send_from_directory(app.config['UPLOAD_FOLDER'], os.path.basename(converted_path), as_attachment=True)
+        file_path = download_video(url, format_type)
+        return send_from_directory(app.config['UPLOAD_FOLDER'], os.path.basename(file_path), as_attachment=True)
     
     except Exception as e:
         flash(f'An error occurred: {str(e)}')
