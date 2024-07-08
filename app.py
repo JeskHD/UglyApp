@@ -125,7 +125,7 @@ def index():
 def download_audio(url, format):
     ydl_opts = {
         'format': 'bestaudio/best',
-        'outtmpl': os.path.join(UPLOAD_FOLDER, '%(title)s.%(ext)s'),
+        'outtmpl': os.path.join(app.config['UPLOAD_FOLDER'], '%(title)s.%(ext)s'),
         'ffmpeg_location': FFMPEG_PATH,  # Specify the path to ffmpeg binaries
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
@@ -143,7 +143,7 @@ def download_audio(url, format):
 def download_video(url, format):
     ydl_opts = {
         'format': 'bestvideo+bestaudio/best',
-        'outtmpl': os.path.join(UPLOAD_FOLDER, 'video.%(ext)s'),
+        'outtmpl': os.path.join(app.config['UPLOAD_FOLDER'], 'video.%(ext)s'),
         'merge_output_format': format,
         'ffmpeg_location': FFMPEG_PATH,  # Specify the path to ffmpeg binaries
         'cookiefile': COOKIES_FILE  # Adding the path to the cookies file
