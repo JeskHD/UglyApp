@@ -1,11 +1,13 @@
 from flask import Flask, request, send_from_directory, render_template_string, flash, redirect, url_for
 import os
-import ffmpeg
-import youtube_dl
+from yt_dlp import YoutubeDL
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for flash messages
 UPLOAD_FOLDER = 'static/uploads'
+COOKIES_FILE = 'cookies_netscape.txt'  # Path to your cookies file
+FFMPEG_PATH = 'ffmpeg/bin'  # Path to your ffmpeg binaries relative to the project root
+
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Ensure the upload folder exists
@@ -124,15 +126,33 @@ def download_audio(url, format):
     ydl_opts = {
         'format': 'bestaudio/best',
         'outtmpl': os.path.join(UPLOAD_FOLDER, '%(title)s.%(ext)s'),
+        'ffmpeg_location': FFMPEG_PATH,  # Specify the path to ffmpeg binaries
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': format,
         }],
+        'cookiefile': COOKIES_FILE  # Adding the path to the cookies file
     }
 
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+    with YoutubeDL(ydl_opts) as ydl:
         info_dict = ydl.extract_info(url, download=True)
         file_path = ydl.prepare_filename(info_dict).rsplit('.', 1)[0] + f'.{format}'
+    
+    return file_path
+
+def download_video(url, format):
+    ydl_opts = {
+        'format': 'bestvideo+bestaudio/best',
+        'outtmpl': os.path.join(UPLOAD_FOLDER, 'video.%(ext)s'),
+        'merge_output_format': format,
+        'ffmpeg_location': FFMPEG_PATH,  # Specify the path to ffmpeg binaries
+        'cookiefile': COOKIES_FILE  # Adding the path to the cookies file
+    }
+
+    with YoutubeDL(ydl_opts) as ydl:
+        info_dict = ydl.extract_info(url, download=True)
+        file_path = ydl.prepare_filename(info_dict)
+        file_path = os.path.splitext(file_path)[0] + f'.{format}'
     
     return file_path
 
@@ -148,24 +168,6 @@ def download_audio_route():
     except Exception as e:
         flash(f'An error occurred: {str(e)}')
         return redirect(url_for('index'))
-
-def download_video(url, format):
-    ydl_opts = {
-        'format': 'best',
-        'outtmpl': os.path.join(UPLOAD_FOLDER, '%(title)s.%(ext)s')
-    }
-
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(url, download=True)
-        file_path = ydl.prepare_filename(info_dict)
-    
-    converted_path = os.path.splitext(file_path)[0] + f'.{format}'
-    
-    # Convert the video using ffmpeg
-    ffmpeg.input(file_path).output(converted_path).run(overwrite_output=True)
-    
-    os.remove(file_path)
-    return converted_path
 
 @app.route('/download_video', methods=['POST'])
 def download_video_route():
