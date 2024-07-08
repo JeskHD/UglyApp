@@ -1,10 +1,11 @@
 from flask import Flask, request, send_from_directory, render_template_string, flash, redirect, url_for
 import os
-from pytube import YouTube
+from yt_dlp import YoutubeDL
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for flash messages
 UPLOAD_FOLDER = 'static/uploads'
+COOKIES_FILE = 'cookies_netscape.txt'  # Path to your cookies file
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Ensure the upload folder exists
@@ -120,26 +121,36 @@ def index():
     return render_template_string(html_template)
 
 def download_audio(url, format):
-    yt = YouTube(url)
-    audio_stream = yt.streams.filter(only_audio=True).first()
-    audio_file_path = audio_stream.download(output_path=UPLOAD_FOLDER)
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'outtmpl': os.path.join(UPLOAD_FOLDER, '%(title)s.%(ext)s'),
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': format,
+        }],
+        'cookiefile': COOKIES_FILE  # Adding the path to the cookies file
+    }
+
+    with YoutubeDL(ydl_opts) as ydl:
+        info_dict = ydl.extract_info(url, download=True)
+        file_path = ydl.prepare_filename(info_dict).rsplit('.', 1)[0] + f'.{format}'
     
-    base, ext = os.path.splitext(audio_file_path)
-    new_file_path = base + f'.{format}'
-    os.rename(audio_file_path, new_file_path)
-    
-    return new_file_path
+    return file_path
 
 def download_video(url, format):
-    yt = YouTube(url)
-    video_stream = yt.streams.filter(progressive=True, file_extension='mp4').first()
-    file_path = video_stream.download(output_path=UPLOAD_FOLDER)
+    ydl_opts = {
+        'format': 'bestvideo+bestaudio/best',
+        'outtmpl': os.path.join(UPLOAD_FOLDER, 'video.%(ext)s'),
+        'merge_output_format': format,
+        'cookiefile': COOKIES_FILE  # Adding the path to the cookies file
+    }
+
+    with YoutubeDL(ydl_opts) as ydl:
+        info_dict = ydl.extract_info(url, download=True)
+        file_path = ydl.prepare_filename(info_dict)
+        file_path = os.path.splitext(file_path)[0] + f'.{format}'
     
-    base, ext = os.path.splitext(file_path)
-    new_file_path = base + f'.{format}'
-    os.rename(file_path, new_file_path)
-    
-    return new_file_path
+    return file_path
 
 @app.route('/download_audio', methods=['POST'])
 def download_audio_route():
