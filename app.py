@@ -2,8 +2,7 @@ from flask import Flask, request, send_from_directory, render_template_string, f
 import os
 from yt_dlp import YoutubeDL
 from pytube import YouTube, exceptions
-from moviepy.editor import VideoFileClip
-from pydub import AudioSegment
+import ffmpeg
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for flash messages
@@ -58,24 +57,24 @@ html_template = '''
         button {
             background-color: #333;
             color: white;
-            cursor: pointer;
+            cursor: pointer.
         }
         button:hover {
-            background-color: #555;
+            background-color: #555.
         }
         .converter {
-            margin: 20px 0;
+            margin: 20px 0.
         }
         .divider {
-            margin: 30px 0;
-            font-size: 1.5em;
+            margin: 30px 0.
+            font-size: 1.5em.
         }
         .flash {
-            background-color: #ff4d4d;
-            color: white;
-            padding: 10px;
-            margin-bottom: 20px;
-            border-radius: 5px;
+            background-color: #ff4d4d.
+            color: white.
+            padding: 10px.
+            margin-bottom: 20px.
+            border-radius: 5px.
         }
     </style>
 </head>
@@ -161,9 +160,10 @@ def download_video_route():
         stream = yt.streams.filter(progressive=True, file_extension='mp4').first()
         file_path = stream.download(output_path=UPLOAD_FOLDER)
         
-        video = VideoFileClip(file_path)
-        converted_path = os.path.join(UPLOAD_FOLDER, f"video.{format_type}")
-        video.write_videofile(converted_path, codec='libx264' if format_type == 'mov' else 'libx264')
+        converted_path = os.path.join(UPLOAD_FOLDER, f"{os.path.splitext(os.path.basename(file_path))[0]}.{format_type}")
+        
+        # Convert the video using ffmpeg
+        ffmpeg.input(file_path).output(converted_path).run(overwrite_output=True)
         
         os.remove(file_path)
         return send_from_directory(app.config['UPLOAD_FOLDER'], os.path.basename(converted_path), as_attachment=True)
