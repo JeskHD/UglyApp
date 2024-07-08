@@ -142,10 +142,6 @@ def download_video(url, format):
         'format': 'bestvideo+bestaudio/best',
         'outtmpl': os.path.join(UPLOAD_FOLDER, 'video.%(ext)s'),
         'merge_output_format': format,
-        'postprocessors': [{
-            'key': 'FFmpegVideoConvertor',
-            'preferedformat': format,
-        }],
         'cookiefile': COOKIES_FILE  # Adding the path to the cookies file
     }
 
