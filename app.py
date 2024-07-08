@@ -1,7 +1,6 @@
 from flask import Flask, request, send_from_directory, render_template_string, flash, redirect, url_for
 import os
 from yt_dlp import YoutubeDL
-from moviepy.editor import VideoFileClip
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for flash messages
@@ -142,6 +141,7 @@ def download_video(url, format):
     ydl_opts = {
         'format': 'bestvideo+bestaudio/best',
         'outtmpl': os.path.join(UPLOAD_FOLDER, 'video.%(ext)s'),
+        'merge_output_format': format,
         'cookiefile': COOKIES_FILE  # Adding the path to the cookies file
     }
 
