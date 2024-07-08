@@ -6,7 +6,7 @@ app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for flash messages
 UPLOAD_FOLDER = 'static/uploads'
 COOKIES_FILE = 'cookies_netscape.txt'  # Path to your cookies file
-FFMPEG_PATH = 'ffmpeg/bin/ffmpeg.exe'  # Path to your ffmpeg binaries relative to the project root
+FFMPEG_PATH = 'ffmpeg/bin'  # Path to your ffmpeg binaries relative to the project root
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
