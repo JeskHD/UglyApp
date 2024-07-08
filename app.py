@@ -1,12 +1,13 @@
 from flask import Flask, request, send_from_directory, render_template_string, flash, redirect, url_for
 import os
-from pytube import YouTube
-from moviepy.editor import VideoFileClip
-from urllib.parse import urlparse
+from yt_dlp import YoutubeDL
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for flash messages
 UPLOAD_FOLDER = 'static/uploads'
+COOKIES_FILE = 'cookies_netscape.txt'  # Path to your cookies file
+FFMPEG_PATH = 'ffmpeg/bin'  # Path to your ffmpeg binaries relative to the project root
+
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Ensure the upload folder exists
@@ -121,52 +122,45 @@ html_template = '''
 def index():
     return render_template_string(html_template)
 
-def is_valid_youtube_url(url):
-    try:
-        parsed_url = urlparse(url)
-        if parsed_url.netloc in ["www.youtube.com", "youtube.com", "youtu.be"]:
-            return True
-    except Exception as e:
-        return False
-    return False
-
 def download_audio(url, format):
-    yt = YouTube(url)
-    audio_stream = yt.streams.filter(only_audio=True).first()
-    output_path = audio_stream.download(output_path=UPLOAD_FOLDER)
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'outtmpl': os.path.join(UPLOAD_FOLDER, '%(title)s.%(ext)s'),
+        'ffmpeg_location': FFMPEG_PATH,  # Specify the path to ffmpeg binaries
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': format,
+        }],
+        'cookiefile': COOKIES_FILE  # Adding the path to the cookies file
+    }
+
+    with YoutubeDL(ydl_opts) as ydl:
+        info_dict = ydl.extract_info(url, download=True)
+        file_path = ydl.prepare_filename(info_dict).rsplit('.', 1)[0] + f'.{format}'
     
-    if format == 'mp3':
-        new_file = output_path.replace('.mp4', '.mp3')
-        os.rename(output_path, new_file)
-        return new_file
-    elif format == 'm4a':
-        new_file = output_path.replace('.mp4', '.m4a')
-        os.rename(output_path, new_file)
-        return new_file
+    return file_path
 
 def download_video(url, format):
-    yt = YouTube(url)
-    video_stream = yt.streams.filter(progressive=True, file_extension='mp4').first()
-    output_path = video_stream.download(output_path=UPLOAD_FOLDER)
+    ydl_opts = {
+        'format': 'bestvideo+bestaudio/best',
+        'outtmpl': os.path.join(UPLOAD_FOLDER, 'video.%(ext)s'),
+        'merge_output_format': format,
+        'ffmpeg_location': FFMPEG_PATH,  # Specify the path to ffmpeg binaries
+        'cookiefile': COOKIES_FILE  # Adding the path to the cookies file
+    }
+
+    with YoutubeDL(ydl_opts) as ydl:
+        info_dict = ydl.extract_info(url, download=True)
+        file_path = ydl.prepare_filename(info_dict)
+        file_path = os.path.splitext(file_path)[0] + f'.{format}'
     
-    if format == 'mov':
-        clip = VideoFileClip(output_path)
-        new_file = output_path.replace('.mp4', '.mov')
-        clip.write_videofile(new_file, codec='libx264')
-        os.remove(output_path)
-        return new_file
-    else:
-        return output_path
+    return file_path
 
 @app.route('/download_audio', methods=['POST'])
 def download_audio_route():
     url = request.form['url']
     format_type = request.form['format']
     
-    if not is_valid_youtube_url(url):
-        flash(f'Invalid YouTube URL.')
-        return redirect(url_for('index'))
-
     try:
         file_path = download_audio(url, format_type)
         return send_from_directory(app.config['UPLOAD_FOLDER'], os.path.basename(file_path), as_attachment=True)
@@ -180,10 +174,6 @@ def download_video_route():
     url = request.form['url']
     format_type = request.form['format']
     
-    if not is_valid_youtube_url(url):
-        flash(f'Invalid YouTube URL.')
-        return redirect(url_for('index'))
-
     try:
         file_path = download_video(url, format_type)
         return send_from_directory(app.config['UPLOAD_FOLDER'], os.path.basename(file_path), as_attachment=True)
