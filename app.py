@@ -1,11 +1,13 @@
 from flask import Flask, request, send_from_directory, render_template_string, flash, redirect, url_for
 import os
 from yt_dlp import YoutubeDL
+from pytube import YouTube, exceptions
+from moviepy.editor import VideoFileClip
+from pydub import AudioSegment
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for flash messages
 UPLOAD_FOLDER = 'static/uploads'
-COOKIES_FILE = 'cookies_netscape.txt'  # Path to your cookies file
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Ensure the upload folder exists
@@ -128,27 +130,11 @@ def download_audio(url, format):
             'key': 'FFmpegExtractAudio',
             'preferredcodec': format,
         }],
-        'cookiefile': COOKIES_FILE  # Adding the path to the cookies file
     }
 
     with YoutubeDL(ydl_opts) as ydl:
         info_dict = ydl.extract_info(url, download=True)
         file_path = ydl.prepare_filename(info_dict).rsplit('.', 1)[0] + f'.{format}'
-    
-    return file_path
-
-def download_video(url, format):
-    ydl_opts = {
-        'format': 'bestvideo+bestaudio/best',
-        'outtmpl': os.path.join(UPLOAD_FOLDER, 'video.%(ext)s'),
-        'merge_output_format': format,
-        'cookiefile': COOKIES_FILE  # Adding the path to the cookies file
-    }
-
-    with YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(url, download=True)
-        file_path = ydl.prepare_filename(info_dict)
-        file_path = os.path.splitext(file_path)[0] + f'.{format}'
     
     return file_path
 
@@ -171,9 +157,20 @@ def download_video_route():
     format_type = request.form['format']
     
     try:
-        file_path = download_video(url, format_type)
-        return send_from_directory(app.config['UPLOAD_FOLDER'], os.path.basename(file_path), as_attachment=True)
+        yt = YouTube(url)
+        stream = yt.streams.filter(progressive=True, file_extension='mp4').first()
+        file_path = stream.download(output_path=UPLOAD_FOLDER)
+        
+        video = VideoFileClip(file_path)
+        converted_path = os.path.join(UPLOAD_FOLDER, f"video.{format_type}")
+        video.write_videofile(converted_path, codec='libx264' if format_type == 'mov' else 'libx264')
+        
+        os.remove(file_path)
+        return send_from_directory(app.config['UPLOAD_FOLDER'], os.path.basename(converted_path), as_attachment=True)
     
+    except exceptions.VideoUnavailable:
+        flash('The video is unavailable.')
+        return redirect(url_for('index'))
     except Exception as e:
         flash(f'An error occurred: {str(e)}')
         return redirect(url_for('index'))
