@@ -19,4 +19,4 @@ imageio[ffmpeg]==2.34.1
 gunicorn==20.1.0
 ffmpeg-python==0.2.0
 requests==2.31.0
-
+pytube==12.1.2
