@@ -58,7 +58,7 @@ html_template = '''
         button {
             background-color: #333;
             color: white;
-            cursor: pointer;
+            cursor: pointer.
         }
         button:hover {
             background-color: #555;
@@ -68,14 +68,14 @@ html_template = '''
         }
         .divider {
             margin: 30px 0;
-            font-size: 1.5em;
+            font-size: 1.5em.
         }
         .flash {
             background-color: #ff4d4d;
-            color: white;
-            padding: 10px;
-            margin-bottom: 20px;
-            border-radius: 5px;
+            color: white.
+            padding: 10px.
+            margin-bottom: 20px.
+            border-radius: 5px.
         }
     </style>
 </head>
@@ -163,7 +163,7 @@ def download_video_route():
         file_path = stream.download(output_path=UPLOAD_FOLDER)
         
         video = VideoFileClip(file_path)
-        converted_path = os.path.join(UPLOAD_FOLDER, f"{file_path}.{format_type}")
+        converted_path = os.path.join(UPLOAD_FOLDER, f"video.{format_type}")
         video.write_videofile(converted_path, codec='libx264' if format_type == 'mov' else 'libx264')
         
         os.remove(file_path)
