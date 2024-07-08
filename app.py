@@ -56,24 +56,24 @@ html_template = '''
         button {
             background-color: #333;
             color: white;
-            cursor: pointer.
+            cursor: pointer;
         }
         button:hover {
-            background-color: #555.
+            background-color: #555;
         }
         .converter {
-            margin: 20px 0.
+            margin: 20px 0;
         }
         .divider {
             margin: 30px 0;
-            font-size: 1.5em.
+            font-size: 1.5em;
         }
         .flash {
             background-color: #ff4d4d;
             color: white;
             padding: 10px;
             margin-bottom: 20px;
-            border-radius: 5px.
+            border-radius: 5px;
         }
     </style>
 </head>
@@ -158,9 +158,8 @@ def download_video(url, format):
     with YoutubeDL(ydl_opts) as ydl:
         info_dict = ydl.extract_info(url, download=True)
         file_path = ydl.prepare_filename(info_dict)
-        if format != 'mp4':
-            file_path = convert_video_format(file_path, format)
-        return file_path
+        converted_path = convert_video_format(file_path, format)
+        return converted_path
 
 def convert_video_format(file_path, format):
     base, ext = os.path.splitext(file_path)
@@ -168,7 +167,7 @@ def convert_video_format(file_path, format):
     if format == 'mov':
         ffmpeg.input(file_path).output(new_file_path, vcodec='libx264', acodec='aac').run()
     else:
-        ffmpeg.input(file_path).output(new_file_path).run()
+        ffmpeg.input(file_path).output(new_file_path, vcodec='libx264', acodec='aac').run()
     os.remove(file_path)
     return new_file_path
 
