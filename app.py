@@ -1,7 +1,7 @@
 from flask import Flask, request, send_from_directory, render_template_string, flash, redirect, url_for
 import os
-import ffmpeg
-import youtube_dl
+from pytube import YouTube, exceptions
+from moviepy.editor import VideoFileClip
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for flash messages
@@ -56,24 +56,24 @@ html_template = '''
         button {
             background-color: #333;
             color: white;
-            cursor: pointer;
+            cursor: pointer.
         }
         button:hover {
-            background-color: #555;
+            background-color: #555.
         }
         .converter {
-            margin: 20px 0;
+            margin: 20px 0.
         }
         .divider {
             margin: 30px 0;
-            font-size: 1.5em;
+            font-size: 1.5em.
         }
         .flash {
             background-color: #ff4d4d;
             color: white;
             padding: 10px;
             margin-bottom: 20px;
-            border-radius: 5px;
+            border-radius: 5px.
         }
     </style>
 </head>
@@ -121,20 +121,21 @@ def index():
     return render_template_string(html_template)
 
 def download_audio(url, format):
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'outtmpl': os.path.join(UPLOAD_FOLDER, '%(title)s.%(ext)s'),
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': format,
-        }],
-    }
+    try:
+        yt = YouTube(url)
+        stream = yt.streams.filter(only_audio=True).first()
+        file_path = stream.download(output_path=UPLOAD_FOLDER, filename_prefix='audio_')
+        if format == 'mp3':
+            file_path = convert_audio_to_mp3(file_path)
+        return file_path
+    except Exception as e:
+        raise Exception(f"An error occurred while downloading audio: {e}")
 
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(url, download=True)
-        file_path = ydl.prepare_filename(info_dict).rsplit('.', 1)[0] + f'.{format}'
-    
-    return file_path
+def convert_audio_to_mp3(file_path):
+    base, ext = os.path.splitext(file_path)
+    new_file_path = base + '.mp3'
+    os.rename(file_path, new_file_path)
+    return new_file_path
 
 @app.route('/download_audio', methods=['POST'])
 def download_audio_route():
@@ -150,22 +151,26 @@ def download_audio_route():
         return redirect(url_for('index'))
 
 def download_video(url, format):
-    ydl_opts = {
-        'format': 'best',
-        'outtmpl': os.path.join(UPLOAD_FOLDER, '%(title)s.%(ext)s')
-    }
+    try:
+        yt = YouTube(url)
+        stream = yt.streams.filter(progressive=True, file_extension='mp4').first()
+        file_path = stream.download(output_path=UPLOAD_FOLDER, filename_prefix='video_')
+        if format != 'mp4':
+            file_path = convert_video_format(file_path, format)
+        return file_path
+    except exceptions.VideoUnavailable:
+        raise Exception('The video is unavailable.')
+    except Exception as e:
+        raise Exception(f"An error occurred while downloading video: {e}")
 
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(url, download=True)
-        file_path = ydl.prepare_filename(info_dict)
-    
-    converted_path = os.path.splitext(file_path)[0] + f'.{format}'
-    
-    # Convert the video using ffmpeg
-    ffmpeg.input(file_path).output(converted_path).run(overwrite_output=True)
-    
+def convert_video_format(file_path, format):
+    base, ext = os.path.splitext(file_path)
+    new_file_path = base + f'.{format}'
+    video = VideoFileClip(file_path)
+    video.write_videofile(new_file_path, codec='libx264' if format == 'mov' else 'libx264')
+    video.close()
     os.remove(file_path)
-    return converted_path
+    return new_file_path
 
 @app.route('/download_video', methods=['POST'])
 def download_video_route():
