@@ -1,11 +1,11 @@
 from flask import Flask, request, send_from_directory, render_template_string, flash, redirect, url_for
 import os
-from yt_dlp import YoutubeDL
+from pytube import YouTube
+from moviepy.editor import VideoFileClip
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for flash messages
 UPLOAD_FOLDER = 'static/uploads'
-COOKIES_FILE = 'cookies_netscape.txt'  # Path to your cookies file
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Ensure the upload folder exists
@@ -127,8 +127,7 @@ def download_audio(url, format):
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': format,
-        }],
-        'cookiefile': COOKIES_FILE  # Adding the path to the cookies file
+        }]
     }
 
     with YoutubeDL(ydl_opts) as ydl:
@@ -138,18 +137,16 @@ def download_audio(url, format):
     return file_path
 
 def download_video(url, format):
-    ydl_opts = {
-        'format': 'bestvideo+bestaudio/best',
-        'outtmpl': os.path.join(UPLOAD_FOLDER, 'video.%(ext)s'),
-        'merge_output_format': format,
-        'cookiefile': COOKIES_FILE  # Adding the path to the cookies file
-    }
-
-    with YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(url, download=True)
-        file_path = ydl.prepare_filename(info_dict)
-        file_path = os.path.splitext(file_path)[0] + f'.{format}'
+    yt = YouTube(url)
+    stream = yt.streams.filter(progressive=True, file_extension='mp4').first()
+    file_path = stream.download(output_path=UPLOAD_FOLDER)
     
+    if format == 'mov':
+        video = VideoFileClip(file_path)
+        mov_path = os.path.splitext(file_path)[0] + '.mov'
+        video.write_videofile(mov_path, codec='libx264')
+        os.remove(file_path)
+        return mov_path
     return file_path
 
 @app.route('/download_audio', methods=['POST'])
