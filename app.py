@@ -1,6 +1,5 @@
 from flask import Flask, request, send_from_directory, render_template_string, flash, redirect, url_for
 import os
-from yt_dlp import YoutubeDL
 from pytube import YouTube, exceptions
 import ffmpeg
 
@@ -57,24 +56,24 @@ html_template = '''
         button {
             background-color: #333;
             color: white;
-            cursor: pointer.
+            cursor: pointer;
         }
         button:hover {
-            background-color: #555.
+            background-color: #555;
         }
         .converter {
-            margin: 20px 0.
+            margin: 20px 0;
         }
         .divider {
-            margin: 30px 0.
-            font-size: 1.5em.
+            margin: 30px 0;
+            font-size: 1.5em;
         }
         .flash {
-            background-color: #ff4d4d.
-            color: white.
-            padding: 10px.
-            margin-bottom: 20px.
-            border-radius: 5px.
+            background-color: #ff4d4d;
+            color: white;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
         }
     </style>
 </head>
@@ -122,20 +121,22 @@ def index():
     return render_template_string(html_template)
 
 def download_audio(url, format):
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'outtmpl': os.path.join(UPLOAD_FOLDER, '%(title)s.%(ext)s'),
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': format,
-        }],
-    }
-
-    with YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(url, download=True)
-        file_path = ydl.prepare_filename(info_dict).rsplit('.', 1)[0] + f'.{format}'
-    
-    return file_path
+    try:
+        yt = YouTube(url)
+        audio_stream = yt.streams.filter(only_audio=True, file_extension='mp4').first()
+        file_path = audio_stream.download(output_path=UPLOAD_FOLDER)
+        
+        converted_path = os.path.join(UPLOAD_FOLDER, f"{os.path.splitext(os.path.basename(file_path))[0]}.{format}")
+        
+        # Convert the audio using ffmpeg
+        ffmpeg.input(file_path).output(converted_path, **{'codec:a': format}).run(overwrite_output=True)
+        
+        os.remove(file_path)
+        return converted_path
+    except exceptions.VideoUnavailable:
+        raise Exception('The audio is unavailable.')
+    except Exception as e:
+        raise Exception(f'An error occurred while downloading the audio: {str(e)}')
 
 @app.route('/download_audio', methods=['POST'])
 def download_audio_route():
@@ -150,27 +151,33 @@ def download_audio_route():
         flash(f'An error occurred: {str(e)}')
         return redirect(url_for('index'))
 
+def download_video(url, format):
+    try:
+        yt = YouTube(url)
+        stream = yt.streams.filter(progressive=True, file_extension='mp4').first()
+        file_path = stream.download(output_path=UPLOAD_FOLDER)
+        
+        converted_path = os.path.join(UPLOAD_FOLDER, f"{os.path.splitext(os.path.basename(file_path))[0]}.{format}")
+        
+        # Convert the video using ffmpeg
+        ffmpeg.input(file_path).output(converted_path).run(overwrite_output=True)
+        
+        os.remove(file_path)
+        return converted_path
+    except exceptions.VideoUnavailable:
+        raise Exception('The video is unavailable.')
+    except Exception as e:
+        raise Exception(f'An error occurred while downloading the video: {str(e)}')
+
 @app.route('/download_video', methods=['POST'])
 def download_video_route():
     url = request.form['url']
     format_type = request.form['format']
     
     try:
-        yt = YouTube(url)
-        stream = yt.streams.filter(progressive=True, file_extension='mp4').first()
-        file_path = stream.download(output_path=UPLOAD_FOLDER)
-        
-        converted_path = os.path.join(UPLOAD_FOLDER, f"{os.path.splitext(os.path.basename(file_path))[0]}.{format_type}")
-        
-        # Convert the video using ffmpeg
-        ffmpeg.input(file_path).output(converted_path).run(overwrite_output=True)
-        
-        os.remove(file_path)
-        return send_from_directory(app.config['UPLOAD_FOLDER'], os.path.basename(converted_path), as_attachment=True)
+        file_path = download_video(url, format_type)
+        return send_from_directory(app.config['UPLOAD_FOLDER'], os.path.basename(file_path), as_attachment=True)
     
-    except exceptions.VideoUnavailable:
-        flash('The video is unavailable.')
-        return redirect(url_for('index'))
     except Exception as e:
         flash(f'An error occurred: {str(e)}')
         return redirect(url_for('index'))
