@@ -2,6 +2,7 @@ from flask import Flask, request, send_from_directory, render_template_string, f
 import os
 from pytube import YouTube
 from moviepy.editor import VideoFileClip
+from urllib.parse import urlparse
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for flash messages
@@ -120,6 +121,15 @@ html_template = '''
 def index():
     return render_template_string(html_template)
 
+def is_valid_youtube_url(url):
+    try:
+        parsed_url = urlparse(url)
+        if parsed_url.netloc in ["www.youtube.com", "youtube.com", "youtu.be"]:
+            return True
+    except Exception as e:
+        return False
+    return False
+
 def download_audio(url, format):
     yt = YouTube(url)
     audio_stream = yt.streams.filter(only_audio=True).first()
@@ -153,6 +163,10 @@ def download_audio_route():
     url = request.form['url']
     format_type = request.form['format']
     
+    if not is_valid_youtube_url(url):
+        flash(f'Invalid YouTube URL.')
+        return redirect(url_for('index'))
+
     try:
         file_path = download_audio(url, format_type)
         return send_from_directory(app.config['UPLOAD_FOLDER'], os.path.basename(file_path), as_attachment=True)
@@ -166,6 +180,10 @@ def download_video_route():
     url = request.form['url']
     format_type = request.form['format']
     
+    if not is_valid_youtube_url(url):
+        flash(f'Invalid YouTube URL.')
+        return redirect(url_for('index'))
+
     try:
         file_path = download_video(url, format_type)
         return send_from_directory(app.config['UPLOAD_FOLDER'], os.path.basename(file_path), as_attachment=True)
