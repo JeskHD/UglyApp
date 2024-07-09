@@ -2,12 +2,6 @@ from flask import Flask, render_template_string, request, redirect, url_for, sen
 import os
 from yt_dlp import YoutubeDL
 from pytube import YouTube
-import gi
-
-gi.require_version('Gst', '1.0')
-from gi.repository import Gst
-
-Gst.init(None)
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for flash messages
@@ -79,7 +73,7 @@ def download_with_pytube(url, format):
         video = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().first()
         out_file = video.download(output_path=app.config['DOWNLOAD_FOLDER'])
         if format == 'mov':
-            out_file = convert_to_mov(out_file)
+            out_file = convert_to_mov_with_ytdlp(out_file, format)
         return send_from_directory(app.config['DOWNLOAD_FOLDER'], os.path.basename(out_file), as_attachment=True)
     except Exception as e:
         flash(f'An error occurred: {str(e)}')
@@ -90,31 +84,34 @@ def download_with_ytdlp(url, format):
         ydl_opts = {
             'format': 'bestvideo+bestaudio/best',
             'outtmpl': os.path.join(app.config['DOWNLOAD_FOLDER'], '%(title)s.%(ext)s'),
-            'merge_output_format': 'mp4',  # Ensure initial download in mp4 format
+            'merge_output_format': 'mp4' if format == 'mp4' else 'mov',
+            'postprocessors': [{
+                'key': 'FFmpegVideoConvertor',
+                'preferedformat': format,
+            }],
             'cookiefile': COOKIES_FILE  # Adding the path to the cookies file
         }
         with YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             video_title = ydl.prepare_filename(info_dict)
-            video_filename = os.path.basename(video_title).rsplit('.', 1)[0] + '.mp4'
-        
-        if format == 'mov':
-            video_filename = convert_to_mov(video_filename)
-        
+            video_filename = os.path.basename(video_title).rsplit('.', 1)[0] + f'.{format}'
         return send_from_directory(app.config['DOWNLOAD_FOLDER'], video_filename, as_attachment=True)
     except Exception as e:
         flash(f'An error occurred: {str(e)}')
         return redirect(url_for('index'))
 
-def convert_to_mov(filepath):
+def convert_to_mov_with_ytdlp(filepath, format):
     try:
-        new_filepath = filepath.rsplit('.', 1)[0] + '.mov'
-        convert_command = (
-            f"gst-launch-1.0 filesrc location={filepath} ! "
-            "decodebin ! videoconvert ! "
-            f"qtmux ! filesink location={new_filepath}"
-        )
-        os.system(convert_command)
+        new_filepath = filepath.rsplit('.', 1)[0] + f'.{format}'
+        ydl_opts = {
+            'outtmpl': new_filepath,
+            'postprocessors': [{
+                'key': 'FFmpegVideoConvertor',
+                'preferedformat': format,
+            }],
+        }
+        with YoutubeDL(ydl_opts) as ydl:
+            ydl.download([filepath])
         os.remove(filepath)
         return new_filepath
     except Exception as e:
