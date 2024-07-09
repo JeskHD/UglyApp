@@ -1,7 +1,6 @@
 from flask import Flask, render_template_string, request, redirect, url_for, send_from_directory, flash
 import os
 from yt_dlp import YoutubeDL
-from moviepy.editor import VideoFileClip
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for flash messages
@@ -78,9 +77,8 @@ def download_with_ytdlp(url, format):
 def convert_to_mov(filepath):
     try:
         new_filepath = filepath.rsplit('.', 1)[0] + '.mov'
-        clip = VideoFileClip(filepath)
-        clip.write_videofile(new_filepath, codec='libx264')
-        clip.close()
+        command = f'gst-launch-1.0 filesrc location={filepath} ! decodebin ! videoconvert ! queue ! qtmux ! filesink location={new_filepath}'
+        os.system(command)
         os.remove(filepath)
         return new_filepath
     except Exception as e:
