@@ -1,186 +1,83 @@
-from flask import Flask, request, send_from_directory, render_template_string, flash, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, send_from_directory
+from pytube import YouTube
+import youtube_dl
 import os
-from yt_dlp import YoutubeDL
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Required for flash messages
-UPLOAD_FOLDER = 'static/uploads'
-COOKIES_FILE = 'cookies_netscape.txt'  # Path to your cookies file
-FFMPEG_PATH = 'ffmpeg.exe'  # Path to your ffmpeg binaries relative to the project root
+DOWNLOAD_FOLDER = 'static/downloads'
+app.config['DOWNLOAD_FOLDER'] = DOWNLOAD_FOLDER
 
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+if not os.path.exists(DOWNLOAD_FOLDER):
+    os.makedirs(DOWNLOAD_FOLDER)
 
-# Ensure the upload folder exists
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
-
-# HTML template embedded as a string
 html_template = '''
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ugly Downloader</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(to bottom, #ff5f6d, #ffc371);
-            color: white;
-            text-align: center;
-            padding: 50px;
-        }
-        h1 {
-            font-size: 3em;
-        }
-        form {
-            margin: 20px auto;
-            max-width: 500px;
-        }
-        label {
-            display: block;
-            margin-bottom: 10px;
-            font-size: 1.2em;
-        }
-        input[type="text"] {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 20px;
-            border: none;
-            border-radius: 5px;
-        }
-        select, button {
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-            font-size: 1em;
-        }
-        button {
-            background-color: #333;
-            color: white;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #555;
-        }
-        .converter {
-            margin: 20px 0;
-        }
-        .divider {
-            margin: 30px 0;
-            font-size: 1.5em;
-        }
-        .flash {
-            background-color: #ff4d4d;
-            color: white;
-            padding: 10px;
-            margin-bottom: 20px;
-            border-radius: 5px;
-        }
-    </style>
+    <title>YouTube Video Downloader</title>
 </head>
 <body>
-    <h1>Ugly Downloader</h1>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <ul class="flash">
-        {% for category, message in messages %}
-          <li>{{ message }}</li>
-        {% endfor %}
-        </ul>
-      {% endif %}
-    {% endwith %}
-    <p>Download Ugly Bros' art, music, and videos swiftly with UglyDownloader. Quality and simplicity in one click.</p>
-    <div class="converter">
-        <form action="/download_audio" method="post">
-            <label for="audio_url">Enter audio URL:</label>
-            <input type="text" id="audio_url" name="url" placeholder="Enter audio URL" required>
-            <select name="format">
-                <option value="mp3">MP3</option>
-                <option value="m4a">M4A</option>
-            </select>
-            <button type="submit">Download Audio</button>
-        </form>
-    </div>
-    <div class="divider">OR</div>
-    <div class="converter">
-        <form action="/download_video" method="post">
-            <label for="video_url">Enter video URL:</label>
-            <input type="text" id="video_url" name="url" placeholder="Enter video URL" required>
-            <select name="format">
-                <option value="mp4">MP4</option>
-                <option value="mov">MOV</option>
-            </select>
-            <button type="submit">Download Video</button>
-        </form>
-    </div>
+    <h1>Download YouTube Video</h1>
+    <form action="/download" method="post">
+        <label for="url">YouTube Video URL:</label>
+        <input type="url" id="url" name="url" required>
+        <br>
+        <label for="method">Download Method:</label>
+        <select id="method" name="method">
+            <option value="pytube">PyTube</option>
+            <option value="youtube-dl">youtube-dl</option>
+        </select>
+        <br>
+        <button type="submit">Download</button>
+    </form>
 </body>
 </html>
 '''
 
 @app.route('/')
 def index():
-    return render_template_string(html_template)
+    return render_template('index.html')
 
-def download_audio(url, format):
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'outtmpl': os.path.join(UPLOAD_FOLDER, '%(title)s.%(ext)s'),
-        'ffmpeg_location': FFMPEG_PATH,  # Specify the path to ffmpeg binaries
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': format,
-        }],
-        'cookiefile': COOKIES_FILE  # Adding the path to the cookies file
-    }
-
-    with YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(url, download=True)
-        file_path = ydl.prepare_filename(info_dict).rsplit('.', 1)[0] + f'.{format}'
-    
-    return file_path
-
-def download_video(url, format):
-    ydl_opts = {
-        'format': 'bestvideo+bestaudio/best',
-        'outtmpl': os.path.join(UPLOAD_FOLDER, 'video.%(ext)s'),
-        'merge_output_format': format,
-        'ffmpeg_location': FFMPEG_PATH,  # Specify the path to ffmpeg binaries
-        'cookiefile': COOKIES_FILE  # Adding the path to the cookies file
-    }
-
-    with YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(url, download=True)
-        file_path = ydl.prepare_filename(info_dict)
-        file_path = os.path.splitext(file_path)[0] + f'.{format}'
-    
-    return file_path
-
-@app.route('/download_audio', methods=['POST'])
-def download_audio_route():
+@app.route('/download', methods=['POST'])
+def download_video():
     url = request.form['url']
-    format_type = request.form['format']
-    
-    try:
-        file_path = download_audio(url, format_type)
-        return send_from_directory(app.config['UPLOAD_FOLDER'], os.path.basename(file_path), as_attachment=True)
-    
-    except Exception as e:
-        flash(f'An error occurred: {str(e)}')
-        return redirect(url_for('index'))
+    method = request.form['method']
 
-@app.route('/download_video', methods=['POST'])
-def download_video_route():
-    url = request.form['url']
-    format_type = request.form['format']
-    
+    if method == 'pytube':
+        return download_with_pytube(url)
+    elif method == 'youtube-dl':
+        return download_with_youtube_dl(url)
+    else:
+        return "Invalid download method."
+
+def download_with_pytube(url):
     try:
-        file_path = download_video(url, format_type)
-        return send_from_directory(app.config['UPLOAD_FOLDER'], os.path.basename(file_path), as_attachment=True)
-    
+        yt = YouTube(url)
+        video = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().first()
+        out_file = video.download(output_path=app.config['DOWNLOAD_FOLDER'])
+        return redirect(url_for('downloaded_file', filename=os.path.basename(out_file)))
     except Exception as e:
-        flash(f'An error occurred: {str(e)}')
-        return redirect(url_for('index'))
+        return str(e)
+
+def download_with_youtube_dl(url):
+    try:
+        ydl_opts = {
+            'format': 'best',
+            'outtmpl': os.path.join(app.config['DOWNLOAD_FOLDER'], '%(title)s.%(ext)s'),
+        }
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(url, download=True)
+            video_title = ydl.prepare_filename(info_dict)
+            video_filename = os.path.basename(video_title)
+        return redirect(url_for('downloaded_file', filename=video_filename))
+    except Exception as e:
+        return str(e)
+
+@app.route('/downloads/<filename>')
+def downloaded_file(filename):
+    return send_from_directory(app.config['DOWNLOAD_FOLDER'], filename)
 
 if __name__ == '__main__':
     app.run(debug=True)
