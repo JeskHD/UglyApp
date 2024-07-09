@@ -1,6 +1,7 @@
 from flask import Flask, render_template_string, request, redirect, url_for, send_from_directory, flash
 import os
 from yt_dlp import YoutubeDL
+import cv2
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for flash messages
@@ -77,8 +78,27 @@ def download_with_ytdlp(url, format):
 def convert_to_mov(filepath):
     try:
         new_filepath = filepath.rsplit('.', 1)[0] + '.mov'
-        command = f'gst-launch-1.0 filesrc location={filepath} ! decodebin ! videoconvert ! queue ! qtmux ! filesink location={new_filepath}'
-        os.system(command)
+        # Open the input video file
+        cap = cv2.VideoCapture(filepath)
+
+        # Get the frame width, height, and frames per second (fps)
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps = cap.get(cv2.CAP_PROP_FPS)
+
+        # Define the codec and create VideoWriter object
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # or 'XVID'
+        out = cv2.VideoWriter(new_filepath, fourcc, fps, (width, height))
+
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            out.write(frame)
+
+        # Release everything if job is finished
+        cap.release()
+        out.release()
         os.remove(filepath)
         return new_filepath
     except Exception as e:
