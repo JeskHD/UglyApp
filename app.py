@@ -1,10 +1,13 @@
-from flask import Flask, render_template_string, request, redirect, url_for, send_from_directory
-from pytube import YouTube
-import youtube_dl
+from flask import Flask, render_template_string, request, redirect, url_for, send_from_directory, flash
 import os
+from yt_dlp import YoutubeDL
 
 app = Flask(__name__)
+app.secret_key = 'your_secret_key'  # Required for flash messages
 DOWNLOAD_FOLDER = 'static/downloads'
+COOKIES_FILE = 'cookies_netscape.txt'  # Path to your cookies file
+FFMPEG_PATH = 'ffmpeg'  # Path to your ffmpeg binaries relative to the project root
+
 app.config['DOWNLOAD_FOLDER'] = DOWNLOAD_FOLDER
 
 if not os.path.exists(DOWNLOAD_FOLDER):
@@ -27,7 +30,7 @@ html_template = '''
         <label for="method">Download Method:</label>
         <select id="method" name="method">
             <option value="pytube">PyTube</option>
-            <option value="youtube-dl">youtube-dl</option>
+            <option value="yt-dlp">yt-dlp</option>
         </select>
         <br>
         <button type="submit">Download</button>
@@ -47,8 +50,8 @@ def download_video():
 
     if method == 'pytube':
         return download_with_pytube(url)
-    elif method == 'youtube-dl':
-        return download_with_youtube_dl(url)
+    elif method == 'yt-dlp':
+        return download_with_ytdlp(url)
     else:
         return "Invalid download method."
 
@@ -61,19 +64,22 @@ def download_with_pytube(url):
     except Exception as e:
         return str(e)
 
-def download_with_youtube_dl(url):
+def download_with_ytdlp(url):
     try:
         ydl_opts = {
             'format': 'best',
             'outtmpl': os.path.join(app.config['DOWNLOAD_FOLDER'], '%(title)s.%(ext)s'),
+            'ffmpeg_location': FFMPEG_PATH,  # Specify the path to ffmpeg binaries
+            'cookiefile': COOKIES_FILE  # Adding the path to the cookies file
         }
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        with YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             video_title = ydl.prepare_filename(info_dict)
             video_filename = os.path.basename(video_title)
         return redirect(url_for('downloaded_file', filename=video_filename))
     except Exception as e:
-        return str(e)
+        flash(f'An error occurred: {str(e)}')
+        return redirect(url_for('index'))
 
 @app.route('/downloads/<filename>')
 def downloaded_file(filename):
