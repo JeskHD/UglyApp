@@ -1,8 +1,13 @@
 from flask import Flask, render_template_string, request, redirect, url_for, send_from_directory, flash
 import os
-import ffmpeg
 from yt_dlp import YoutubeDL
 from pytube import YouTube
+import gi
+
+gi.require_version('Gst', '1.0')
+from gi.repository import Gst
+
+Gst.init(None)
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for flash messages
@@ -104,12 +109,12 @@ def download_with_ytdlp(url, format):
 def convert_to_mov(filepath):
     try:
         new_filepath = filepath.rsplit('.', 1)[0] + '.mov'
-        (
-            ffmpeg
-            .input(filepath)
-            .output(new_filepath, vcodec='libx264', acodec='aac')
-            .run(overwrite_output=True)
+        convert_command = (
+            f"gst-launch-1.0 filesrc location={filepath} ! "
+            "decodebin ! videoconvert ! "
+            f"qtmux ! filesink location={new_filepath}"
         )
+        os.system(convert_command)
         os.remove(filepath)
         return new_filepath
     except Exception as e:
