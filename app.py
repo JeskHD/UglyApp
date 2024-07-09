@@ -67,11 +67,12 @@ def download_with_ytdlp(url, format):
             info_dict = ydl.extract_info(url, download=True)
             video_title = ydl.prepare_filename(info_dict)
             video_filename = os.path.basename(video_title).rsplit('.', 1)[0] + '.mp4'
+            video_filepath = os.path.join(app.config['DOWNLOAD_FOLDER'], video_filename)
 
             if format == 'mov':
-                video_filename = convert_to_mov(video_filename)
+                video_filepath = convert_to_mov(video_filepath)
 
-        return send_from_directory(app.config['DOWNLOAD_FOLDER'], video_filename, as_attachment=True)
+        return send_from_directory(app.config['DOWNLOAD_FOLDER'], os.path.basename(video_filepath), as_attachment=True)
     except Exception as e:
         flash(f'An error occurred: {str(e)}')
         return redirect(url_for('index'))
