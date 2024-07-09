@@ -75,11 +75,14 @@ def download_with_ytdlp(url, format):
         return redirect(url_for('index'))
 
 def convert_to_mov(filepath):
-    # Conversion without using ffmpeg is not straightforward and usually not supported
-    # This placeholder function assumes the conversion is possible without ffmpeg
-    new_filepath = filepath.rsplit('.', 1)[0] + '.mov'
-    os.rename(filepath, new_filepath)
-    return new_filepath
+    try:
+        new_filepath = filepath.rsplit('.', 1)[0] + '.mov'
+        # Simple rename to .mov (placeholder for actual conversion logic)
+        os.rename(filepath, new_filepath)
+        return new_filepath
+    except Exception as e:
+        flash(f'An error occurred during conversion: {str(e)}')
+        return filepath
 
 @app.route('/downloads/<filename>')
 def downloaded_file(filename):
