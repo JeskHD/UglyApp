@@ -1,8 +1,7 @@
 from flask import Flask, render_template_string, request, redirect, url_for, send_from_directory, flash
 import os
 from yt_dlp import YoutubeDL
-import imageio
-from PIL import Image
+from moviepy.editor import VideoFileClip
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for flash messages
@@ -79,15 +78,9 @@ def download_with_ytdlp(url, format):
 def convert_to_mov(filepath):
     try:
         new_filepath = filepath.rsplit('.', 1)[0] + '.mov'
-        reader = imageio.get_reader(filepath, 'ffmpeg')
-        fps = reader.get_meta_data()['fps']
-        writer = imageio.get_writer(new_filepath, fps=fps, codec='libx264')
-
-        for i, frame in enumerate(reader):
-            writer.append_data(frame)
-        
-        writer.close()
-        reader.close()
+        clip = VideoFileClip(filepath)
+        clip.write_videofile(new_filepath, codec='libx264')
+        clip.close()
         os.remove(filepath)
         return new_filepath
     except Exception as e:
