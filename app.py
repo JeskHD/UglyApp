@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, send_from_directory
+from flask import Flask, render_template_string, request, redirect, url_for, send_from_directory
 from pytube import YouTube
 import youtube_dl
 import os
@@ -11,7 +11,7 @@ if not os.path.exists(DOWNLOAD_FOLDER):
     os.makedirs(DOWNLOAD_FOLDER)
 
 html_template = '''
-    <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -38,7 +38,7 @@ html_template = '''
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template_string(html_template)
 
 @app.route('/download', methods=['POST'])
 def download_video():
