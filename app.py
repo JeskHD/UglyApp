@@ -2,7 +2,7 @@ from flask import Flask, render_template_string, request, redirect, url_for, sen
 import os
 from yt_dlp import YoutubeDL
 from pytube import YouTube
-import cv2
+from moviepy.editor import VideoFileClip
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for flash messages
@@ -102,19 +102,10 @@ def download_with_ytdlp(url, format):
 
 def convert_to_mov(filepath):
     try:
-        cap = cv2.VideoCapture(filepath)
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # 'mp4v' is a codec compatible with MOV format
+        clip = VideoFileClip(filepath)
         new_filepath = filepath.rsplit('.', 1)[0] + '.mov'
-        out = cv2.VideoWriter(new_filepath, fourcc, cap.get(cv2.CAP_PROP_FPS), (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))))
-        
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if not ret:
-                break
-            out.write(frame)
-        
-        cap.release()
-        out.release()
+        clip.write_videofile(new_filepath, codec='libx264', audio_codec='aac')
+        clip.close()
         os.remove(filepath)
         return new_filepath
     except Exception as e:
