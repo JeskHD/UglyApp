@@ -1,7 +1,8 @@
 from flask import Flask, render_template_string, request, redirect, url_for, send_from_directory, flash
 import os
 from yt_dlp import YoutubeDL
-import cv2
+import imageio
+from PIL import Image
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for flash messages
@@ -78,27 +79,15 @@ def download_with_ytdlp(url, format):
 def convert_to_mov(filepath):
     try:
         new_filepath = filepath.rsplit('.', 1)[0] + '.mov'
-        # Open the input video file
-        cap = cv2.VideoCapture(filepath)
+        reader = imageio.get_reader(filepath, 'ffmpeg')
+        fps = reader.get_meta_data()['fps']
+        writer = imageio.get_writer(new_filepath, fps=fps, codec='libx264')
 
-        # Get the frame width, height, and frames per second (fps)
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fps = cap.get(cv2.CAP_PROP_FPS)
-
-        # Define the codec and create VideoWriter object
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # or 'XVID'
-        out = cv2.VideoWriter(new_filepath, fourcc, fps, (width, height))
-
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
-            out.write(frame)
-
-        # Release everything if job is finished
-        cap.release()
-        out.release()
+        for i, frame in enumerate(reader):
+            writer.append_data(frame)
+        
+        writer.close()
+        reader.close()
         os.remove(filepath)
         return new_filepath
     except Exception as e:
