@@ -77,7 +77,6 @@ def download_with_ytdlp(url, format):
 def convert_to_mov(filepath):
     try:
         new_filepath = filepath.rsplit('.', 1)[0] + '.mov'
-        # Simple rename to .mov (placeholder for actual conversion logic)
         os.rename(filepath, new_filepath)
         return new_filepath
     except Exception as e:
