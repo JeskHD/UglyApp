@@ -85,6 +85,7 @@ def download_with_ytdlp(url, format):
         ydl_opts = {
             'format': 'bestvideo+bestaudio/best',
             'outtmpl': os.path.join(app.config['DOWNLOAD_FOLDER'], '%(title)s.%(ext)s'),
+            'merge_output_format': 'mp4',  # Ensure initial download in mp4 format
             'cookiefile': COOKIES_FILE  # Adding the path to the cookies file
         }
         with YoutubeDL(ydl_opts) as ydl:
