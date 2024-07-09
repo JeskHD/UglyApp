@@ -25,3 +25,4 @@ pydub==0.25.1
 youtube-dl==2021.12.17
 pathlib==0.97
 opencv-python
+pgi
