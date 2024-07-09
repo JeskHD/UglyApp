@@ -1,6 +1,7 @@
 from flask import Flask, render_template_string, request, redirect, url_for, send_from_directory, flash
 import os
 from yt_dlp import YoutubeDL
+from pytube import YouTube
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for flash messages
@@ -27,6 +28,12 @@ html_template = '''
         <label for="url">YouTube Video URL:</label>
         <input type="url" id="url" name="url" required>
         <br>
+        <label for="method">Download Method:</label>
+        <select id="method" name="method">
+            <option value="pytube">PyTube</option>
+            <option value="yt-dlp">yt-dlp</option>
+        </select>
+        <br>
         <label for="format">Select Format:</label>
         <select id="format" name="format">
             <option value="mp4">MP4</option>
@@ -46,15 +53,20 @@ def index():
 @app.route('/download', methods=['POST'])
 def download_video():
     url = request.form['url']
-    format = request.form['format']
     method = request.form['method']
+    format = request.form['format']
+
+    if not url or not method or not format:
+        flash('All fields are required.')
+        return redirect(url_for('index'))
 
     if method == 'pytube':
         return download_with_pytube(url)
     elif method == 'yt-dlp':
         return download_with_ytdlp(url, format)
     else:
-        return "Invalid download method."
+        flash('Invalid download method.')
+        return redirect(url_for('index'))
 
 def download_with_pytube(url):
     try:
@@ -63,7 +75,8 @@ def download_with_pytube(url):
         out_file = video.download(output_path=app.config['DOWNLOAD_FOLDER'])
         return send_from_directory(app.config['DOWNLOAD_FOLDER'], os.path.basename(out_file), as_attachment=True)
     except Exception as e:
-        return str(e)
+        flash(f'An error occurred: {str(e)}')
+        return redirect(url_for('index'))
 
 def download_with_ytdlp(url, format):
     try:
