@@ -6,6 +6,7 @@ import sqlalchemy as sa
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
 import glob
+import subprocess  # Ensure subprocess is imported
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
