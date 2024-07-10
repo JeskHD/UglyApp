@@ -3,7 +3,6 @@ import os
 from yt_dlp import YoutubeDL
 import imageio_ffmpeg as ffmpeg
 import subprocess
-from celery import Celery
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for flash messages
@@ -11,11 +10,6 @@ DOWNLOAD_FOLDER = 'static/downloads'
 COOKIES_FILE = 'cookies_netscape.txt'  # Path to your cookies file
 
 app.config['DOWNLOAD_FOLDER'] = DOWNLOAD_FOLDER
-app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
-app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'
-
-celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
-celery.conf.update(app.config)
 
 if not os.path.exists(DOWNLOAD_FOLDER):
     os.makedirs(DOWNLOAD_FOLDER)
@@ -76,35 +70,26 @@ def download_with_ytdlp(url, format):
             video_filepath = os.path.join(app.config['DOWNLOAD_FOLDER'], video_filename)
 
             if format == 'mov':
-                task = convert_to_mov.delay(video_filepath)
-                return redirect(url_for('check_task', task_id=task.id))
+                video_filepath = convert_to_mov(video_filepath)
 
         return send_from_directory(app.config['DOWNLOAD_FOLDER'], os.path.basename(video_filepath), as_attachment=True)
     except Exception as e:
+        app.logger.error(f'Error during video download or conversion: {str(e)}')
         flash(f'An error occurred: {str(e)}')
         return redirect(url_for('index'))
 
-@celery.task
 def convert_to_mov(filepath):
     try:
         new_filepath = filepath.rsplit('.', 1)[0] + '.mov'
         ffmpeg_path = ffmpeg.get_ffmpeg_exe()
-        command = [ffmpeg_path, '-i', filepath, new_filepath]
+        command = [ffmpeg_path, '-i', filepath, '-vcodec', 'copy', '-acodec', 'copy', new_filepath]
         subprocess.run(command, check=True)
         os.remove(filepath)
         return new_filepath
     except Exception as e:
-        return str(e)
-
-@app.route('/status/<task_id>')
-def check_task(task_id):
-    task = convert_to_mov.AsyncResult(task_id)
-    if task.state == 'PENDING':
-        return 'Processing...'
-    elif task.state == 'SUCCESS':
-        return send_from_directory(app.config['DOWNLOAD_FOLDER'], os.path.basename(task.result), as_attachment=True)
-    else:
-        return str(task.info)  # Error details
+        app.logger.error(f'Error during conversion to MOV: {str(e)}')
+        flash(f'An error occurred during conversion: {str(e)}')
+        return filepath
 
 @app.route('/downloads/<filename>')
 def downloaded_file(filename):
