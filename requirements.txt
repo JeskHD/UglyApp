@@ -27,4 +27,4 @@ pathlib==0.97
 opencv-python
 celery
 redis
-
+twspace_dl==2021.12.15.0
