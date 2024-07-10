@@ -3,10 +3,12 @@ import os
 from yt_dlp import YoutubeDL
 from pytube import YouTube, exceptions
 from moviepy.editor import VideoFileClip
+import subprocess
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for flash messages
 UPLOAD_FOLDER = 'static/uploads'
+COOKIES_FILE = 'cookies_netscape.txt'  # Path to your cookies file
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Ensure the upload folder exists
@@ -39,7 +41,7 @@ html_template = '''
         label {
             display: block;
             margin-bottom: 10px;
-            font-size: 1.2em;
+            font-size: 1.2em.
         }
         input[type="text"] {
             width: 100%;
@@ -52,7 +54,7 @@ html_template = '''
             padding: 10px;
             border: none;
             border-radius: 5px;
-            font-size: 1em;
+            font-size: 1em.
         }
         button {
             background-color: #333;
@@ -74,7 +76,7 @@ html_template = '''
             color: white;
             padding: 10px;
             margin-bottom: 20px;
-            border-radius: 5px;
+            border-radius: 5px.
         }
     </style>
 </head>
@@ -122,6 +124,18 @@ def index():
     return render_template_string(html_template)
 
 def download_audio(url, format):
+    if "twitter.com" in url and "/spaces/" in url:
+        output_template = os.path.join(UPLOAD_FOLDER, '%(title)s.%(ext)s')
+        command = [
+            "twspace_dl",
+            "-i", url,
+            "-c", COOKIES_FILE,
+            "-o", output_template
+        ]
+        subprocess.run(command, check=True)
+        file_path = os.path.join(UPLOAD_FOLDER, f"{os.path.basename(output_template)}.{format}")
+        return file_path
+
     ydl_opts = {
         'format': 'bestaudio/best',
         'outtmpl': os.path.join(UPLOAD_FOLDER, '%(title)s.%(ext)s'),
@@ -129,6 +143,7 @@ def download_audio(url, format):
             'key': 'FFmpegExtractAudio',
             'preferredcodec': format,
         }],
+        'cookiefile': COOKIES_FILE  # Adding the path to the cookies file
     }
 
     with YoutubeDL(ydl_opts) as ydl:
@@ -161,7 +176,7 @@ def download_video_route():
         file_path = stream.download(output_path=UPLOAD_FOLDER)
         
         video = VideoFileClip(file_path)
-        converted_path = os.path.join(UPLOAD_FOLDER, f"video.{format_type}")
+        converted_path = os.path.join(UPLOAD_FOLDER, f"{os.path.splitext(os.path.basename(file_path))[0]}.{format_type}")
         video.write_videofile(converted_path, codec='libx264' if format_type == 'mov' else 'libx264')
         
         os.remove(file_path)
