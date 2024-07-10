@@ -1,8 +1,6 @@
 from flask import Flask, render_template_string, request, redirect, url_for, send_from_directory, flash
 import os
 from yt_dlp import YoutubeDL
-import imageio_ffmpeg as ffmpeg
-import subprocess
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for flash messages
@@ -70,28 +68,22 @@ def download_with_ytdlp(url, format):
             video_filepath = os.path.join(app.config['DOWNLOAD_FOLDER'], video_filename)
 
             if format == 'mov':
-                video_filepath = convert_to_mov(video_filepath)
+                video_filepath = rename_to_mov(video_filepath)
 
         return send_from_directory(app.config['DOWNLOAD_FOLDER'], os.path.basename(video_filepath), as_attachment=True)
     except Exception as e:
-        app.logger.error(f'Error during video download or conversion: {str(e)}')
+        app.logger.error(f'Error during video download or renaming: {str(e)}')
         flash(f'An error occurred: {str(e)}')
         return redirect(url_for('index'))
 
-def convert_to_mov(filepath):
+def rename_to_mov(filepath):
     try:
         new_filepath = filepath.rsplit('.', 1)[0] + '.mov'
-        ffmpeg_path = ffmpeg.get_ffmpeg_exe()
-        command = [
-            ffmpeg_path, '-i', filepath, '-vcodec', 'libx264', '-acodec', 'aac', 
-            '-strict', 'experimental', new_filepath
-        ]
-        subprocess.run(command, check=True)
-        os.remove(filepath)
+        os.rename(filepath, new_filepath)
         return new_filepath
     except Exception as e:
-        app.logger.error(f'Error during conversion to MOV: {str(e)}')
-        flash(f'An error occurred during conversion: {str(e)}')
+        app.logger.error(f'Error during renaming to MOV: {str(e)}')
+        flash(f'An error occurred during renaming: {str(e)}')
         return filepath
 
 @app.route('/downloads/<filename>')
