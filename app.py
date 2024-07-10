@@ -386,12 +386,10 @@ def download():
 
     try:
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
-            cookie_file = 'cookies_netscape.txt'
             output_template = os.path.join(DOWNLOADS_DIR, '%(title)s')
             command = [
                 'twspace_dl',
                 '-i', url,
-                '-c', cookie_file,
                 '-o', output_template
             ]
             subprocess.run(command, check=True)
