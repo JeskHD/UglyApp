@@ -41,7 +41,7 @@ html_template = '''
         label {
             display: block;
             margin-bottom: 10px;
-            font-size: 1.2em.
+            font-size: 1.2em;
         }
         input[type="text"] {
             width: 100%;
@@ -54,7 +54,7 @@ html_template = '''
             padding: 10px;
             border: none;
             border-radius: 5px;
-            font-size: 1em.
+            font-size: 1em;
         }
         button {
             background-color: #333;
@@ -76,7 +76,7 @@ html_template = '''
             color: white;
             padding: 10px;
             margin-bottom: 20px;
-            border-radius: 5px.
+            border-radius: 5px;
         }
     </style>
 </head>
