@@ -82,7 +82,10 @@ def convert_to_mov(filepath):
     try:
         new_filepath = filepath.rsplit('.', 1)[0] + '.mov'
         ffmpeg_path = ffmpeg.get_ffmpeg_exe()
-        command = [ffmpeg_path, '-i', filepath, '-vcodec', 'libx264', '-acodec', 'aac', new_filepath]
+        command = [
+            ffmpeg_path, '-i', filepath, '-vcodec', 'libx264', '-acodec', 'aac', 
+            '-strict', 'experimental', new_filepath
+        ]
         subprocess.run(command, check=True)
         os.remove(filepath)
         return new_filepath
