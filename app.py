@@ -1,13 +1,11 @@
-from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory, jsonify
+from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory
 import yt_dlp
 import os
 import base64
 import sqlalchemy as sa
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
-import subprocess
 import glob
-from collections.abc import MutableMapping  # Updated import
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
@@ -19,10 +17,6 @@ db = SQLAlchemy(app)
 # Ensure the downloads directory exists
 DOWNLOADS_DIR = os.path.join(os.getcwd(), 'Downloads')
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
-
-# Define the path to the ffmpeg and ffprobe executables
-FFMPEG_PATH = r'C:\Users\Windows 11\Desktop\UglyApp\ffmpeg\bin\ffmpeg.exe'
-FFPROBE_PATH = r'C:\Users\Windows 11\Desktop\UglyApp\ffmpeg\bin\ffprobe.exe'
 
 # Example model for demonstration
 class User(db.Model):
@@ -403,39 +397,7 @@ def download():
             list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
             latest_file = max(list_of_files, key=os.path.getmtime)
             if os.path.exists(latest_file):
-                if format == 'audio' and request.form['audio_format'] == 'm4a':
-                    file_to_send = latest_file
-                elif format == 'audio' and request.form['audio_format'] == 'mp3':
-                    mp3_file = latest_file.replace('.m4a', '.mp3')
-                    if os.path.exists(mp3_file):
-                        os.remove(mp3_file)
-                    convert_command = [
-                        FFMPEG_PATH,
-                        '-y',
-                        '-i', latest_file,
-                        '-codec:a', 'libmp3lame',
-                        '-qscale:a', '2',
-                        mp3_file
-                    ]
-                    subprocess.run(convert_command, check=True)
-                    file_to_send = mp3_file
-                elif format == 'video' and request.form['video_format'] == 'mov':
-                    mov_file = latest_file.replace('.mp4', '.mov')
-                    if os.path.exists(mov_file):
-                        os.remove(mov_file)
-                    convert_command = [
-                        FFMPEG_PATH,
-                        '-y',
-                        '-i', latest_file,
-                        '-c:v', 'copy',
-                        '-c:a', 'copy',
-                        mov_file
-                    ]
-                    subprocess.run(convert_command, check=True)
-                    file_to_send = mov_file
-                else:
-                    file_to_send = latest_file
-                
+                file_to_send = latest_file
                 flash(f"Download complete: {os.path.basename(file_to_send)}")
                 return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
             else:
@@ -445,19 +407,17 @@ def download():
             ydl_opts = {
                 'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
                 'cookiefile': 'cookies_netscape.txt',
-                'hls_use_mpegts': True,  # Ensure HLS processing for all formats
-                'ffmpeg_location': FFMPEG_PATH,  # Specify ffmpeg path
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': request.form['audio_format'] if format == 'audio' else None,
-                    'preferredquality': '192',
-                    'nopostoverwrites': False,
-                }],
+                'hls_use_mpegts': True  # Ensure HLS processing for all formats
             }
             if format == 'audio':
                 audio_format = request.form['audio_format']
                 ydl_opts.update({
                     'format': 'bestaudio/best',
+                    'postprocessors': [{
+                        'key': 'FFmpegExtractAudio',
+                        'preferredcodec': audio_format,
+                        'preferredquality': '192',
+                    }],
                 })
             else:
                 video_format = request.form['video_format']
@@ -474,43 +434,10 @@ def download():
                     if format == 'audio':
                         file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
                     else:
-                        if video_format == 'mov':
-                            file_path = file_path.replace('.mp4', f'.mp4')
-                        else:
-                            file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
-                        
+                        file_path = file_path.replace('.mp4', f'.{video_format}')
+                    
                     if os.path.exists(file_path):
-                        if format == 'audio' and audio_format == 'mp3':
-                            mp3_file = file_path.replace('.m4a', '.mp3')
-                            if os.path.exists(mp3_file):
-                                os.remove(mp3_file)
-                            convert_command = [
-                                FFMPEG_PATH,
-                                '-y',
-                                '-i', file_path,
-                                '-codec:a', 'libmp3lame',
-                                '-qscale:a', '2',
-                                mp3_file
-                            ]
-                            subprocess.run(convert_command, check=True)
-                            file_to_send = mp3_file
-                        elif format == 'video' and video_format == 'mov':
-                            mov_file = file_path.replace('.mp4', '.mov')
-                            if os.path.exists(mov_file):
-                                os.remove(mov_file)
-                            convert_command = [
-                                FFMPEG_PATH,
-                                '-y',
-                                '-i', file_path,
-                                '-c:v', 'copy',
-                                '-c:a', 'copy',
-                                mov_file
-                            ]
-                            subprocess.run(convert_command, check=True)
-                            file_to_send = mov_file
-                        else:
-                            file_to_send = file_path
-
+                        file_to_send = file_path
                         return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
                     else:
                         flash("File not found after download.")
