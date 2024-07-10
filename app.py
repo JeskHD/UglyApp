@@ -1,5 +1,4 @@
 from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory, jsonify
-from flask_socketio import SocketIO, emit
 import yt_dlp
 import os
 import base64
@@ -15,8 +14,6 @@ app.secret_key = 'your_secret_key'  # Needed for flashing messages
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-socketio = SocketIO(app)
-
 db = SQLAlchemy(app)
 
 # Ensure the downloads directory exists
@@ -24,8 +21,8 @@ DOWNLOADS_DIR = os.path.join(os.getcwd(), 'Downloads')
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
 # Define the path to the ffmpeg and ffprobe executables
-FFMPEG_PATH = os.path.join(os.getcwd(), 'ffmpeg', 'bin', 'ffmpeg.exe')
-FFPROBE_PATH = os.path.join(os.getcwd(), 'ffmpeg', 'bin', 'ffprobe.exe')
+FFMPEG_PATH = r'C:\Users\Windows 11\Desktop\UglyApp\ffmpeg\bin\ffmpeg.exe'
+FFPROBE_PATH = r'C:\Users\Windows 11\Desktop\UglyApp\ffmpeg\bin\ffprobe.exe'
 
 # Example model for demonstration
 class User(db.Model):
@@ -301,16 +298,6 @@ def index():
             }
         }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
-    <script>
-        var socket = io();
-        socket.on('connect', function() {
-            console.log('Connected to server');
-        });
-        socket.on('download_complete', function(data) {
-            alert('Download complete: ' + data.filename);
-        });
-    </script>
 </head>
 <body>
     <div class="topbar">
@@ -381,9 +368,6 @@ def index():
     </div>
 </body>
 </html>
-
-
-
         '''
         return render_template_string(html_content, background_base64=background_base64, font_base64=font_base64)
     except Exception as e:
@@ -453,7 +437,6 @@ def download():
                     file_to_send = latest_file
                 
                 flash(f"Download complete: {os.path.basename(file_to_send)}")
-                socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
                 return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
             else:
                 flash("File not found after download.")
@@ -528,7 +511,6 @@ def download():
                         else:
                             file_to_send = file_path
 
-                        socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
                         return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
                     else:
                         flash("File not found after download.")
@@ -563,4 +545,4 @@ else:
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    socketio.run(app, host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port)
