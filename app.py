@@ -5,7 +5,7 @@ import base64
 import sqlalchemy as sa
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
-import subprocess
+import space_dl  # Importing space_dl library
 import glob
 from collections.abc import MutableMapping  # Updated import
 
@@ -153,7 +153,7 @@ def index():
             margin: 20px 10px;
             font-size: 18px;
             text-align: center;
-            width: 100%;
+            width: 100%.
         }
         .form-container {
             display: flex;
@@ -161,7 +161,7 @@ def index():
             justify-content: center;
             gap: 10px;
             margin-top: 20px;
-            flex-wrap: wrap;
+            flex-wrap: wrap.
         }
         .searchbox {
             width: 300px;
@@ -172,10 +172,10 @@ def index():
             font-family: "Poppins", sans-serif;
             text-align: center;
             border: none;
-            padding-left: 20px;
+            padding-left: 20px.
         }
         .searchbox:hover {
-            border: 1px solid #ff78df;
+            border: 1px solid #ff78df.
         }
         .dropdown1, .dropdown2 {
             height: 38px;
@@ -184,7 +184,7 @@ def index():
             border: none;
             font-family: "Poppins", sans-serif;
             background-color: #ff78df;
-            color: white;
+            color: white.
         }
         .btn1, .btn2 {
             height: 38px;
@@ -194,21 +194,21 @@ def index():
             color: white;
             border: none;
             cursor: pointer;
-            font-family: "Poppins", sans-serif;
+            font-family: "Poppins", sans-serif.
         }
         .btn1:active, .btn2:active {
             color: #fb85df;
-            background-color: #f8a1e4;
+            background-color: #f8a1e4.
         }
         .btn1:hover, .btn2:hover {
-            background-color: #e767c7;
+            background-color: #e767c7.
         }
         .or {
             position: relative;
             top: 15px;
             color: white;
             font-size: 18px;
-            margin: 10px 0;
+            margin: 10px 0.
         }
         .url {
             text-shadow: 0px 3px 5px 0 #c255a7;
@@ -219,13 +219,13 @@ def index():
             text-align: center.
         }
         .sp li:hover {
-            color: #1d9bf0 !important;
+            color: #1d9bf0 !important.
         }
         .ua {
             font-family: 'Porkys';
             color: #f50da1;
             font-size: 40px;
-            text-shadow: 1px 1px 2px #27f1e6;
+            text-shadow: 1px 1px 2px #27f1e6.
         }
         .flashes {
             color: red;
@@ -394,17 +394,12 @@ def download():
 
     try:
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
-            output_template = os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s')
-            command = [
-                'twspace_dl',
-                '-i', url,
-                '-c', cookie_file,
-                '-o', output_template
-            ]
-            subprocess.run(command, check=True)
-            list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
-            latest_file = max(list_of_files, key=os.path.getmtime)
-            return send_file(latest_file, as_attachment=True, download_name=os.path.basename(latest_file))
+            out_dir = os.path.join(DOWNLOADS_DIR)
+            s = space_dl.Space.from_url(url, out_dir, verbose=True, proxies=None)
+            playlist_path = s.playlist_file_path
+            audio_file_path = os.path.join(out_dir, 'space_audio.m4a')
+            s.merge_into_m4a(audio_file_path)
+            return send_file(audio_file_path, as_attachment=True, download_name=os.path.basename(audio_file_path))
 
         else:
             ydl_opts = {
