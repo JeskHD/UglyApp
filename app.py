@@ -21,8 +21,8 @@ DOWNLOADS_DIR = os.path.join(os.getcwd(), 'Downloads')
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
 # Define the path to the ffmpeg and ffprobe executables
-FFMPEG_PATH = os.path.join(os.getcwd(), 'ffmpeg/bin/ffmpeg')
-FFPROBE_PATH = os.path.join(os.getcwd(), 'ffmpeg/bin/ffprobe')
+FFMPEG_PATH = os.path.join(os.getcwd(), 'ffmpeg/bin/ffmpeg.exe')
+FFPROBE_PATH = os.path.join(os.getcwd(), 'ffmpeg/bin/ffprobe.exe')
 
 # Example model for demonstration
 class User(db.Model):
