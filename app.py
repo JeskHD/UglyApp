@@ -406,6 +406,12 @@ def download():
             except subprocess.CalledProcessError as e:
                 flash(f"Error downloading from Twitter Spaces: {str(e)}")
                 return redirect(url_for('index'))
+            except RuntimeError as e:
+                flash(f"Error: {str(e)}")
+                return redirect(url_for('index'))
+            except AttributeError as e:
+                flash(f"Error: {str(e)}")
+                return redirect(url_for('index'))
         else:
             ydl_opts = {
                 'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
