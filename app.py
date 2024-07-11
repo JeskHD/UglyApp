@@ -392,15 +392,19 @@ def download():
                 '-i', url,
                 '-o', output_template
             ]
-            subprocess.run(command, check=True)
-            list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
-            latest_file = max(list_of_files, key=os.path.getmtime)
-            if os.path.exists(latest_file):
-                file_to_send = latest_file
-                flash(f"Download complete: {os.path.basename(file_to_send)}")
-                return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
-            else:
-                flash("File not found after download.")
+            try:
+                subprocess.run(command, check=True)
+                list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
+                latest_file = max(list_of_files, key=os.path.getmtime)
+                if os.path.exists(latest_file):
+                    file_to_send = latest_file
+                    flash(f"Download complete: {os.path.basename(file_to_send)}")
+                    return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
+                else:
+                    flash("File not found after download.")
+                    return redirect(url_for('index'))
+            except subprocess.CalledProcessError as e:
+                flash(f"Error downloading from Twitter Spaces: {str(e)}")
                 return redirect(url_for('index'))
         else:
             ydl_opts = {
@@ -446,11 +450,8 @@ def download():
                 flash(f"Error: {str(e)}")
                 return redirect(url_for('index'))
 
-    except subprocess.CalledProcessError as e:
-        flash(f"Error: {str(e)}")
-        return redirect(url_for('index'))
-    except yt_dlp.utils.DownloadError as e:
-        flash(f"Error: {str(e)}")
+    except Exception as e:
+        flash(f"Unexpected error: {str(e)}")
         return redirect(url_for('index'))
 
 @app.route('/uploads/<path:filename>', methods=['GET', 'POST'])
