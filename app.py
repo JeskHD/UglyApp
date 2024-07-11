@@ -20,10 +20,6 @@ db = SQLAlchemy(app)
 DOWNLOADS_DIR = os.path.join(os.getcwd(), 'Downloads')
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
-# Define the path to the ffmpeg and ffprobe executables
-FFMPEG_PATH = os.path.join(os.getcwd(), 'ffmpeg/bin/ffmpeg.exe')
-FFPROBE_PATH = os.path.join(os.getcwd(), 'ffmpeg/bin/ffprobe.exe')
-
 # Example model for demonstration
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -396,90 +392,38 @@ def download():
         flash("Cookie file not found. Please ensure the cookie file is present and properly formatted.")
         return redirect(url_for('index'))
 
-    # Check if ffmpeg is installed and accessible
-    if not os.path.exists(FFMPEG_PATH):
-        flash(f"FFmpeg not found at {FFMPEG_PATH}. Please ensure ffmpeg is installed and accessible.")
-        return redirect(url_for('index'))
-
     try:
-        if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
-            output_template = os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s')
-            ydl_opts = {
-                'outtmpl': output_template,
-                'cookiefile': cookie_file,
-                'ffmpeg_location': FFMPEG_PATH,
+        output_template = os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s')
+        ydl_opts = {
+            'outtmpl': output_template,
+            'cookiefile': cookie_file,
+        }
+        if format == 'audio':
+            audio_format = request.form['audio_format']
+            ydl_opts.update({
+                'format': 'bestaudio/best',
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
-                    'preferredcodec': request.form['audio_format'] if format == 'audio' else None,
+                    'preferredcodec': audio_format,
                     'preferredquality': '192',
-                    'nopostoverwrites': False,
                 }],
-            }
-            if format == 'audio':
-                audio_format = request.form['audio_format']
-                ydl_opts.update({
-                    'format': 'bestaudio/best',
-                })
-            else:
-                video_format = request.form['video_format']
-                ydl_opts.update({
-                    'format': 'bestvideo+bestaudio/best',
-                    'merge_output_format': 'mp4'
-                })
+            })
+        else:
+            video_format = request.form['video_format']
+            ydl_opts.update({
+                'format': 'bestvideo+bestaudio/best',
+                'merge_output_format': video_format,
+            })
 
-            try:
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    info_dict = ydl.extract_info(url, download=True)
-                    file_path = ydl.prepare_filename(info_dict)
-                    
-                    if format == 'audio':
-                        file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
-                    else:
-                        if video_format == 'mov':
-                            file_path = file_path.replace('.mp4', f'.mov')
-                        else:
-                            file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
-                    
-                    if os.path.exists(file_path):
-                        if format == 'audio' and audio_format == 'mp3':
-                            mp3_file = file_path.replace('.m4a', '.mp3')
-                            if os.path.exists(mp3_file):
-                                os.remove(mp3_file)
-                            convert_command = [
-                                FFMPEG_PATH,
-                                '-y',
-                                '-i', file_path,
-                                '-codec:a', 'libmp3lame',
-                                '-qscale:a', '2',
-                                mp3_file
-                            ]
-                            subprocess.run(convert_command, check=True)
-                            file_to_send = mp3_file
-                        elif format == 'video' and video_format == 'mov':
-                            mov_file = file_path.replace('.mp4', '.mov')
-                            if os.path.exists(mov_file):
-                                os.remove(mov_file)
-                            convert_command = [
-                                FFMPEG_PATH,
-                                '-y',
-                                '-i', file_path,
-                                '-c:v', 'copy',
-                                '-c:a', 'copy',
-                                mov_file
-                            ]
-                            subprocess.run(convert_command, check=True)
-                            file_to_send = mov_file
-                        else:
-                            file_to_send = file_path
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info_dict = ydl.extract_info(url, download=True)
+                file_path = ydl.prepare_filename(info_dict)
 
-                        return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
-                    else:
-                        flash("File not found after download.")
-                        return redirect(url_for('index'))
-
-            except yt_dlp.utils.DownloadError as e:
-                flash(f"Error: {str(e)}")
-                return redirect(url_for('index'))
+                return send_file(file_path, as_attachment=True, download_name=os.path.basename(file_path))
+        except yt_dlp.utils.DownloadError as e:
+            flash(f"Error: {str(e)}")
+            return redirect(url_for('index'))
 
     except subprocess.CalledProcessError as e:
         flash(f"Error: {str(e)}")
