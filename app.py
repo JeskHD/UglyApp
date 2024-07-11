@@ -1,11 +1,14 @@
-from io import BytesIO
-from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash
+# Flask and other necessary imports
+from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory
 import yt_dlp
 import os
 import base64
 import sqlalchemy as sa
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
+import subprocess
+import glob
+import shutil
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
@@ -18,11 +21,10 @@ db = SQLAlchemy(app)
 DOWNLOADS_DIR = os.path.join(os.path.expanduser("~"), 'Downloads')
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
-# Create table for file uploads
-class Upload(db.Model):
+# Example model for demonstration
+class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    filename = db.Column(db.String(50))
-    data = db.Column(db.LargeBinary)
+    name = db.Column(db.String(80), unique=True, nullable=False)
 
 # Function to read and encode image files to base64
 def get_base64_image(filepath):
@@ -52,25 +54,21 @@ def index():
             <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
             <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-
             <style>
                 @font-face {
                     font-family: 'Porkys';
                     src: url(data:font/ttf;base64,{{ font_base64 }}) format('truetype');
                 }
-
                 * {
                     box-sizing: border-box;
                     margin: 0;
                     padding: 0;
                 }
-
                 body {
                     font-family: "Poppins", sans-serif;
                     width: 100%;
                     overflow-x: hidden;
                 }
-
                 .topbar {
                     font-family: "Montserrat", "Poppins", "Avenir";
                     width: 100%;
@@ -83,13 +81,11 @@ def index():
                     top: 1px;
                     z-index: 1000; /* Ensure topbar is above other content */
                 }
-
                 .topbar nav {
                     display: flex;
                     align-items: center;
                     width: 100%;
                 }
-
                 .topbar .menu-toggle {
                     display: none;
                     font-size: 24px;
@@ -103,7 +99,6 @@ def index():
                     top: 565px;
                     right: 575px;
                 }
-
                 .topbar ul {
                     list-style-type: none;
                     padding: 0;
@@ -113,29 +108,24 @@ def index():
                     position: absolute;
                     right: 50px;
                 }
-
                 .topbar ul li {
                     color: white;
                 }
-
                 .topbar ul li:hover {
                     color: rgb(255, 120, 223);
                     cursor: grab;
                 }
-
                 .poppins-medium-italic {
                     font-family: "Poppins", sans-serif;
                     font-weight: 500;
                     font-style: italic;
                 }
-
                 .topbar img {
                     height: 65px;
                     width: auto;
                     position: relative;
                     top: 2px;
                 }
-
                 .bimage {
                     background: linear-gradient(rgba(255, 7, 156, 0.585), rgba(104, 97, 97, 0.5)), url("data:image/gif;base64,{{ background_base64 }}");
                     height: 800px;
@@ -150,11 +140,9 @@ def index():
                     text-align: center;
                     padding-top: 70px; /* Ensure content is not overlapped by topbar */
                 }
-
                 .Wrapper {
                     text-align: center;
                 }
-
                 .UglyStay {
                     position: fixed;
                     top: 225px;
@@ -164,14 +152,12 @@ def index():
                     font-weight: 800;
                     font-style: italic;
                 }
-
                 .uglydesc {
                     position: fixed;
                     top: 310px;
                     left: 240px;
                     color: whitesmoke;
                 }
-
                 .form-container {
                     display: flex;
                     align-items: center;
@@ -179,7 +165,6 @@ def index():
                     gap: 10px;
                     margin-top: 20px;
                 }
-
                 .searchbox {
                     width: 300px;
                     height: 40px;
@@ -191,11 +176,9 @@ def index():
                     border: none;
                     padding-left: 20px;
                 }
-
                 .searchbox:hover {
                     border: 1px solid #ff78df;
                 }
-
                 .dropdown1, .dropdown2 {
                     height: 38px;
                     border-radius: 0;
@@ -205,7 +188,6 @@ def index():
                     background-color: #ff78df;
                     color: white;
                 }
-
                 .btn1, .btn2 {
                     height: 38px;
                     border-radius: 0 50px 50px 0;
@@ -216,22 +198,18 @@ def index():
                     cursor: pointer;
                     font-family: "Poppins", sans-serif;
                 }
-
                 .btn1:active, .btn2:active {
                     color: #fb85df;
                     background-color: #f8a1e4;
                 }
-
                 .btn1:hover, .btn2:hover {
                     background-color: #e767c7;
                 }
-
                 .or {
                     position: relative;
                     top: 15px;
                     color: white;
                 }
-
                 .url {
                     position: absolute;
                     top: 540px;
@@ -240,25 +218,21 @@ def index():
                     color: white;
                     font-size: 11px;
                 }
-
                 .sp li:hover {
                     color: #1d9bf0 !important;
                 }
-
                 .ua {
                     font-family: 'Porkys';
                     color: #f50da1;
                     font-size: 40px;
                     text-shadow: 1px 1px 2px #27f1e6;
                 }
-
                 .flashes {
                     color: red;
                     list-style: none;
                     text-align: center;
                     margin-top: 10px;
                 }
-
                 /* Responsive Design */
                 @media (max-width: 800px) {
                     .topbar {
@@ -266,11 +240,9 @@ def index():
                         align-items: center;
                         padding: 10px 10px;
                     }
-
                     .topbar .menu-toggle {
                         display: block;
                     }
-
                     .topbar ul {
                         display: none;
                         flex-direction: column;
@@ -278,7 +250,6 @@ def index():
                         width: 100%;
                         margin-top: 10px;
                     }
-
                     .topbar ul.active {
                         display: flex;
                         font-size: 10px;
@@ -292,17 +263,14 @@ def index():
                         width: 200px;
                         padding: 10px;
                     }
-
                     .topbar h2 {
                         font-size: 24px;
                     }
-
                     .UglyStay {
                         font-size: 30px;
                         top: 110px;
                         right: 40px;
                     }
-
                     .uglydesc {
                         position: absolute;
                         top: 200px;
@@ -310,18 +278,15 @@ def index():
                         right: 10px;
                         font-size: 14px;
                     }
-
                     .form-container {
                         flex-direction: column;
                         align-items: center;
                     }
-
                     .searchbox, .dropdown1, .dropdown2, .btn1, .btn2 {
                         width: 100%;
                         margin-bottom: 10px;
                         position: relative;
                     }
-
                     .url {
                         top: 650px;
                         left: 50%;
@@ -419,46 +384,70 @@ def download():
     if not is_valid_url(url):
         flash("Invalid URL. Please enter a valid URL.")
         return redirect(url_for('index'))
-    
-    ydl_opts = {
-        'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
-        'cookiefile': 'cookies_netscape.txt'
-    }
-
-    if format == 'audio':
-        audio_format = request.form['audio_format']
-        ydl_opts.update({
-            'format': 'bestaudio/best',
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': audio_format,
-                'preferredquality': '192',
-            }]
-        })
-    else:
-        video_format = request.form['video_format']
-        ydl_opts.update({
-            'format': f'bestvideo+bestaudio/best' if video_format == 'mp4' else f'best[ext={video_format}]',
-            'merge_output_format': video_format
-        })
 
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(url, download=True)
-            file_path = ydl.prepare_filename(info_dict)
-            
-            # Ensure the correct extension for audio and video files
-            if format == 'audio':
-                file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
-            else:
-                file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
-                
-            if os.path.exists(file_path):
-                return send_file(file_path, as_attachment=True, download_name=os.path.basename(file_path))
+        if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
+            cookie_file = 'cookies_netscape.txt'
+            output_template = os.path.join(DOWNLOADS_DIR, 'downloaded_file')
+            command = [
+                'twspace_dl',
+                '-i', url,
+                '-c', cookie_file,
+                '-o', output_template
+            ]
+            subprocess.run(command, check=True)
+            # Find the most recently modified file in the DOWNLOADS_DIR
+            list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
+            latest_file = max(list_of_files, key=os.path.getmtime)
+            if os.path.exists(latest_file):
+                # Notify the user via flash message
+                flash(f"Download complete: {os.path.basename(latest_file)}")
+                return send_file(latest_file, as_attachment=True, download_name=os.path.basename(latest_file))
             else:
                 flash("File not found after download.")
                 return redirect(url_for('index'))
+        else:
+            ydl_opts = {
+                'outtmpl': os.path.join(DOWNLOADS_DIR, 'downloaded_file'),
+                'cookiefile': 'cookies_netscape.txt'
+            }
+            if format == 'audio':
+                audio_format = request.form['audio_format']
+                ydl_opts.update({
+                    'format': 'bestaudio/best',
+                    'postprocessors': [{
+                        'key': 'FFmpegExtractAudio',
+                        'preferredcodec': audio_format,
+                        'preferredquality': '192',
+                    }]
+                })
+            else:
+                video_format = request.form['video_format']
+                ydl_opts.update({
+                    'format': f'bestvideo+bestaudio/best' if video_format == 'mp4' else f'best[ext={video_format}]',
+                    'merge_output_format': video_format
+                })
 
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info_dict = ydl.extract_info(url, download=True)
+                file_path = ydl.prepare_filename(info_dict)
+
+                # Manually rename the file to the correct extension
+                if format == 'audio':
+                    new_file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
+                else:
+                    new_file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
+                
+                if os.path.exists(file_path):
+                    shutil.move(file_path, new_file_path)
+                    flash(f"Download complete: {os.path.basename(new_file_path)}")
+                    return send_file(new_file_path, as_attachment=True, download_name=os.path.basename(new_file_path))
+                else:
+                    flash("File not found after download.")
+                    return redirect(url_for('index'))
+    except subprocess.CalledProcessError as e:
+        flash(f"Error: {str(e)}")
+        return redirect(url_for('index'))
     except yt_dlp.utils.DownloadError as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
@@ -467,21 +456,6 @@ def download():
 def upload(filename):
     uploads = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
     return send_from_directory(uploads, filename)
-
-@app.route('/file_upload', methods=['GET', 'POST'])
-def file_upload():
-    if request.method == 'POST':
-        file = request.files['file']
-        upload = Upload(filename=file.filename, data=file.read())
-        db.session.add(upload)
-        db.session.commit()
-        return f'Uploaded: {file.filename}'
-    return render_template('index.html')
-
-@app.route('/file_download/<upload_id>')
-def file_download(upload_id):
-    upload = Upload.query.filter_by(id=upload_id).first()
-    return send_file(BytesIO(upload.data), download_name=upload.filename, as_attachment=True)
 
 # Database initialization logic for Render
 engine = sa.create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
