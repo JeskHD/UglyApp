@@ -384,69 +384,25 @@ def download():
     format = request.form['format']
 
     url = audio_url if format == 'audio' else video_url
-    
+
     if not is_valid_url(url):
         flash("Invalid URL. Please enter a valid URL.")
         return redirect(url_for('index'))
 
+    cookie_file = 'cookies_netscape.txt'  # Keep the cookie file path as provided
+
+    # Check if cookie file exists
+    if not os.path.exists(cookie_file):
+        flash("Cookie file not found. Please ensure the cookie file is present and properly formatted.")
+        return redirect(url_for('index'))
+
     try:
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
-            cookie_file = 'cookies_netscape.txt'
-            output_template = os.path.join(DOWNLOADS_DIR, '%(title)s')
-            command = [
-                'twspace_dl',
-                '-i', url,
-                '-c', cookie_file,
-                '-o', output_template
-            ]
-            subprocess.run(command, check=True)
-            list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
-            latest_file = max(list_of_files, key=os.path.getmtime)
-            if os.path.exists(latest_file):
-                if format == 'audio' and request.form['audio_format'] == 'm4a':
-                    file_to_send = latest_file
-                elif format == 'audio' and request.form['audio_format'] == 'mp3':
-                    mp3_file = latest_file.replace('.m4a', '.mp3')
-                    if os.path.exists(mp3_file):
-                        os.remove(mp3_file)
-                    convert_command = [
-                        FFMPEG_PATH,
-                        '-y',
-                        '-i', latest_file,
-                        '-codec:a', 'libmp3lame',
-                        '-qscale:a', '2',
-                        mp3_file
-                    ]
-                    subprocess.run(convert_command, check=True)
-                    file_to_send = mp3_file
-                elif format == 'video' and request.form['video_format'] == 'mov':
-                    mov_file = latest_file.replace('.mp4', '.mov')
-                    if os.path.exists(mov_file):
-                        os.remove(mov_file)
-                    convert_command = [
-                        FFMPEG_PATH,
-                        '-y',
-                        '-i', latest_file,
-                        '-c:v', 'copy',
-                        '-c:a', 'copy',
-                        mov_file
-                    ]
-                    subprocess.run(convert_command, check=True)
-                    file_to_send = mov_file
-                else:
-                    file_to_send = latest_file
-                
-                flash(f"Download complete: {os.path.basename(file_to_send)}")
-                return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
-            else:
-                flash("File not found after download.")
-                return redirect(url_for('index'))
-        else:
+            output_template = os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s')
             ydl_opts = {
-                'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
-                'cookiefile': 'cookies_netscape.txt',
-                'hls_use_mpegts': True,  # Ensure HLS processing for all formats
-                'ffmpeg_location': FFMPEG_PATH,  # Specify ffmpeg path
+                'outtmpl': output_template,
+                'cookiefile': cookie_file,
+                'ffmpeg_location': FFMPEG_PATH,
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': request.form['audio_format'] if format == 'audio' else None,
@@ -475,10 +431,10 @@ def download():
                         file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
                     else:
                         if video_format == 'mov':
-                            file_path = file_path.replace('.mp4', f'.mp4')
+                            file_path = file_path.replace('.mp4', f'.mov')
                         else:
                             file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
-                        
+                    
                     if os.path.exists(file_path):
                         if format == 'audio' and audio_format == 'mp3':
                             mp3_file = file_path.replace('.m4a', '.mp3')
