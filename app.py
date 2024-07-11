@@ -1,6 +1,6 @@
+import os
 from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory, jsonify
 import yt_dlp
-import os
 import base64
 import sqlalchemy as sa
 from flask_sqlalchemy import SQLAlchemy
@@ -21,8 +21,8 @@ DOWNLOADS_DIR = os.path.join(os.getcwd(), 'Downloads')
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
 # Define the path to the ffmpeg and ffprobe executables
-FFMPEG_PATH = r'C:\Users\Windows 11\Desktop\UglyApp\ffmpeg\bin\ffmpeg.exe'
-FFPROBE_PATH = r'C:\Users\Windows 11\Desktop\UglyApp\ffmpeg\bin\ffprobe.exe'
+FFMPEG_PATH = os.path.join(os.getcwd(), 'bin/ffmpeg/ffmpeg')
+FFPROBE_PATH = os.path.join(os.getcwd(), 'bin/ffmpeg/ffprobe')
 
 # Example model for demonstration
 class User(db.Model):
@@ -220,7 +220,7 @@ def index():
             font-size: 14px;
             margin-top: 10px;
             width: 100%;
-            text-align: center;
+            text-align: center.
         }
         .sp li:hover {
             color: #1d9bf0 !important;
@@ -235,24 +235,24 @@ def index():
             color: red;
             list-style: none;
             text-align: center;
-            margin-top: 10px;
+            margin-top: 10px.
         }
         /* Responsive Design */
         @media (max-width: 800px) {
             .topbar {
                 flex-direction: row;
                 align-items: center;
-                padding: 10px 10px;
+                padding: 10px 10px.
             }
             .topbar .menu-toggle {
-                display: block;
+                display: block.
             }
             .topbar ul {
                 display: none;
                 flex-direction: column;
                 align-items: center;
                 width: 100%;
-                margin-top: 10px;
+                margin-top: 10px.
             }
             .topbar ul.active {
                 display: flex;
@@ -265,36 +265,36 @@ def index():
                 right: 10px;
                 top: 60px;
                 width: 200px;
-                padding: 10px;
+                padding: 10px.
             }
             .topbar h2 {
-                font-size: 24px;
+                font-size: 24px.
             }
             .UglyStay {
                 font-size: 30px;
                 margin-top: 1px;
-                text-align: center;
+                text-align: center.
             }
             .uglydesc {
                 font-size: 16px;
                 margin: 20px 20px;
-                text-align: center;
+                text-align: center.
             }
             .form-container {
                 flex-direction: column;
-                align-items: center;
+                align-items: center.
             }
             .searchbox, .dropdown1, .dropdown2, .btn1, .btn2 {
                 width: 100%;
-                margin-bottom: 10px;
+                margin-bottom: 10px.
             }
             .or {
                 top: 0;
-                margin: 10px 0;
+                margin: 10px 0.
             }
             .url {
                 margin-top: 20px;
-                text-align: center;
+                text-align: center.
             }
         }
     </style>
@@ -394,6 +394,11 @@ def download():
     # Check if cookie file exists
     if not os.path.exists(cookie_file):
         flash("Cookie file not found. Please ensure the cookie file is present and properly formatted.")
+        return redirect(url_for('index'))
+
+    # Check if ffmpeg is installed and accessible
+    if not os.path.exists(FFMPEG_PATH):
+        flash(f"FFmpeg not found at {FFMPEG_PATH}. Please ensure ffmpeg is installed and accessible.")
         return redirect(url_for('index'))
 
     try:
