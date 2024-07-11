@@ -5,9 +5,11 @@ import base64
 import sqlalchemy as sa
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
-import space_dl  # Importing space_dl library
 import glob
+from pathlib import Path  # Updated to use pathlib
 from collections.abc import MutableMapping  # Updated import
+import space_dl
+import subprocess
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
@@ -17,8 +19,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # Ensure the downloads directory exists
-DOWNLOADS_DIR = os.path.join(os.getcwd(), 'Downloads')
-os.makedirs(DOWNLOADS_DIR, exist_ok=True)
+DOWNLOADS_DIR = Path(os.getcwd()) / 'Downloads'
+DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 # Example model for demonstration
 class User(db.Model):
@@ -146,7 +148,7 @@ def index():
             font-style: italic;
             margin: 0 20px;
             text-align: center;
-            width: 100%;
+            width: 100%.
         }
         .uglydesc {
             color: whitesmoke;
@@ -394,10 +396,10 @@ def download():
 
     try:
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
-            out_dir = os.path.join(DOWNLOADS_DIR)
+            out_dir = DOWNLOADS_DIR
             s = space_dl.Space.from_url(url, out_dir, verbose=True, proxies=None)
             playlist_path = s.playlist_file_path
-            audio_file_path = os.path.join(out_dir, 'space_audio.m4a')
+            audio_file_path = out_dir / 'space_audio.m4a'
             s.merge_into_m4a(audio_file_path)
             return send_file(audio_file_path, as_attachment=True, download_name=os.path.basename(audio_file_path))
 
@@ -410,11 +412,6 @@ def download():
                 audio_format = request.form['audio_format']
                 ydl_opts.update({
                     'format': 'bestaudio/best',
-                    'postprocessors': [{
-                        'key': 'FFmpegExtractAudio',
-                        'preferredcodec': audio_format,
-                        'preferredquality': '192',
-                    }],
                 })
             else:
                 video_format = request.form['video_format']
@@ -429,7 +426,7 @@ def download():
 
                 return send_file(file_path, as_attachment=True, download_name=os.path.basename(file_path))
 
-    except subprocess.CalledProcessError as e:
+    except space_dl.exceptions.SpaceDLException as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
     except yt_dlp.utils.DownloadError as e:
