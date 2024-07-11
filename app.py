@@ -398,6 +398,9 @@ def download():
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
             out_dir = DOWNLOADS_DIR
             s = space_dl.Space.from_url(url, out_dir, verbose=True, proxies=None)
+            if s is None:
+                flash("Failed to create Space object from URL.")
+                return redirect(url_for('index'))
             playlist_path = s.playlist_file_path
             audio_file_path = out_dir / 'space_audio.m4a'
             s.merge_into_m4a(audio_file_path)
@@ -412,6 +415,11 @@ def download():
                 audio_format = request.form['audio_format']
                 ydl_opts.update({
                     'format': 'bestaudio/best',
+                    'postprocessors': [{
+                        'key': 'FFmpegExtractAudio',
+                        'preferredcodec': audio_format,
+                        'preferredquality': '192',
+                    }],
                 })
             else:
                 video_format = request.form['video_format']
@@ -426,10 +434,7 @@ def download():
 
                 return send_file(file_path, as_attachment=True, download_name=os.path.basename(file_path))
 
-    except space_dl.exceptions.SpaceDLException as e:
-        flash(f"Error: {str(e)}")
-        return redirect(url_for('index'))
-    except yt_dlp.utils.DownloadError as e:
+    except Exception as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
 
