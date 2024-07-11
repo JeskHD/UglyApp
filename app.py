@@ -393,37 +393,46 @@ def download():
         return redirect(url_for('index'))
 
     try:
-        output_template = os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s')
-        ydl_opts = {
-            'outtmpl': output_template,
-            'cookiefile': cookie_file,
-        }
-        if format == 'audio':
-            audio_format = request.form['audio_format']
-            ydl_opts.update({
-                'format': 'bestaudio/best',
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': audio_format,
-                    'preferredquality': '192',
-                }],
-            })
-        else:
-            video_format = request.form['video_format']
-            ydl_opts.update({
-                'format': 'bestvideo+bestaudio/best',
-                'merge_output_format': video_format,
-            })
+        if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
+            output_template = os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s')
+            command = [
+                'twspace_dl',
+                '-i', url,
+                '-c', cookie_file,
+                '-o', output_template
+            ]
+            subprocess.run(command, check=True)
+            list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
+            latest_file = max(list_of_files, key=os.path.getmtime)
+            return send_file(latest_file, as_attachment=True, download_name=os.path.basename(latest_file))
 
-        try:
+        else:
+            ydl_opts = {
+                'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
+                'cookiefile': cookie_file,
+            }
+            if format == 'audio':
+                audio_format = request.form['audio_format']
+                ydl_opts.update({
+                    'format': 'bestaudio/best',
+                    'postprocessors': [{
+                        'key': 'FFmpegExtractAudio',
+                        'preferredcodec': audio_format,
+                        'preferredquality': '192',
+                    }],
+                })
+            else:
+                video_format = request.form['video_format']
+                ydl_opts.update({
+                    'format': 'bestvideo+bestaudio/best',
+                    'merge_output_format': video_format,
+                })
+
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info_dict = ydl.extract_info(url, download=True)
                 file_path = ydl.prepare_filename(info_dict)
 
                 return send_file(file_path, as_attachment=True, download_name=os.path.basename(file_path))
-        except yt_dlp.utils.DownloadError as e:
-            flash(f"Error: {str(e)}")
-            return redirect(url_for('index'))
 
     except subprocess.CalledProcessError as e:
         flash(f"Error: {str(e)}")
