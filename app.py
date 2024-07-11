@@ -1,14 +1,13 @@
-import os
 from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory, jsonify
 import yt_dlp
+import os
 import base64
 import sqlalchemy as sa
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
+import subprocess
 import glob
-from pathlib import Path  # Updated to use pathlib
 from collections.abc import MutableMapping  # Updated import
-import subprocess  # Necessary for calling external processes
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
@@ -18,8 +17,12 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # Ensure the downloads directory exists
-DOWNLOADS_DIR = Path(os.getcwd()) / 'Downloads'
-DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
+DOWNLOADS_DIR = os.path.join(os.getcwd(), 'Downloads')
+os.makedirs(DOWNLOADS_DIR, exist_ok=True)
+
+# Define the path to the ffmpeg and ffprobe executables
+FFMPEG_PATH = r'C:\Users\Windows 11\Desktop\UglyApp\ffmpeg\bin\ffmpeg.exe'
+FFPROBE_PATH = r'C:\Users\Windows 11\Desktop\UglyApp\ffmpeg\bin\ffprobe.exe'
 
 # Example model for demonstration
 class User(db.Model):
@@ -381,59 +384,141 @@ def download():
     format = request.form['format']
 
     url = audio_url if format == 'audio' else video_url
-
+    
     if not is_valid_url(url):
         flash("Invalid URL. Please enter a valid URL.")
         return redirect(url_for('index'))
 
-    cookie_file = 'cookies_netscape.txt'  # Keep the cookie file path as provided
-
-    # Check if cookie file exists
-    if not os.path.exists(cookie_file):
-        flash("Cookie file not found. Please ensure the cookie file is present and properly formatted.")
-        return redirect(url_for('index'))
-
     try:
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
-            out_dir = DOWNLOADS_DIR
+            cookie_file = 'cookies_netscape.txt'
+            output_template = os.path.join(DOWNLOADS_DIR, '%(title)s')
             command = [
-                "python3", "tslazer.py",
-                "--space_id", url,
-                "--cookies", cookie_file,
-                "--path", str(out_dir),
-                "--fileformat", "%St_%Ud"
+                'twspace_dl',
+                '-i', url,
+                '-c', cookie_file,
+                '-o', output_template
             ]
             subprocess.run(command, check=True)
-            audio_file_path = list(out_dir.glob("*.m4a"))[0]  # Assuming the output is m4a file
-            return send_file(audio_file_path, as_attachment=True, download_name=audio_file_path.name)
-
+            list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
+            latest_file = max(list_of_files, key=os.path.getmtime)
+            if os.path.exists(latest_file):
+                if format == 'audio' and request.form['audio_format'] == 'm4a':
+                    file_to_send = latest_file
+                elif format == 'audio' and request.form['audio_format'] == 'mp3':
+                    mp3_file = latest_file.replace('.m4a', '.mp3')
+                    if os.path.exists(mp3_file):
+                        os.remove(mp3_file)
+                    convert_command = [
+                        FFMPEG_PATH,
+                        '-y',
+                        '-i', latest_file,
+                        '-codec:a', 'libmp3lame',
+                        '-qscale:a', '2',
+                        mp3_file
+                    ]
+                    subprocess.run(convert_command, check=True)
+                    file_to_send = mp3_file
+                elif format == 'video' and request.form['video_format'] == 'mov':
+                    mov_file = latest_file.replace('.mp4', '.mov')
+                    if os.path.exists(mov_file):
+                        os.remove(mov_file)
+                    convert_command = [
+                        FFMPEG_PATH,
+                        '-y',
+                        '-i', latest_file,
+                        '-c:v', 'copy',
+                        '-c:a', 'copy',
+                        mov_file
+                    ]
+                    subprocess.run(convert_command, check=True)
+                    file_to_send = mov_file
+                else:
+                    file_to_send = latest_file
+                
+                flash(f"Download complete: {os.path.basename(file_to_send)}")
+                return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
+            else:
+                flash("File not found after download.")
+                return redirect(url_for('index'))
         else:
             ydl_opts = {
                 'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
-                'cookiefile': cookie_file,
+                'cookiefile': 'cookies_netscape.txt',
+                'hls_use_mpegts': True,  # Ensure HLS processing for all formats
+                'ffmpeg_location': FFMPEG_PATH,  # Specify ffmpeg path
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': request.form['audio_format'] if format == 'audio' else None,
+                    'preferredquality': '192',
+                    'nopostoverwrites': False,
+                }],
             }
             if format == 'audio':
                 audio_format = request.form['audio_format']
                 ydl_opts.update({
                     'format': 'bestaudio/best',
-                    'postprocessors': [{
-                        'key': 'FFmpegExtractAudio',
-                        'preferredcodec': audio_format,
-                        'preferredquality': '192',
-                    }],
                 })
             else:
                 video_format = request.form['video_format']
                 ydl_opts.update({
                     'format': 'bestvideo+bestaudio/best',
-                    'merge_output_format': video_format,
+                    'merge_output_format': 'mp4'
                 })
 
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info_dict = ydl.extract_info(url, download=True)
-                file_path = ydl.prepare_filename(info_dict)
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info_dict = ydl.extract_info(url, download=True)
+                    file_path = ydl.prepare_filename(info_dict)
+                    
+                    if format == 'audio':
+                        file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
+                    else:
+                        if video_format == 'mov':
+                            file_path = file_path.replace('.mp4', f'.mp4')
+                        else:
+                            file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
+                        
+                    if os.path.exists(file_path):
+                        if format == 'audio' and audio_format == 'mp3':
+                            mp3_file = file_path.replace('.m4a', '.mp3')
+                            if os.path.exists(mp3_file):
+                                os.remove(mp3_file)
+                            convert_command = [
+                                FFMPEG_PATH,
+                                '-y',
+                                '-i', file_path,
+                                '-codec:a', 'libmp3lame',
+                                '-qscale:a', '2',
+                                mp3_file
+                            ]
+                            subprocess.run(convert_command, check=True)
+                            file_to_send = mp3_file
+                        elif format == 'video' and video_format == 'mov':
+                            mov_file = file_path.replace('.mp4', '.mov')
+                            if os.path.exists(mov_file):
+                                os.remove(mov_file)
+                            convert_command = [
+                                FFMPEG_PATH,
+                                '-y',
+                                '-i', file_path,
+                                '-c:v', 'copy',
+                                '-c:a', 'copy',
+                                mov_file
+                            ]
+                            subprocess.run(convert_command, check=True)
+                            file_to_send = mov_file
+                        else:
+                            file_to_send = file_path
 
-                return send_file(file_path, as_attachment=True, download_name=os.path.basename(file_path))
+                        return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
+                    else:
+                        flash("File not found after download.")
+                        return redirect(url_for('index'))
+
+            except yt_dlp.utils.DownloadError as e:
+                flash(f"Error: {str(e)}")
+                return redirect(url_for('index'))
 
     except subprocess.CalledProcessError as e:
         flash(f"Error: {str(e)}")
