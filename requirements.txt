@@ -30,3 +30,4 @@ redis
 twspace_dl==2021.12.15.0
 flask_socketio==5.3.2
 space_dl
+pymediainfo
