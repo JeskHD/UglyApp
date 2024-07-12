@@ -6,7 +6,6 @@ import base64
 import sqlalchemy as sa
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
-import subprocess
 import glob
 from collections.abc import MutableMapping  # Updated import
 
@@ -64,7 +63,7 @@ def index():
                 * {
                     box-sizing: border-box;
                     margin: 0;
-                    padding: 0;
+                    padding: 0.
                 }
                 body {
                     font-family: "Poppins", sans-serif;
@@ -86,7 +85,7 @@ def index():
                 .topbar nav {
                     display: flex;
                     align-items: center;
-                    width: 100%;
+                    width: 100%.
                 }
                 .topbar .menu-toggle {
                     display: none;
@@ -94,12 +93,12 @@ def index():
                     color: white;
                     cursor: pointer;
                     position: absolute;
-                    right: 40px;
+                    right: 40px.
                 }
                 .message {
                     position: absolute;
                     top: 565px;
-                    right: 575px;
+                    right: 575px.
                 }
                 .topbar ul {
                     list-style-type: none;
@@ -108,25 +107,25 @@ def index():
                     display: flex;
                     gap: 20px;
                     position: absolute;
-                    right: 50px;
+                    right: 50px.
                 }
                 .topbar ul li {
-                    color: white;
+                    color: white.
                 }
                 .topbar ul li:hover {
                     color: rgb(255, 120, 223);
-                    cursor: grab;
+                    cursor: grab.
                 }
                 .poppins-medium-italic {
                     font-family: "Poppins", sans-serif;
                     font-weight: 500;
-                    font-style: italic;
+                    font-style: italic.
                 }
                 .topbar img {
                     height: 65px;
                     width: auto;
                     position: relative;
-                    top: 2px;
+                    top: 2px.
                 }
                 .bimage {
                     background: linear-gradient(rgba(255, 7, 156, 0.585), rgba(104, 97, 97, 0.5)), url("data:image/gif;base64,{{ background_base64 }}");
@@ -143,7 +142,7 @@ def index():
                     padding-top: 70px; /* Ensure content is not overlapped by topbar */
                 }
                 .Wrapper {
-                    text-align: center;
+                    text-align: center.
                 }
                 .UglyStay {
                     position: fixed;
@@ -152,20 +151,20 @@ def index():
                     color: rgb(255, 136, 237);
                     font-size: 50px;
                     font-weight: 800;
-                    font-style: italic;
+                    font-style: italic.
                 }
                 .uglydesc {
                     position: fixed;
                     top: 310px;
                     left: 240px;
-                    color: whitesmoke;
+                    color: whitesmoke.
                 }
                 .form-container {
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     gap: 10px;
-                    margin-top: 20px;
+                    margin-top: 20px.
                 }
                 .searchbox {
                     width: 300px;
@@ -176,10 +175,10 @@ def index():
                     font-family: "Poppins", sans-serif;
                     text-align: center;
                     border: none;
-                    padding-left: 20px;
+                    padding-left: 20px.
                 }
                 .searchbox:hover {
-                    border: 1px solid #ff78df;
+                    border: 1px solid #ff78df.
                 }
                 .dropdown1, .dropdown2 {
                     height: 38px;
@@ -188,7 +187,7 @@ def index():
                     border: none;
                     font-family: "Poppins", sans-serif;
                     background-color: #ff78df;
-                    color: white;
+                    color: white.
                 }
                 .btn1, .btn2 {
                     height: 38px;
@@ -198,19 +197,19 @@ def index():
                     color: white;
                     border: none;
                     cursor: pointer;
-                    font-family: "Poppins", sans-serif;
+                    font-family: "Poppins", sans-serif.
                 }
                 .btn1:active, .btn2:active {
                     color: #fb85df;
-                    background-color: #f8a1e4;
+                    background-color: #f8a1e4.
                 }
                 .btn1:hover, .btn2:hover {
-                    background-color: #e767c7;
+                    background-color: #e767c7.
                 }
                 .or {
                     position: relative;
                     top: 15px;
-                    color: white;
+                    color: white.
                 }
                 .url {
                     position: absolute;
@@ -218,39 +217,39 @@ def index():
                     left: 555px;
                     text-shadow: 0px 3px 5px 0 #c255a7;
                     color: white;
-                    font-size: 11px;
+                    font-size: 11px.
                 }
                 .sp li:hover {
-                    color: #1d9bf0 !important;
+                    color: #1d9bf0 !important.
                 }
                 .ua {
                     font-family: 'Porkys';
                     color: #f50da1;
                     font-size: 40px;
-                    text-shadow: 1px 1px 2px #27f1e6;
+                    text-shadow: 1px 1px 2px #27f1e6.
                 }
                 .flashes {
                     color: red;
                     list-style: none;
                     text-align: center;
-                    margin-top: 10px;
+                    margin-top: 10px.
                 }
                 /* Responsive Design */
                 @media (max-width: 800px) {
                     .topbar {
                         flex-direction: row;
                         align-items: center;
-                        padding: 10px 10px;
+                        padding: 10px 10px.
                     }
                     .topbar .menu-toggle {
-                        display: block;
+                        display: block.
                     }
                     .topbar ul {
                         display: none;
                         flex-direction: column;
                         align-items: center;
                         width: 100%;
-                        margin-top: 10px;
+                        margin-top: 10px.
                     }
                     .topbar ul.active {
                         display: flex;
@@ -263,36 +262,36 @@ def index():
                         right: 10px;
                         top: 60px;
                         width: 200px;
-                        padding: 10px;
+                        padding: 10px.
                     }
                     .topbar h2 {
-                        font-size: 24px;
+                        font-size: 24px.
                     }
                     .UglyStay {
                         font-size: 30px;
                         top: 110px;
-                        right: 40px;
+                        right: 40px.
                     }
                     .uglydesc {
                         position: absolute;
                         top: 200px;
                         left: 10px;
                         right: 10px;
-                        font-size: 14px;
+                        font-size: 14px.
                     }
                     .form-container {
                         flex-direction: column;
-                        align-items: center;
+                        align-items: center.
                     }
                     .searchbox, .dropdown1, .dropdown2, .btn1, .btn2 {
                         width: 100%;
                         margin-bottom: 10px;
-                        position: relative;
+                        position: relative.
                     }
                     .url {
                         top: 650px;
                         left: 50%;
-                        transform: translateX(-50%);
+                        transform: translateX(-50%).
                     }
                 }
             </style>
@@ -398,9 +397,6 @@ def download():
 
     try:
         return handle_general_download(url, format, request.form)
-    except subprocess.CalledProcessError as e:
-        flash(f"Error: {str(e)}")
-        return redirect(url_for('index'))
     except yt_dlp.utils.DownloadError as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
@@ -421,20 +417,14 @@ def get_ydl_options(format, form):
     ydl_opts = {
         'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
         'cookiefile': 'cookies_netscape.txt',
-        'hls_use_mpegts': True
+        'hls_use_mpegts': True,
+        'postprocessors': []  # No postprocessing to avoid ffmpeg requirement
     }
     if format == 'audio':
-        audio_format = form['audio_format']
         ydl_opts.update({
-            'format': 'bestaudio/best',
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': audio_format,
-                'preferredquality': '192',
-            }]
+            'format': 'bestaudio/best'
         })
     else:
-        video_format = form['video_format']
         ydl_opts.update({
             'format': 'bestvideo+bestaudio/best',
             'merge_output_format': 'mp4'
