@@ -417,7 +417,8 @@ def get_ydl_options(format, form):
         'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
         'cookiefile': 'cookies_netscape.txt',
         'hls_use_mpegts': False,  # Avoid HLS which requires ffmpeg
-        'postprocessors': []  # No postprocessing to avoid ffmpeg requirement
+        'postprocessors': [],  # No postprocessing to avoid ffmpeg requirement
+        'external_downloader': 'aria2c',  # Use aria2c as an external downloader to avoid ffmpeg for certain formats
     }
     if format == 'audio':
         ydl_opts.update({
@@ -425,7 +426,7 @@ def get_ydl_options(format, form):
         })
     else:
         ydl_opts.update({
-            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best[ext=m4a]'
+            'format': 'best[ext=mp4]/best[ext=m4a]'
         })
     return ydl_opts
 
