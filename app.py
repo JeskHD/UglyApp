@@ -6,7 +6,6 @@ import base64
 import sqlalchemy as sa
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
-import subprocess
 import glob
 from collections.abc import MutableMapping  # Updated import
 
@@ -398,9 +397,6 @@ def download():
 
     try:
         return handle_general_download(url, format, request.form)
-    except subprocess.CalledProcessError as e:
-        flash(f"Error: {str(e)}")
-        return redirect(url_for('index'))
     except yt_dlp.utils.DownloadError as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
@@ -411,8 +407,7 @@ def handle_general_download(url, format, form):
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             file_path = ydl.prepare_filename(info_dict)
-            file_to_send = finalize_file_path(file_path, format, form)
-            return send_file_response(file_to_send)
+            return send_file_response(file_path)
     except yt_dlp.utils.DownloadError as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
@@ -421,36 +416,19 @@ def get_ydl_options(format, form):
     ydl_opts = {
         'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
         'cookiefile': 'cookies_netscape.txt',
-        'hls_use_mpegts': True
+        'hls_use_mpegts': True,
+        'postprocessors': []  # No postprocessing to avoid ffmpeg requirement
     }
     if format == 'audio':
-        audio_format = form['audio_format']
         ydl_opts.update({
-            'format': 'bestaudio/best',
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': audio_format,
-                'preferredquality': '192',
-            }]
+            'format': 'bestaudio/best'
         })
     else:
-        video_format = form['video_format']
         ydl_opts.update({
             'format': 'bestvideo+bestaudio/best',
-            'merge_output_format': 'mp4'
+            'merge_output_format': form['video_format']
         })
     return ydl_opts
-
-def finalize_file_path(file_path, format, form):
-    if format == 'audio':
-        file_path = file_path.replace('.webm', f'.{form["audio_format"]}')
-        file_path = file_path.replace('.opus', f'.{form["audio_format"]}')
-    else:
-        if form['video_format'] == 'mov':
-            file_path = file_path.replace('.mp4', f'.mov')
-        else:
-            file_path = file_path.replace('.mp4', f'.{form["video_format"]}')
-    return file_path
 
 def send_file_response(file_to_send):
     if os.path.exists(file_to_send):
