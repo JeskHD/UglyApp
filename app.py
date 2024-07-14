@@ -416,17 +416,16 @@ def get_ydl_options(format, form):
     ydl_opts = {
         'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
         'cookiefile': 'cookies_netscape.txt',
-        'hls_use_mpegts': True,
+        'hls_use_mpegts': False,  # Avoid HLS which requires ffmpeg
         'postprocessors': []  # No postprocessing to avoid ffmpeg requirement
     }
     if format == 'audio':
         ydl_opts.update({
-            'format': 'bestaudio/best'
+            'format': 'bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio'
         })
     else:
         ydl_opts.update({
-            'format': 'bestvideo+bestaudio/best',
-            'merge_output_format': form['video_format']
+            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best[ext=m4a]'
         })
     return ydl_opts
 
