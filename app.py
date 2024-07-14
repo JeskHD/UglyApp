@@ -123,19 +123,22 @@ def download_media(url, format, is_audio):
     ydl_opts = {
         'format': 'bestaudio/best' if is_audio else 'bestvideo+bestaudio',
         'outtmpl': os.path.join(UPLOAD_FOLDER, '%(title)s.%(ext)s'),
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio' if is_audio else 'FFmpegVideoConvertor',
-            'preferredcodec': format,
-        }] if is_audio else []
+        'noplaylist': True
     }
 
     with YoutubeDL(ydl_opts) as ydl:
         info_dict = ydl.extract_info(url, download=True)
         file_path = ydl.prepare_filename(info_dict)
-        if is_audio:
-            file_path = file_path.rsplit('.', 1)[0] + f'.{format}'
+
+        if is_audio and format != 'mp3':
+            file_ext = '.m4a'
+        else:
+            file_ext = '.mp3' if is_audio else '.mp4'
+        
+        new_file_path = file_path.rsplit('.', 1)[0] + file_ext
+        os.rename(file_path, new_file_path)
     
-    return file_path
+    return new_file_path
 
 @app.route('/download_audio', methods=['POST'])
 def download_audio():
