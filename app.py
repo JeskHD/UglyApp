@@ -5,12 +5,13 @@ import base64
 import sqlalchemy as sa
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
-import subprocess
-import glob
-from collections.abc import MutableMapping  # Updated import
+import requests
+import shutil
+from collections.abc import MutableMapping
+from ffmpeg import FFmpeg
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Needed for flashing messages
+app.secret_key = 'your_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -396,29 +397,8 @@ def download():
         return redirect(url_for('index'))
 
     try:
-        if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
-            return handle_twitter_spaces_download(url, format, request.form)
-        else:
-            return handle_direct_download(url, format, request.form)
+        return handle_direct_download(url, format, request.form)
     except requests.exceptions.RequestException as e:
-        flash(f"Error: {str(e)}")
-        return redirect(url_for('index'))
-
-def handle_twitter_spaces_download(url, format, form):
-    try:
-        cookie_file = 'cookies_netscape.txt'
-        output_template = os.path.join(DOWNLOADS_DIR, 'Downloaded_File')
-        command = [
-            'twspace-dl',
-            '-i', url,
-            '-c', cookie_file,
-            '-o', output_template
-        ]
-        subprocess.run(command, check=True)
-        list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
-        latest_file = max(list_of_files, key=os.path.getmtime)
-        return send_file_response(latest_file)
-    except subprocess.CalledProcessError as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
 
