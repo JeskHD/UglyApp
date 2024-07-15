@@ -1,12 +1,12 @@
 from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory, jsonify
 from flask_socketio import SocketIO, emit
-import youtube_dl
 import os
 import base64
 import sqlalchemy as sa
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
-import glob
+import requests
+import shutil
 from collections.abc import MutableMapping  # Updated import
 
 app = Flask(__name__)
@@ -396,39 +396,21 @@ def download():
         return redirect(url_for('index'))
 
     try:
-        return handle_general_download(url, format, request.form)
-    except youtube_dl.utils.DownloadError as e:
+        return handle_direct_download(url, format, request.form)
+    except requests.exceptions.RequestException as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
 
-def handle_general_download(url, format, form):
-    ydl_opts = get_ydl_options(format, form)
-    try:
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(url, download=True)
-            file_path = ydl.prepare_filename(info_dict)
-            return send_file_response(file_path)
-    except youtube_dl.utils.DownloadError as e:
-        flash(f"Error: {str(e)}")
-        return redirect(url_for('index'))
+def handle_direct_download(url, format, form):
+    filename = url.split('/')[-1]
+    filepath = os.path.join(DOWNLOADS_DIR, filename)
 
-def get_ydl_options(format, form):
-    ydl_opts = {
-        'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
-        'nocheckcertificate': True,
-        'quiet': True,
-    }
-    if format == 'audio':
-        audio_format = form['audio_format']
-        ydl_opts.update({
-            'format': f'bestaudio[ext={audio_format}]',
-        })
-    else:
-        video_format = form['video_format']
-        ydl_opts.update({
-            'format': f'bestvideo[ext={video_format}]+bestaudio[ext=m4a]/best[ext={video_format}]'
-        })
-    return ydl_opts
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        with open(filepath, 'wb') as f:
+            shutil.copyfileobj(r.raw, f)
+
+    return send_file_response(filepath)
 
 def send_file_response(file_to_send):
     if os.path.exists(file_to_send):
