@@ -7,12 +7,11 @@ from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
 import requests
 import shutil
-import subprocess
-import glob
-from collections.abc import MutableMapping  # Updated import
+from collections.abc import MutableMapping
+from ffmpeg import FFmpeg
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Needed for flashing messages
+app.secret_key = 'your_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
