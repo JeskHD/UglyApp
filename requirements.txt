@@ -34,3 +34,4 @@ pymediainfo
 m3u8
 flask
 gunicorn
+requests
