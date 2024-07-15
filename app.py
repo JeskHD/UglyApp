@@ -1,6 +1,6 @@
 from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory, jsonify
 from flask_socketio import SocketIO, emit
-import yt_dlp
+import youtube_dl
 import os
 import base64
 import sqlalchemy as sa
@@ -397,39 +397,36 @@ def download():
 
     try:
         return handle_general_download(url, format, request.form)
-    except yt_dlp.utils.DownloadError as e:
+    except youtube_dl.utils.DownloadError as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
 
 def handle_general_download(url, format, form):
     ydl_opts = get_ydl_options(format, form)
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             file_path = ydl.prepare_filename(info_dict)
             return send_file_response(file_path)
-    except yt_dlp.utils.DownloadError as e:
-        if 'm3u8' in str(e):
-            flash("Error: The video format requires ffmpeg, which is not available.")
-        else:
-            flash(f"Error: {str(e)}")
+    except youtube_dl.utils.DownloadError as e:
+        flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
 
 def get_ydl_options(format, form):
     ydl_opts = {
         'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
-        'cookiefile': 'cookies_netscape.txt',
-        'hls_use_mpegts': False,  # Avoid HLS which requires ffmpeg
-        'postprocessors': [],  # No postprocessing to avoid ffmpeg requirement
+        'nocheckcertificate': True,
+        'quiet': True,
     }
     if format == 'audio':
+        audio_format = form['audio_format']
         ydl_opts.update({
-            'format': 'bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio'
+            'format': f'bestaudio[ext={audio_format}]',
         })
     else:
+        video_format = form['video_format']
         ydl_opts.update({
-            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best[ext=m4a]',
-            'merge_output_format': 'mp4' if form['video_format'] == 'mp4' else 'm4a'
+            'format': f'bestvideo[ext={video_format}]+bestaudio[ext=m4a]/best[ext={video_format}]'
         })
     return ydl_opts
 
