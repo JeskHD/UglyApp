@@ -1,95 +1,175 @@
-from flask import Flask, render_template_string, request, redirect, url_for, send_from_directory, flash
+from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash
+from flask_sqlalchemy import SQLAlchemy
+from flask_socketio import SocketIO, emit
 import os
-from yt_dlp import YoutubeDL
+import yt_dlp
+from urllib.parse import urlparse
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Required for flash messages
-DOWNLOAD_FOLDER = 'static/downloads'
-COOKIES_FILE = 'cookies_netscape.txt'  # Path to your cookies file
+app.secret_key = 'your_secret_key'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-app.config['DOWNLOAD_FOLDER'] = DOWNLOAD_FOLDER
+socketio = SocketIO(app)
 
-if not os.path.exists(DOWNLOAD_FOLDER):
-    os.makedirs(DOWNLOAD_FOLDER)
+db = SQLAlchemy(app)
 
-html_template = '''
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Video Downloader</title>
-</head>
-<body>
-    <h1>Download YouTube Video</h1>
-    <form action="/download" method="post">
-        <label for="url">YouTube Video URL:</label>
-        <input type="url" id="url" name="url" required>
-        <br>
-        <label for="format">Select Format:</label>
-        <select id="format" name="format">
-            <option value="mp4">MP4</option>
-            <option value="mov">MOV</option>
-        </select>
-        <br>
-        <button type="submit">Download</button>
-    </form>
-</body>
-</html>
-'''
+# Ensure the downloads directory exists
+DOWNLOADS_DIR = 'static/uploads'
+os.makedirs(DOWNLOADS_DIR, exist_ok=True)
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), unique=True, nullable=False)
 
 @app.route('/')
 def index():
-    return render_template_string(html_template)
+    try:
+        html_content = '''
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Ugly Downloader</title>
+            <style>
+                /* CSS styles here */
+            </style>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+            <script>
+                var socket = io();
+                socket.on('connect', function() {
+                    console.log('Connected to server');
+                });
+                socket.on('download_complete', function(data) {
+                    alert('Download complete: ' + data.filename);
+                });
+            </script>
+        </head>
+        <body>
+            <div class="topbar">
+                <header>
+                    <nav>
+                        <h2 class="ua">Ugly Downloader</h2>
+                        <div class="menu-toggle">
+                            <i class="fa fa-bars"></i>
+                        </div>
+                        <ul class="menu">
+                            <li>About Us</li>
+                            <li>Collection</li>
+                            <li>Media</li>
+                            <li>FAQ</li>
+                            <li>Downloader</li>
+                            <div class="sp">
+                                <li><i class="fa fa-twitter"></i></li>
+                            </div>
+                        </ul>
+                    </nav>
+                </header>
+            </div>
+            <div class="bimage">
+                <main>
+                    <h1></h1>
+                    <section class="Wrapper">
+                        <article>
+                            <div>
+                                <h2 class="UglyStay">Stay Ugly With Our Media</h2>
+                                <p class="uglydesc">Download Ugly Bros' art, music, and videos swiftly with UglyDownloader. Quality and simplicity in one click.</p>
+                                <br>
+                                <div class="form-container">
+                                    <form action="/download" method="post">
+                                        <div class="AllC">
+                                            <input type="text" name="audio_url" placeholder="Enter audio URL" class="searchbox">
+                                            <select name="audio_format" class="dropdown1">
+                                                <option value="mp3">MP3</option>
+                                                <option value="m4a">M4A</option>
+                                            </select>
+                                            <button type="submit" name="format" value="audio" class="btn1">Download Audio</button>
+                                            <br>
+                                            <p class="or">OR</p><br>
+                                            <input type="text" name="video_url" placeholder="Enter video URL" class="searchbox">
+                                            <select name="video_format" class="dropdown2">
+                                                <option value="mp4">MP4</option>
+                                                <option value="mov">MOV</option>
+                                            </select>
+                                            <button type="submit" name="format" value="video" class="btn2">Download Video</button>
+                                            <br><br>
+                                    </form>
+                                    <p class="url">Enter your desired URL and let it do the trick</p>
+                                    <div class="message">
+                                        {% with messages = get_flashed_messages() %}
+                                            {% if messages %}
+                                                <ul class="flashes">
+                                                {% for message in messages %}
+                                                    <li>{{ message }}</li>
+                                                {% endfor %}
+                                                </ul>
+                                            {% endif %}
+                                        {% endwith %}
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+                    </section>
+                </main>
+            </div>
+        </body>
+        </html>
+        '''
+        return render_template_string(html_content)
+    except Exception as e:
+        return f"Error rendering page: {str(e)}"
+
+def is_valid_url(url):
+    parsed = urlparse(url)
+    return bool(parsed.netloc) and bool(parsed.scheme)
 
 @app.route('/download', methods=['POST'])
-def download_video():
-    url = request.form['url']
+def download():
+    audio_url = request.form.get('audio_url')
+    video_url = request.form.get('video_url')
     format = request.form['format']
+    url = audio_url if format == 'audio' else video_url
 
-    if not url or not format:
-        flash('All fields are required.')
+    if not is_valid_url(url):
+        flash("Invalid URL. Please enter a valid URL.")
         return redirect(url_for('index'))
 
-    return download_with_ytdlp(url, format)
-
-def download_with_ytdlp(url, format):
     try:
-        ydl_opts = {
-            'format': 'bestvideo+bestaudio/best',
-            'outtmpl': os.path.join(app.config['DOWNLOAD_FOLDER'], '%(title)s.%(ext)s'),
-            'merge_output_format': 'mp4',  # Ensure initial download in mp4 format
-            'cookiefile': COOKIES_FILE  # Adding the path to the cookies file
-        }
-        with YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(url, download=True)
-            video_title = ydl.prepare_filename(info_dict)
-            video_filename = os.path.basename(video_title).rsplit('.', 1)[0] + '.mp4'
-            video_filepath = os.path.join(app.config['DOWNLOAD_FOLDER'], video_filename)
-
-            if format == 'mov':
-                video_filepath = rename_to_mov(video_filepath)
-
-        return send_from_directory(app.config['DOWNLOAD_FOLDER'], os.path.basename(video_filepath), as_attachment=True)
+        return handle_yt_dlp_download(url, format)
     except Exception as e:
-        app.logger.error(f'Error during video download or renaming: {str(e)}')
-        flash(f'An error occurred: {str(e)}')
+        flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
 
-def rename_to_mov(filepath):
-    try:
-        new_filepath = filepath.rsplit('.', 1)[0] + '.mov'
-        os.rename(filepath, new_filepath)
-        return new_filepath
-    except Exception as e:
-        app.logger.error(f'Error during renaming to MOV: {str(e)}')
-        flash(f'An error occurred during renaming: {str(e)}')
-        return filepath
+def handle_yt_dlp_download(url, format):
+    ydl_opts = {
+        'format': 'bestaudio/best' if format == 'audio' else 'bestvideo+bestaudio',
+        'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio' if format == 'audio' else 'FFmpegVideoConvertor',
+            'preferredcodec': 'mp3' if format == 'audio' else 'mp4',
+            'preferredquality': '192'
+        }] if format == 'audio' else []
+    }
 
-@app.route('/downloads/<filename>')
-def downloaded_file(filename):
-    return send_from_directory(app.config['DOWNLOAD_FOLDER'], filename, as_attachment=True)
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info_dict = ydl.extract_info(url, download=True)
+        file_path = ydl.prepare_filename(info_dict)
+        if format == 'audio':
+            file_path = file_path.rsplit('.', 1)[0] + '.mp3'
+        else:
+            file_path = file_path.rsplit('.', 1)[0] + '.mp4'
+
+    return send_file_response(file_path)
+
+def send_file_response(file_to_send):
+    if os.path.exists(file_to_send):
+        socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
+        return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
+    else:
+        flash("File not found after download.")
+        return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    # Binding to 0.0.0.0 to make the server publicly available
-    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    port = int(os.environ.get('PORT', 5000))
+    socketio.run(app, host='0.0.0.0', port=port)
