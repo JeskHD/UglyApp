@@ -9,8 +9,6 @@ import requests
 import shutil
 from collections.abc import MutableMapping
 from ffmpeg import FFmpeg
-import logging
-from logging.handlers import RotatingFileHandler
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -440,10 +438,5 @@ else:
     app.logger.info('Database already contains the users table.')
 
 if __name__ == '__main__':
-    # Logging configuration
-    handler = RotatingFileHandler('error.log', maxBytes=10000, backupCount=1)
-    handler.setLevel(logging.ERROR)
-    app.logger.addHandler(handler)
-    
     port = int(os.environ.get('PORT', 5000))
-    socketio.run(app, host='0.0.0.0', port=port, debug=True)
+    socketio.run(app, host='0.0.0.0', port=port)
