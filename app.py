@@ -8,7 +8,8 @@ from urllib.parse import urlparse
 import requests
 import shutil
 from collections.abc import MutableMapping
-from ffmpeg import FFmpeg
+from _ffmpeg import FFmpeg
+
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
