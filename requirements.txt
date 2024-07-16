@@ -450,7 +450,7 @@ def download():
                 'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
                 'cookiefile': 'cookies_netscape.txt',
                 'hls_use_mpegts': True,  # Ensure HLS processing for all formats
-                'ffmpeg_location': '/ffmpeg/bin/ffmpeg.exe'  # Specify the location of ffmpeg
+                'ffmpeg_location': 'ffmpeg/bin/ffmpeg.exe'  # Specify the location of ffmpeg
             }
             if format == 'audio':
                 audio_format = request.form['audio_format']
