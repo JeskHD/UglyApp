@@ -28,21 +28,24 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)
 
-def is_valid_url(url):
-    parsed = urlparse(url)
-    return bool(parsed.netloc) and bool(parsed.scheme)
-
-# Function to read and encode image files to base64
 def get_base64_image(filepath):
     with open(filepath, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
+
+def get_base64_font(filepath):
+    with open(filepath, "rb") as font_file:
+        return base64.b64encode(font_file.read()).decode('utf-8')
+
+def is_valid_url(url):
+    parsed = urlparse(url)
+    return bool(parsed.netloc) and bool(parsed.scheme)
 
 @app.route('/')
 def index():
     try:
         background_base64 = get_base64_image('uglygif.gif')
         logo_base64 = get_base64_image('uglylogo.png')
-        font_base64 = get_base64_image('PORKH___.TTF.ttf')
+        font_base64 = get_base64_font('PORKH___.TTF.ttf')
 
         html_content = '''
         <!DOCTYPE html>
