@@ -10,6 +10,7 @@ import sqlalchemy as sa
 import glob
 from collections.abc import MutableMapping
 import base64
+import shutil
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
@@ -19,8 +20,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 socketio = SocketIO(app)
 db = SQLAlchemy(app)
 
-# Ensure the downloads directory exists
-DOWNLOADS_DIR = '/opt/render/Downloads'
+# Ensure the downloads directory exists in the user's Downloads folder
+DOWNLOADS_DIR = os.path.join(os.path.expanduser("~"), 'Downloads')
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
 # Example model for demonstration
