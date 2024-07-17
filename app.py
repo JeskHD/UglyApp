@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 import sqlalchemy as sa
 import glob
 from collections.abc import MutableMapping
+import base64
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
@@ -30,6 +31,14 @@ class User(db.Model):
 def is_valid_url(url):
     parsed = urlparse(url)
     return bool(parsed.netloc) and bool(parsed.scheme)
+
+def get_base64_image(image_path):
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode('utf-8')
+
+def get_base64_font(font_path):
+    with open(font_path, "rb") as font_file:
+        return base64.b64encode(font_file.read()).decode('utf-8')
 
 @app.route('/')
 def index():
@@ -265,28 +274,28 @@ def index():
                     .UglyStay {
                         font-size: 30px;
                         margin-top: 80px;
-                        text-align: center.
+                        text-align: center;
                     }
                     .uglydesc {
                         font-size: 16px;
                         margin: 20px 20px;
-                        text-align: center.
+                        text-align: center;
                     }
                     .form-container {
-                        flex-direction: column.
-                        align-items: center.
+                        flex-direction: column;
+                        align-items: center;
                     }
                     .searchbox, .dropdown1, .dropdown2, .btn1, .btn2 {
-                        width: 100%.
-                        margin-bottom: 10px.
+                        width: 100%;
+                        margin-bottom: 10px;
                     }
                     .or {
-                        top: 0.
-                        margin: 10px 0.
+                        top: 0;
+                        margin: 10px 0;
                     }
                     .url {
-                        margin-top: 20px.
-                        text-align: center.
+                        margin-top: 20px;
+                        text-align: center;
                     }
                 }
             </style>
