@@ -388,8 +388,8 @@ def download():
 
     try:
         # Paths to ffmpeg and ffprobe
-        ffmpeg_location = '/usr/bin/ffmpeg'
-        ffprobe_location = '/usr/bin/ffprobe'
+        ffmpeg_location = '/ffmpeg/bin/ffmpeg'
+        ffprobe_location = '/ffmpeg/bin/ffprobe'
 
         ydl_opts = {
             'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
