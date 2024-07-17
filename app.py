@@ -401,29 +401,24 @@ def download():
     try:
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
             cookie_file = 'cookies_netscape.txt'
-            output_template = os.path.join(DOWNLOADS_DIR, 'Downloaded_File.%(ext)s')
+            output_template = os.path.join(DOWNLOADS_DIR, 'downloaded_file')
             command = [
                 'twspace_dl',
                 '-i', url,
                 '-c', cookie_file,
                 '-o', output_template
             ]
-
-            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            for line in process.stdout:
-                line = line.decode('utf-8').strip()
-                if "size=" in line:
-                    socketio.emit('download_progress', {'progress': line})
-                    print(line)
-
-            process.wait()
-            if process.returncode != 0:
-                flash("Error during Twitter Spaces download.")
-                return redirect(url_for('index'))
-
+            subprocess.run(command, check=True)
+            # Find the most recently modified file in the DOWNLOADS_DIR
             list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
             latest_file = max(list_of_files, key=os.path.getmtime)
-            return send_file_response(latest_file)
+            if os.path.exists(latest_file):
+                # Notify the user via flash message
+                flash(f"Download complete: {os.path.basename(latest_file)}")
+                return send_file(latest_file, as_attachment=True, download_name=os.path.basename(latest_file))
+            else:
+                flash("File not found after download.")
+                return redirect(url_for('index'))
         else:
             ydl_opts = {
                 'outtmpl': os.path.join(DOWNLOADS_DIR, 'downloaded_file'),
@@ -468,14 +463,6 @@ def download():
         return redirect(url_for('index'))
     except yt_dlp.utils.DownloadError as e:
         flash(f"Error: {str(e)}")
-        return redirect(url_for('index'))
-
-def send_file_response(file_to_send):
-    if os.path.exists(file_to_send):
-        socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
-        return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
-    else:
-        flash("File not found after download.")
         return redirect(url_for('index'))
 
 @app.route('/uploads/<path:filename>', methods=['GET', 'POST'])
