@@ -369,7 +369,7 @@ def index():
                 </main>
             </div>
         </body>
-        </html>
+        </html>        
         '''
         return render_template_string(html_content, background_base64=background_base64, font_base64=font_base64)
     except Exception as e:
@@ -388,8 +388,8 @@ def download():
 
     try:
         # Paths to ffmpeg and ffprobe
-        ffmpeg_location = '/usr/bin/ffmpeg'
-        ffprobe_location = '/usr/bin/ffprobe'
+        ffmpeg_location = '/ffmpeg/bin/ffmpeg'
+        ffprobe_location = '/ffmpeg/bin/ffprobe'
 
         ydl_opts = {
             'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
@@ -477,7 +477,6 @@ engine = sa.create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
 inspector = sa.inspect(engine)
 if not inspector.has_table("user"):
     with app.app_context():
-        db.drop_all()
         db.create_all()
         app.logger.info('Initialized the database!')
 else:
