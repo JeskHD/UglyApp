@@ -10,7 +10,6 @@ import glob
 import base64
 import shutil
 import requests
-from flask_migrate import Migrate
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'default_secret_key')  # Use environment variable for secret key
@@ -19,7 +18,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 socketio = SocketIO(app)
 db = SQLAlchemy(app)
-migrate = Migrate(app, db)
 
 # Ensure the downloads directory exists in the user's Downloads folder
 DOWNLOADS_DIR = os.path.join(os.path.expanduser("~"), 'Downloads')
@@ -464,7 +462,7 @@ def upload(filename):
     uploads = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
     return send_from_directory(uploads, filename)
 
-# Database initialization logic for Render
+# Database initialization logic
 engine = sa.create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
 inspector = sa.inspect(engine)
 if not inspector.has_table("user"):
