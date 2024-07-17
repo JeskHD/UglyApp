@@ -1,14 +1,12 @@
 import os
-import sys
 import subprocess
 import yt_dlp
-from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory, jsonify
+from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory
 from flask_socketio import SocketIO, emit
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
 import sqlalchemy as sa
 import glob
-from collections.abc import MutableMapping
 import base64
 import shutil
 
@@ -397,84 +395,62 @@ def download():
         return redirect(url_for('index'))
 
     try:
-        # Paths to ffmpeg and ffprobe
-        ffmpeg_location = '/usr/bin/ffmpeg'
-        ffprobe_location = '/usr/bin/ffprobe'
-
-        ydl_opts = {
-            'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
-            'ffmpeg_location': ffmpeg_location,
-            'ffprobe_location': ffprobe_location,
-            'cookiefile': 'cookies_netscape.txt',
-            'hls_use_mpegts': True  # Ensure HLS processing for all formats
-        }
-        
-        if format == 'audio':
-            audio_format = request.form['audio_format']
-            ydl_opts.update({
-                'format': 'bestaudio/best',
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': audio_format,
-                    'preferredquality': '192',
-                }]
-            })
+        if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
+            return handle_twitter_spaces_download(url, format)
         else:
-            video_format = request.form['video_format']
-            ydl_opts.update({
-                'format': 'bestvideo+bestaudio/best',
-                'merge_output_format': 'mp4'
-            })
+            return handle_direct_download(url, format)
+    except requests.exceptions.RequestException as e:
+        flash(f"Error: {str(e)}")
+        return redirect(url_for('index'))
 
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(url, download=True)
-            file_path = ydl.prepare_filename(info_dict)
+def handle_twitter_spaces_download(url, format):
+    try:
+        cookie_file = 'cookies_netscape.txt'
+        output_template = os.path.join(DOWNLOADS_DIR, 'Downloaded_File.%(ext)s')
+        command = [
+            'twspace_dl',
+            '-i', url,
+            '-c', cookie_file,
+            '-o', output_template
+        ]
+        
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        for line in process.stdout:
+            line = line.decode('utf-8').strip()
+            if "size=" in line:
+                # Extract and emit progress information
+                socketio.emit('download_progress', {'progress': line})
+                print(line)
 
-            if format == 'audio':
-                file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
-            else:
-                if video_format == 'mov':
-                    file_path = file_path.replace('.mp4', f'.mp4')
-                else:
-                    file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
-                
-            if os.path.exists(file_path):
-                if format == 'audio' and audio_format == 'mp3':
-                    mp3_file = file_path.replace('.m4a', '.mp3')
-                    convert_command = [
-                        ffmpeg_location,
-                        '-i', file_path,
-                        '-codec:a', 'libmp3lame',
-                        '-qscale:a', '2',
-                        mp3_file
-                    ]
-                    subprocess.run(convert_command, check=True)
-                    file_to_send = mp3_file
-                elif format == 'video' and video_format == 'mov':
-                    mov_file = file_path.replace('.mp4', '.mov')
-                    convert_command = [
-                        ffmpeg_location,
-                        '-i', file_path,
-                        '-c:v', 'copy',
-                        '-c:a', 'copy',
-                        mov_file
-                    ]
-                    subprocess.run(convert_command, check=True)
-                    file_to_send = mov_file
-                else:
-                    file_to_send = file_path
+        process.wait()
+        if process.returncode != 0:
+            flash("Error during Twitter Spaces download.")
+            return redirect(url_for('index'))
 
-                socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
-                return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
-            else:
-                flash("File not found after download.")
-                return redirect(url_for('index'))
-
+        list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
+        latest_file = max(list_of_files, key=os.path.getmtime)
+        return send_file_response(latest_file)
     except subprocess.CalledProcessError as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
-    except yt_dlp.utils.DownloadError as e:
-        flash(f"Error: {str(e)}")
+
+def handle_direct_download(url, format):
+    filename = url.split('/')[-1]
+    filepath = os.path.join(DOWNLOADS_DIR, filename)
+
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        with open(filepath, 'wb') as f:
+            shutil.copyfileobj(r.raw, f)
+
+    return send_file_response(filepath)
+
+def send_file_response(file_to_send):
+    if os.path.exists(file_to_send):
+        socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
+        return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
+    else:
+        flash("File not found after download.")
         return redirect(url_for('index'))
 
 @app.route('/uploads/<path:filename>', methods=['GET', 'POST'])
