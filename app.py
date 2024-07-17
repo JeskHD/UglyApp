@@ -9,7 +9,6 @@ from urllib.parse import urlparse
 import sqlalchemy as sa
 import glob
 from collections.abc import MutableMapping
-import base64
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
@@ -27,14 +26,6 @@ os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)
-
-def get_base64_image(filepath):
-    with open(filepath, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode('utf-8')
-
-def get_base64_font(filepath):
-    with open(filepath, "rb") as font_file:
-        return base64.b64encode(font_file.read()).decode('utf-8')
 
 def is_valid_url(url):
     parsed = urlparse(url)
@@ -274,28 +265,28 @@ def index():
                     .UglyStay {
                         font-size: 30px;
                         margin-top: 80px;
-                        text-align: center;
+                        text-align: center.
                     }
                     .uglydesc {
                         font-size: 16px;
                         margin: 20px 20px;
-                        text-align: center;
+                        text-align: center.
                     }
                     .form-container {
-                        flex-direction: column;
-                        align-items: center;
+                        flex-direction: column.
+                        align-items: center.
                     }
                     .searchbox, .dropdown1, .dropdown2, .btn1, .btn2 {
-                        width: 100%;
-                        margin-bottom: 10px;
+                        width: 100%.
+                        margin-bottom: 10px.
                     }
                     .or {
-                        top: 0;
-                        margin: 10px 0;
+                        top: 0.
+                        margin: 10px 0.
                     }
                     .url {
-                        margin-top: 20px;
-                        text-align: center;
+                        margin-top: 20px.
+                        text-align: center.
                     }
                 }
             </style>
@@ -397,8 +388,8 @@ def download():
 
     try:
         # Paths to ffmpeg and ffprobe
-        'ffmpeg_location': "/usr/bin/ffmpeg"
-        'ffprobe_location': '/usr/bin/ffprobe'
+        ffmpeg_location = '/usr/bin/ffmpeg'
+        ffprobe_location = '/usr/bin/ffprobe'
 
         ydl_opts = {
             'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
