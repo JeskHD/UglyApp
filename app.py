@@ -9,14 +9,17 @@ import sqlalchemy as sa
 import glob
 import base64
 import shutil
+import requests
+from flask_migrate import Migrate
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Needed for flashing messages
+app.secret_key = os.getenv('SECRET_KEY', 'default_secret_key')  # Use environment variable for secret key
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 socketio = SocketIO(app)
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
 # Ensure the downloads directory exists in the user's Downloads folder
 DOWNLOADS_DIR = os.path.join(os.path.expanduser("~"), 'Downloads')
@@ -28,14 +31,17 @@ class User(db.Model):
     name = db.Column(db.String(80), unique=True, nullable=False)
 
 def is_valid_url(url):
+    """Check if the provided URL is valid."""
     parsed = urlparse(url)
     return bool(parsed.netloc) and bool(parsed.scheme)
 
 def get_base64_image(image_path):
+    """Convert image to base64 string."""
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
 
 def get_base64_font(font_path):
+    """Convert font to base64 string."""
     with open(font_path, "rb") as font_file:
         return base64.b64encode(font_file.read()).decode('utf-8')
 
@@ -463,7 +469,6 @@ engine = sa.create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
 inspector = sa.inspect(engine)
 if not inspector.has_table("user"):
     with app.app_context():
-        db.drop_all()
         db.create_all()
         app.logger.info('Initialized the database!')
 else:
