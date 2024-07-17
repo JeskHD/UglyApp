@@ -397,7 +397,7 @@ def download():
 
     try:
         # Paths to ffmpeg and ffprobe
-        'ffmpeg_location': '/usr/bin/ffmpeg' 
+        'ffmpeg_location': "/usr/bin/ffmpeg"
         'ffprobe_location': '/usr/bin/ffprobe'
 
         ydl_opts = {
