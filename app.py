@@ -400,54 +400,75 @@ def download():
 
     try:
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
-            return handle_twitter_spaces_download(url, format)
+            cookie_file = 'cookies_netscape.txt'
+            output_template = os.path.join(DOWNLOADS_DIR, 'Downloaded_File.%(ext)s')
+            command = [
+                'twspace_dl',
+                '-i', url,
+                '-c', cookie_file,
+                '-o', output_template
+            ]
+
+            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            for line in process.stdout:
+                line = line.decode('utf-8').strip()
+                if "size=" in line:
+                    socketio.emit('download_progress', {'progress': line})
+                    print(line)
+
+            process.wait()
+            if process.returncode != 0:
+                flash("Error during Twitter Spaces download.")
+                return redirect(url_for('index'))
+
+            list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
+            latest_file = max(list_of_files, key=os.path.getmtime)
+            return send_file_response(latest_file)
         else:
-            return handle_direct_download(url, format)
-    except requests.exceptions.RequestException as e:
-        flash(f"Error: {str(e)}")
-        return redirect(url_for('index'))
+            ydl_opts = {
+                'outtmpl': os.path.join(DOWNLOADS_DIR, 'downloaded_file'),
+                'cookiefile': 'cookies_netscape.txt'
+            }
+            if format == 'audio':
+                audio_format = request.form['audio_format']
+                ydl_opts.update({
+                    'format': 'bestaudio/best',
+                    'postprocessors': [{
+                        'key': 'FFmpegExtractAudio',
+                        'preferredcodec': audio_format,
+                        'preferredquality': '192',
+                    }]
+                })
+            else:
+                video_format = request.form['video_format']
+                ydl_opts.update({
+                    'format': f'bestvideo+bestaudio/best' if video_format == 'mp4' else f'best[ext={video_format}]',
+                    'merge_output_format': video_format
+                })
 
-def handle_twitter_spaces_download(url, format):
-    try:
-        cookie_file = 'cookies_netscape.txt'
-        output_template = os.path.join(DOWNLOADS_DIR, 'Downloaded_File.%(ext)s')
-        command = [
-            'twspace_dl',
-            '-i', url,
-            '-c', cookie_file,
-            '-o', output_template
-        ]
-        
-        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        for line in process.stdout:
-            line = line.decode('utf-8').strip()
-            if "size=" in line:
-                # Extract and emit progress information
-                socketio.emit('download_progress', {'progress': line})
-                print(line)
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info_dict = ydl.extract_info(url, download=True)
+                file_path = ydl.prepare_filename(info_dict)
 
-        process.wait()
-        if process.returncode != 0:
-            flash("Error during Twitter Spaces download.")
-            return redirect(url_for('index'))
-
-        list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
-        latest_file = max(list_of_files, key=os.path.getmtime)
-        return send_file_response(latest_file)
+                # Manually rename the file to the correct extension
+                if format == 'audio':
+                    new_file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
+                else:
+                    new_file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
+                
+                if os.path.exists(file_path):
+                    shutil.move(file_path, new_file_path)
+                    flash(f"Download complete: {os.path.basename(new_file_path)}")
+                    return send_file(new_file_path, as_attachment=True, download_name=os.path.basename(new_file_path))
+                else:
+                    flash("File not found after download.")
+                    return redirect(url_for('index'))
     except subprocess.CalledProcessError as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
-
-def handle_direct_download(url, format):
-    filename = url.split('/')[-1]
-    filepath = os.path.join(DOWNLOADS_DIR, filename)
-
-    with requests.get(url, stream=True) as r:
-        r.raise_for_status()
-        with open(filepath, 'wb') as f:
-            shutil.copyfileobj(r.raw, f)
-
-    return send_file_response(filepath)
+    except yt_dlp.utils.DownloadError as e:
+        flash(f"Error: {str(e)}")
+        return redirect(url_for('index'))
 
 def send_file_response(file_to_send):
     if os.path.exists(file_to_send):
