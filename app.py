@@ -1,15 +1,14 @@
-from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash
-from flask_socketio import SocketIO, emit
 import os
-import base64
-import sqlalchemy as sa
+import sys
+import subprocess
+import yt_dlp
+from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory, jsonify
+from flask_socketio import SocketIO, emit
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
-import subprocess
+import sqlalchemy as sa
 import glob
-import requests
-import shutil
-from yt_dlp import YoutubeDL
+from collections.abc import MutableMapping
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
@@ -17,11 +16,10 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 socketio = SocketIO(app)
-
 db = SQLAlchemy(app)
 
 # Ensure the downloads directory exists
-DOWNLOADS_DIR = 'static/downloads'
+DOWNLOADS_DIR = '/opt/render/Downloads'
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
 # Example model for demonstration
@@ -29,15 +27,9 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)
 
-# Function to read and encode image files to base64
-def get_base64_image(filepath):
-    with open(filepath, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode('utf-8')
-
-# Function to read and encode font files to base64
-def get_base64_font(filepath):
-    with open(filepath, "rb") as font_file:
-        return base64.b64encode(font_file.read()).decode('utf-8')
+def is_valid_url(url):
+    parsed = urlparse(url)
+    return bool(parsed.netloc) and bool(parsed.scheme)
 
 @app.route('/')
 def index():
@@ -52,10 +44,11 @@ def index():
         <head>
             <meta charset="UTF-8">
             <meta name="HTML WEB DESIGN" content="Web Design">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Ugly Downloader</title>
             <link rel="preconnect" href="https://fonts.googleapis.com">
             <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-            <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900&display=swap" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
             <style>
                 @font-face {
@@ -81,8 +74,8 @@ def index():
                     padding: 10px 50px;
                     background: rgba(0, 0, 0, 0.5);
                     position: absolute;
-                    top: 1px;
-                    z-index: 1000; /* Ensure topbar is above other content */
+                    top: 0;
+                    z-index: 1000;
                 }
                 .topbar nav {
                     display: flex;
@@ -96,11 +89,6 @@ def index():
                     cursor: pointer;
                     position: absolute;
                     right: 40px;
-                }
-                .message {
-                    position: absolute;
-                    top: 565px;
-                    right: 575px;
                 }
                 .topbar ul {
                     list-style-type: none;
@@ -116,7 +104,7 @@ def index():
                 }
                 .topbar ul li:hover {
                     color: rgb(255, 120, 223);
-                    cursor: grab;
+                    cursor: pointer;
                 }
                 .poppins-medium-italic {
                     font-family: "Poppins", sans-serif;
@@ -141,25 +129,27 @@ def index():
                     justify-content: center;
                     align-items: center;
                     text-align: center;
-                    padding-top: 70px; /* Ensure content is not overlapped by topbar */
+                    padding-top: 100px; /* Adjusted to move content closer to the topbar */
                 }
                 .Wrapper {
                     text-align: center;
+                    padding: 20px;
                 }
                 .UglyStay {
-                    position: fixed;
-                    top: 225px;
-                    right: 350px;
                     color: rgb(255, 136, 237);
                     font-size: 50px;
                     font-weight: 800;
                     font-style: italic;
+                    margin: 0 20px;
+                    text-align: center;
+                    width: 100%;
                 }
                 .uglydesc {
-                    position: fixed;
-                    top: 310px;
-                    left: 240px;
                     color: whitesmoke;
+                    margin: 20px 10px;
+                    font-size: 18px;
+                    text-align: center;
+                    width: 100%;
                 }
                 .form-container {
                     display: flex;
@@ -167,6 +157,7 @@ def index():
                     justify-content: center;
                     gap: 10px;
                     margin-top: 20px;
+                    flex-wrap: wrap;
                 }
                 .searchbox {
                     width: 300px;
@@ -212,14 +203,16 @@ def index():
                     position: relative;
                     top: 15px;
                     color: white;
+                    font-size: 18px;
+                    margin: 10px 0;
                 }
                 .url {
-                    position: absolute;
-                    top: 540px;
-                    left: 555px;
                     text-shadow: 0px 3px 5px 0 #c255a7;
                     color: white;
-                    font-size: 11px;
+                    font-size: 14px;
+                    margin-top: 10px;
+                    width: 100%;
+                    text-align: center;
                 }
                 .sp li:hover {
                     color: #1d9bf0 !important;
@@ -271,15 +264,13 @@ def index():
                     }
                     .UglyStay {
                         font-size: 30px;
-                        top: 110px;
-                        right: 40px;
+                        margin-top: 80px;
+                        text-align: center;
                     }
                     .uglydesc {
-                        position: absolute;
-                        top: 200px;
-                        left: 10px;
-                        right: 10px;
-                        font-size: 14px;
+                        font-size: 16px;
+                        margin: 20px 20px;
+                        text-align: center;
                     }
                     .form-container {
                         flex-direction: column;
@@ -288,12 +279,14 @@ def index():
                     .searchbox, .dropdown1, .dropdown2, .btn1, .btn2 {
                         width: 100%;
                         margin-bottom: 10px;
-                        position: relative;
+                    }
+                    .or {
+                        top: 0;
+                        margin: 10px 0;
                     }
                     .url {
-                        top: 650px;
-                        left: 50%;
-                        transform: translateX(-50%);
+                        margin-top: 20px;
+                        text-align: center;
                     }
                 }
             </style>
@@ -376,15 +369,11 @@ def index():
                 </main>
             </div>
         </body>
-        </html>
+        </html>        
         '''
         return render_template_string(html_content, background_base64=background_base64, font_base64=font_base64)
     except Exception as e:
         return f"Error rendering page: {str(e)}"
-
-def is_valid_url(url):
-    parsed = urlparse(url)
-    return bool(parsed.netloc) and bool(parsed.scheme)
 
 @app.route('/download', methods=['POST'])
 def download():
@@ -392,57 +381,90 @@ def download():
     video_url = request.form.get('video_url')
     format = request.form['format']
     url = audio_url if format == 'audio' else video_url
-
+    
     if not is_valid_url(url):
         flash("Invalid URL. Please enter a valid URL.")
         return redirect(url_for('index'))
 
     try:
-        if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
-            return handle_twitter_spaces_download(url, format)
-        else:
-            return handle_direct_download(url, format)
-    except requests.exceptions.RequestException as e:
-        flash(f"Error: {str(e)}")
-        return redirect(url_for('index'))
+        # Paths to ffmpeg and ffprobe
+        ffmpeg_location = '/ffmpeg/bin/ffmpeg'
+        ffprobe_location = '/ffmpeg/bin/ffprobe'
 
-def handle_twitter_spaces_download(url, format):
-    try:
-        cookie_file = 'cookies_netscape.txt'
-        output_template = os.path.join(DOWNLOADS_DIR, 'Downloaded_File.%(ext)s')
         ydl_opts = {
-            'outtmpl': output_template,
-            'cookies': cookie_file,
-            'format': 'bestaudio/best' if format == 'audio' else 'bestvideo+bestaudio/best',
+            'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
+            'ffmpeg_location': ffmpeg_location,
+            'ffprobe_location': ffprobe_location,
+            'cookiefile': 'cookies_netscape.txt',
+            'hls_use_mpegts': True  # Ensure HLS processing for all formats
         }
+        
+        if format == 'audio':
+            audio_format = request.form['audio_format']
+            ydl_opts.update({
+                'format': 'bestaudio/best',
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': audio_format,
+                    'preferredquality': '192',
+                }]
+            })
+        else:
+            video_format = request.form['video_format']
+            ydl_opts.update({
+                'format': 'bestvideo+bestaudio/best',
+                'merge_output_format': 'mp4'
+            })
 
-        with YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(url, download=True)
+            file_path = ydl.prepare_filename(info_dict)
 
-        list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
-        latest_file = max(list_of_files, key=os.path.getmtime)
-        return send_file_response(latest_file)
-    except Exception as e:
+            if format == 'audio':
+                file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
+            else:
+                if video_format == 'mov':
+                    file_path = file_path.replace('.mp4', f'.mp4')
+                else:
+                    file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
+                
+            if os.path.exists(file_path):
+                if format == 'audio' and audio_format == 'mp3':
+                    mp3_file = file_path.replace('.m4a', '.mp3')
+                    convert_command = [
+                        ffmpeg_location,
+                        '-i', file_path,
+                        '-codec:a', 'libmp3lame',
+                        '-qscale:a', '2',
+                        mp3_file
+                    ]
+                    subprocess.run(convert_command, check=True)
+                    file_to_send = mp3_file
+                elif format == 'video' and video_format == 'mov':
+                    mov_file = file_path.replace('.mp4', '.mov')
+                    convert_command = [
+                        ffmpeg_location,
+                        '-i', file_path,
+                        '-c:v', 'copy',
+                        '-c:a', 'copy',
+                        mov_file
+                    ]
+                    subprocess.run(convert_command, check=True)
+                    file_to_send = mov_file
+                else:
+                    file_to_send = file_path
+
+                socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
+                return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
+            else:
+                flash("File not found after download.")
+                return redirect(url_for('index'))
+
+    except subprocess.CalledProcessError as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
-
-def handle_direct_download(url, format):
-    filename = url.split('/')[-1]
-    filepath = os.path.join(DOWNLOADS_DIR, filename)
-
-    with requests.get(url, stream=True) as r:
-        r.raise_for_status()
-        with open(filepath, 'wb') as f:
-            shutil.copyfileobj(r.raw, f)
-
-    return send_file_response(filepath)
-
-def send_file_response(file_to_send):
-    if os.path.exists(file_to_send):
-        socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
-        return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
-    else:
-        flash("File not found after download.")
+    except yt_dlp.utils.DownloadError as e:
+        flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
 
 @app.route('/uploads/<path:filename>', methods=['GET', 'POST'])
