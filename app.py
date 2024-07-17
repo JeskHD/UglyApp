@@ -1,13 +1,13 @@
-# Flask and other necessary imports
-from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory
-import yt_dlp
 import os
-import base64
-import sqlalchemy as sa
+import subprocess
+import yt_dlp
+from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory
+from flask_socketio import SocketIO, emit
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
-import subprocess
+import sqlalchemy as sa
 import glob
+import base64
 import shutil
 
 app = Flask(__name__)
@@ -15,6 +15,7 @@ app.secret_key = 'your_secret_key'  # Needed for flashing messages
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+socketio = SocketIO(app)
 db = SQLAlchemy(app)
 
 # Ensure the downloads directory exists in the user's Downloads folder
@@ -26,14 +27,16 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)
 
-# Function to read and encode image files to base64
-def get_base64_image(filepath):
-    with open(filepath, "rb") as image_file:
+def is_valid_url(url):
+    parsed = urlparse(url)
+    return bool(parsed.netloc) and bool(parsed.scheme)
+
+def get_base64_image(image_path):
+    with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
 
-# Function to read and encode font files to base64
-def get_base64_font(filepath):
-    with open(filepath, "rb") as font_file:
+def get_base64_font(font_path):
+    with open(font_path, "rb") as font_file:
         return base64.b64encode(font_file.read()).decode('utf-8')
 
 @app.route('/')
@@ -49,10 +52,11 @@ def index():
         <head>
             <meta charset="UTF-8">
             <meta name="HTML WEB DESIGN" content="Web Design">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Ugly Downloader</title>
             <link rel="preconnect" href="https://fonts.googleapis.com">
             <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-            <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900&display=swap" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
             <style>
                 @font-face {
@@ -78,8 +82,8 @@ def index():
                     padding: 10px 50px;
                     background: rgba(0, 0, 0, 0.5);
                     position: absolute;
-                    top: 1px;
-                    z-index: 1000; /* Ensure topbar is above other content */
+                    top: 0;
+                    z-index: 1000;
                 }
                 .topbar nav {
                     display: flex;
@@ -93,11 +97,6 @@ def index():
                     cursor: pointer;
                     position: absolute;
                     right: 40px;
-                }
-                .message {
-                    position: absolute;
-                    top: 565px;
-                    right: 575px;
                 }
                 .topbar ul {
                     list-style-type: none;
@@ -113,7 +112,7 @@ def index():
                 }
                 .topbar ul li:hover {
                     color: rgb(255, 120, 223);
-                    cursor: grab;
+                    cursor: pointer;
                 }
                 .poppins-medium-italic {
                     font-family: "Poppins", sans-serif;
@@ -138,25 +137,27 @@ def index():
                     justify-content: center;
                     align-items: center;
                     text-align: center;
-                    padding-top: 70px; /* Ensure content is not overlapped by topbar */
+                    padding-top: 100px; /* Adjusted to move content closer to the topbar */
                 }
                 .Wrapper {
                     text-align: center;
+                    padding: 20px;
                 }
                 .UglyStay {
-                    position: fixed;
-                    top: 225px;
-                    right: 350px;
                     color: rgb(255, 136, 237);
                     font-size: 50px;
                     font-weight: 800;
                     font-style: italic;
+                    margin: 0 20px;
+                    text-align: center;
+                    width: 100%;
                 }
                 .uglydesc {
-                    position: fixed;
-                    top: 310px;
-                    left: 240px;
                     color: whitesmoke;
+                    margin: 20px 10px;
+                    font-size: 18px;
+                    text-align: center;
+                    width: 100%;
                 }
                 .form-container {
                     display: flex;
@@ -164,6 +165,7 @@ def index():
                     justify-content: center;
                     gap: 10px;
                     margin-top: 20px;
+                    flex-wrap: wrap;
                 }
                 .searchbox {
                     width: 300px;
@@ -209,14 +211,16 @@ def index():
                     position: relative;
                     top: 15px;
                     color: white;
+                    font-size: 18px;
+                    margin: 10px 0;
                 }
                 .url {
-                    position: absolute;
-                    top: 540px;
-                    left: 555px;
                     text-shadow: 0px 3px 5px 0 #c255a7;
                     color: white;
-                    font-size: 11px;
+                    font-size: 14px;
+                    margin-top: 10px;
+                    width: 100%;
+                    text-align: center;
                 }
                 .sp li:hover {
                     color: #1d9bf0 !important;
@@ -268,15 +272,13 @@ def index():
                     }
                     .UglyStay {
                         font-size: 30px;
-                        top: 110px;
-                        right: 40px;
+                        margin-top: 80px;
+                        text-align: center;
                     }
                     .uglydesc {
-                        position: absolute;
-                        top: 200px;
-                        left: 10px;
-                        right: 10px;
-                        font-size: 14px;
+                        font-size: 16px;
+                        margin: 20px 20px;
+                        text-align: center;
                     }
                     .form-container {
                         flex-direction: column;
@@ -285,15 +287,27 @@ def index():
                     .searchbox, .dropdown1, .dropdown2, .btn1, .btn2 {
                         width: 100%;
                         margin-bottom: 10px;
-                        position: relative;
+                    }
+                    .or {
+                        top: 0;
+                        margin: 10px 0;
                     }
                     .url {
-                        top: 650px;
-                        left: 50%;
-                        transform: translateX(-50%);
+                        margin-top: 20px;
+                        text-align: center;
                     }
                 }
             </style>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+            <script>
+                var socket = io();
+                socket.on('connect', function() {
+                    console.log('Connected to server');
+                });
+                socket.on('download_complete', function(data) {
+                    alert('Download complete: ' + data.filename);
+                });
+            </script>
         </head>
         <body>
             <div class="topbar">
@@ -363,22 +377,17 @@ def index():
                 </main>
             </div>
         </body>
-        </html>
+        </html>        
         '''
         return render_template_string(html_content, background_base64=background_base64, font_base64=font_base64)
     except Exception as e:
         return f"Error rendering page: {str(e)}"
-
-def is_valid_url(url):
-    parsed = urlparse(url)
-    return bool(parsed.netloc) and bool(parsed.scheme)
 
 @app.route('/download', methods=['POST'])
 def download():
     audio_url = request.form.get('audio_url')
     video_url = request.form.get('video_url')
     format = request.form['format']
-
     url = audio_url if format == 'audio' else video_url
     
     if not is_valid_url(url):
@@ -387,69 +396,61 @@ def download():
 
     try:
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
-            cookie_file = 'cookies_netscape.txt'
-            output_template = os.path.join(DOWNLOADS_DIR, 'downloaded_file')
-            command = [
-                'twspace_dl',
-                '-i', url,
-                '-c', cookie_file,
-                '-o', output_template
-            ]
-            subprocess.run(command, check=True)
-            # Find the most recently modified file in the DOWNLOADS_DIR
-            list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
-            latest_file = max(list_of_files, key=os.path.getmtime)
-            if os.path.exists(latest_file):
-                # Notify the user via flash message
-                flash(f"Download complete: {os.path.basename(latest_file)}")
-                return send_file(latest_file, as_attachment=True, download_name=os.path.basename(latest_file))
-            else:
-                flash("File not found after download.")
-                return redirect(url_for('index'))
+            return handle_twitter_spaces_download(url, format)
         else:
-            ydl_opts = {
-                'outtmpl': os.path.join(DOWNLOADS_DIR, 'downloaded_file'),
-                'cookiefile': 'cookies_netscape.txt'
-            }
-            if format == 'audio':
-                audio_format = request.form['audio_format']
-                ydl_opts.update({
-                    'format': 'bestaudio/best',
-                    'postprocessors': [{
-                        'key': 'FFmpegExtractAudio',
-                        'preferredcodec': audio_format,
-                        'preferredquality': '192',
-                    }]
-                })
-            else:
-                video_format = request.form['video_format']
-                ydl_opts.update({
-                    'format': f'bestvideo+bestaudio/best' if video_format == 'mp4' else f'best[ext={video_format}]',
-                    'merge_output_format': video_format
-                })
+            return handle_direct_download(url, format)
+    except requests.exceptions.RequestException as e:
+        flash(f"Error: {str(e)}")
+        return redirect(url_for('index'))
 
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info_dict = ydl.extract_info(url, download=True)
-                file_path = ydl.prepare_filename(info_dict)
+def handle_twitter_spaces_download(url, format):
+    try:
+        cookie_file = 'cookies_netscape.txt'
+        output_template = os.path.join(DOWNLOADS_DIR, 'Downloaded_File.%(ext)s')
+        command = [
+            'twspace_dl',
+            '-i', url,
+            '-c', cookie_file,
+            '-o', output_template
+        ]
+        
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        for line in process.stdout:
+            line = line.decode('utf-8').strip()
+            if "size=" in line:
+                # Extract and emit progress information
+                socketio.emit('download_progress', {'progress': line})
+                print(line)
 
-                # Manually rename the file to the correct extension
-                if format == 'audio':
-                    new_file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
-                else:
-                    new_file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
-                
-                if os.path.exists(file_path):
-                    shutil.move(file_path, new_file_path)
-                    flash(f"Download complete: {os.path.basename(new_file_path)}")
-                    return send_file(new_file_path, as_attachment=True, download_name=os.path.basename(new_file_path))
-                else:
-                    flash("File not found after download.")
-                    return redirect(url_for('index'))
+        process.wait()
+        if process.returncode != 0:
+            flash("Error during Twitter Spaces download.")
+            return redirect(url_for('index'))
+
+        list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
+        latest_file = max(list_of_files, key=os.path.getmtime)
+        return send_file_response(latest_file)
     except subprocess.CalledProcessError as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
-    except yt_dlp.utils.DownloadError as e:
-        flash(f"Error: {str(e)}")
+
+def handle_direct_download(url, format):
+    filename = url.split('/')[-1]
+    filepath = os.path.join(DOWNLOADS_DIR, filename)
+
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        with open(filepath, 'wb') as f:
+            shutil.copyfileobj(r.raw, f)
+
+    return send_file_response(filepath)
+
+def send_file_response(file_to_send):
+    if os.path.exists(file_to_send):
+        socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
+        return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
+    else:
+        flash("File not found after download.")
         return redirect(url_for('index'))
 
 @app.route('/uploads/<path:filename>', methods=['GET', 'POST'])
@@ -470,4 +471,4 @@ else:
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    socketio.run(app, host='0.0.0.0', port=port)
