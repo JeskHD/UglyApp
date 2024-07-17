@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 import sqlalchemy as sa
 import glob
 from collections.abc import MutableMapping
+import base64
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
@@ -31,12 +32,17 @@ def is_valid_url(url):
     parsed = urlparse(url)
     return bool(parsed.netloc) and bool(parsed.scheme)
 
+# Function to read and encode image files to base64
+def get_base64_image(filepath):
+    with open(filepath, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode('utf-8')
+
 @app.route('/')
 def index():
     try:
         background_base64 = get_base64_image('uglygif.gif')
         logo_base64 = get_base64_image('uglylogo.png')
-        font_base64 = get_base64_font('PORKH___.TTF.ttf')
+        font_base64 = get_base64_image('PORKH___.TTF.ttf')
 
         html_content = '''
         <!DOCTYPE html>
@@ -477,6 +483,7 @@ engine = sa.create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
 inspector = sa.inspect(engine)
 if not inspector.has_table("user"):
     with app.app_context():
+        db.drop_all()
         db.create_all()
         app.logger.info('Initialized the database!')
 else:
