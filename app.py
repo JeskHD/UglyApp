@@ -401,7 +401,7 @@ def download():
     try:
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
             cookie_file = 'cookies_netscape.txt'
-            output_template = os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s')
+            output_template = os.path.join(DOWNLOADS_DIR, 'downloaded_file.%(ext)s')
             command = [
                 'twspace_dl',
                 '-i', url,
@@ -421,7 +421,7 @@ def download():
                 return redirect(url_for('index'))
         else:
             ydl_opts = {
-                'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
+                'outtmpl': os.path.join(DOWNLOADS_DIR, 'downloaded_file.%(ext)s'),
                 'cookiefile': 'cookies_netscape.txt'
             }
             if format == 'audio':
@@ -451,6 +451,9 @@ def download():
                 else:
                     new_file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
                 
+                print(f"Original file path: {file_path}")
+                print(f"New file path: {new_file_path}")
+
                 if os.path.exists(file_path):
                     shutil.move(file_path, new_file_path)
                     flash(f"Download complete: {os.path.basename(new_file_path)}")
