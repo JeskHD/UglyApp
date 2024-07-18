@@ -403,7 +403,7 @@ def download():
             cookie_file = 'cookies_netscape.txt'
             output_template = os.path.join(DOWNLOADS_DIR, 'downloaded_file')
             command = [
-                'twspace-dl',  # Just use the command name if it's in your PATH
+                '/usr/local/bin/twspace-dl',  # Use the full path to twspace-dl
                 '-i', url,
                 '-c', cookie_file,
                 '-o', output_template
