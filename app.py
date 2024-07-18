@@ -404,7 +404,18 @@ def download():
         ffmpeg_location = '/usr/bin/ffmpeg'
         ffprobe_location = '/usr/bin/ffprobe'
 
-        if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
+        ydl_opts = {
+            'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
+            'ffmpeg_location': ffmpeg_location,
+            'ffprobe_location': ffprobe_location,
+            'hls_use_mpegts': True  # Ensure HLS processing for all formats
+        }
+
+        if "youtube.com" in url:
+            logger.debug("Downloading from YouTube")
+            ydl_opts['cookiefile'] = 'youtube_cookies.txt'
+        elif "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
+            logger.debug("Downloading from Twitter Spaces")
             cookie_file = 'cookies_netscape.txt'
             audio_format = request.form.get('audio_format', 'm4a/mp3')
             output_template = os.path.join(DOWNLOADS_DIR, '%(title)s')
@@ -423,7 +434,7 @@ def download():
                 if process.poll() is not None:
                     break
                 if output:
-                    print(output.strip())
+                    logger.debug(output.strip())
                     socketio.emit('eta', {'data': output.strip()})
 
             process.wait()
@@ -456,16 +467,6 @@ def download():
                 flash("Error during the download process.")
                 return redirect(url_for('index'))
         else:
-            ydl_opts = {
-                'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
-                'ffmpeg_location': ffmpeg_location,
-                'ffprobe_location': ffprobe_location,
-                'cookiefile': 'youtube_cookies.txt',
-                'hls_use_mpegts': True,  # Ensure HLS processing for all formats
-                'username': 'oauth2',
-                'password': ''
-            }
-            
             if format == 'audio':
                 audio_format = request.form['audio_format']
                 ydl_opts.update({
@@ -484,6 +485,7 @@ def download():
                 })
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                logger.debug("Starting download with yt-dlp")
                 info_dict = ydl.extract_info(url, download=True)
                 file_path = ydl.prepare_filename(info_dict)
 
@@ -494,7 +496,7 @@ def download():
                         file_path = file_path.replace('.mp4', f'.mp4')
                     else:
                         file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
-                    
+
                 if os.path.exists(file_path):
                     if format == 'audio' and audio_format == 'mp3':
                         mp3_file = file_path.replace('.m4a', '.mp3')
