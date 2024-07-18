@@ -401,7 +401,7 @@ def download():
 
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
             cookie_file = 'cookies_netscape.txt'
-            output_template = os.path.join(DOWNLOADS_DIR, 'downloaded_file')
+            output_template = os.path.join(DOWNLOADS_DIR, '%(title)s')
             command = [
                 '/root/UglyApp/venv/bin/twspace_dl',  # Use the full path to twspace_dl
                 '-i', url,
