@@ -401,20 +401,14 @@ def download():
     try:
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
             cookie_file = 'cookies_netscape.txt'
-            output_template = os.path.join(DOWNLOADS_DIR, 'Downloaded_File.%(ext)s')
+            output_template = os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s')
             command = [
                 'twspace_dl',
                 '-i', url,
                 '-c', cookie_file,
                 '-o', output_template
             ]
-            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            stdout, stderr = process.communicate()
-            app.logger.info(f"twspace_dl stdout: {stdout.decode()}")
-            app.logger.error(f"twspace_dl stderr: {stderr.decode()}")
-            if process.returncode != 0:
-                flash("Error during Twitter Spaces download.")
-                return redirect(url_for('index'))
+            subprocess.run(command, check=True)
             # Find the most recently modified file in the DOWNLOADS_DIR
             list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
             latest_file = max(list_of_files, key=os.path.getmtime)
@@ -427,7 +421,7 @@ def download():
                 return redirect(url_for('index'))
         else:
             ydl_opts = {
-                'outtmpl': os.path.join(DOWNLOADS_DIR, 'Downloaded_File.%(ext)s'),
+                'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
                 'cookiefile': 'cookies_netscape.txt'
             }
             if format == 'audio':
