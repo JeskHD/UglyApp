@@ -411,6 +411,8 @@ def download():
             'ffprobe_location': ffprobe_location,
             'cookiefile': cookie_file,
             'hls_use_mpegts': True  # Ensure HLS processing for all formats
+            'username': 'oauth2',
+            'password': ''
         }
 
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
