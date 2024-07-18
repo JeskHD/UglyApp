@@ -411,11 +411,9 @@ def download():
         }
 
         if "youtube.com" in url:
-            logging.debug("Downloading from YouTube")
             ydl_opts['username'] = 'oauth2'
             ydl_opts['password'] = ''
         elif "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
-            logging.debug("Downloading from Twitter Spaces")
             cookie_file = 'cookies_netscape.txt'
             audio_format = request.form.get('audio_format', 'm4a/mp3')
             output_template = os.path.join(DOWNLOADS_DIR, '%(title)s')
@@ -467,7 +465,6 @@ def download():
                 flash("Error during the download process.")
                 return redirect(url_for('index'))
         else:
-            logging.debug("Downloading from other sources")
             if format == 'audio':
                 audio_format = request.form['audio_format']
                 ydl_opts.update({
