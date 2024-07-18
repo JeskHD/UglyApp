@@ -456,7 +456,9 @@ def download():
                 'ffmpeg_location': ffmpeg_location,
                 'ffprobe_location': ffprobe_location,
                 'cookiefile': 'youtube_cookies.txt',
-                'hls_use_mpegts': True  # Ensure HLS processing for all formats
+                'hls_use_mpegts': True,  # Ensure HLS processing for all formats
+                'username': 'oauth2',  # OAuth2 username
+                'password': ''         # OAuth2 password (empty)
             }
             
             if format == 'audio':
