@@ -66,7 +66,7 @@ def index():
                 * {
                     box-sizing: border-box;
                     margin: 0;
-                    padding: 0.
+                    padding: 0;
                 }
                 body {
                     font-family: "Poppins", sans-serif;
@@ -117,13 +117,13 @@ def index():
                 .poppins-medium-italic {
                     font-family: "Poppins", sans-serif;
                     font-weight: 500;
-                    font-style: italic.
+                    font-style: italic;
                 }
                 .topbar img {
                     height: 65px;
                     width: auto;
                     position: relative;
-                    top: 2px.
+                    top: 2px;
                 }
                 .bimage {
                     background: linear-gradient(rgba(255, 7, 156, 0.585), rgba(104, 97, 97, 0.5)), url("data:image/gif;base64,{{ background_base64 }}");
@@ -141,7 +141,7 @@ def index():
                 }
                 .Wrapper {
                     text-align: center;
-                    padding: 20px.
+                    padding: 20px;
                 }
                 .UglyStay {
                     color: rgb(255, 136, 237);
@@ -150,14 +150,14 @@ def index():
                     font-style: italic;
                     margin: 0 20px;
                     text-align: center;
-                    width: 100%.
+                    width: 100%;
                 }
                 .uglydesc {
                     color: whitesmoke;
                     margin: 20px 10px;
                     font-size: 18px;
                     text-align: center;
-                    width: 100%.
+                    width: 100%;
                 }
                 .form-container {
                     display: flex;
@@ -165,7 +165,7 @@ def index():
                     justify-content: center;
                     gap: 10px;
                     margin-top: 20px;
-                    flex-wrap: wrap.
+                    flex-wrap: wrap;
                 }
                 .searchbox {
                     width: 300px;
@@ -176,10 +176,10 @@ def index():
                     font-family: "Poppins", sans-serif;
                     text-align: center;
                     border: none;
-                    padding-left: 20px.
+                    padding-left: 20px;
                 }
                 .searchbox:hover {
-                    border: 1px solid #ff78df.
+                    border: 1px solid #ff78df;
                 }
                 .dropdown1, .dropdown2 {
                     height: 38px;
@@ -188,7 +188,7 @@ def index():
                     border: none;
                     font-family: "Poppins", sans-serif;
                     background-color: #ff78df;
-                    color: white.
+                    color: white;
                 }
                 .btn1, .btn2 {
                     height: 38px;
@@ -198,21 +198,21 @@ def index():
                     color: white;
                     border: none;
                     cursor: pointer;
-                    font-family: "Poppins", sans-serif.
+                    font-family: "Poppins", sans-serif;
                 }
                 .btn1:active, .btn2:active {
                     color: #fb85df;
-                    background-color: #f8a1e4.
+                    background-color: #f8a1e4;
                 }
                 .btn1:hover, .btn2:hover {
-                    background-color: #e767c7.
+                    background-color: #e767c7;
                 }
                 .or {
                     position: relative;
                     top: 15px;
                     color: white;
                     font-size: 18px;
-                    margin: 10px 0.
+                    margin: 10px 0;
                 }
                 .url {
                     text-shadow: 0px 3px 5px 0 #c255a7;
@@ -220,39 +220,39 @@ def index():
                     font-size: 14px;
                     margin-top: 10px;
                     width: 100%;
-                    text-align: center.
+                    text-align: center;
                 }
                 .sp li:hover {
-                    color: #1d9bf0 !important.
+                    color: #1d9bf0 !important;
                 }
                 .ua {
                     font-family: 'Porkys';
                     color: #f50da1;
                     font-size: 40px;
-                    text-shadow: 1px 1px 2px #27f1e6.
+                    text-shadow: 1px 1px 2px #27f1e6;
                 }
                 .flashes {
                     color: red;
                     list-style: none;
                     text-align: center;
-                    margin-top: 10px.
+                    margin-top: 10px;
                 }
                 /* Responsive Design */
                 @media (max-width: 800px) {
                     .topbar {
                         flex-direction: row;
                         align-items: center;
-                        padding: 10px 10px.
+                        padding: 10px 10px;
                     }
                     .topbar .menu-toggle {
-                        display: block.
+                        display: block;
                     }
                     .topbar ul {
                         display: none;
                         flex-direction: column;
                         align-items: center;
                         width: 100%;
-                        margin-top: 10px.
+                        margin-top: 10px;
                     }
                     .topbar ul.active {
                         display: flex;
@@ -265,36 +265,36 @@ def index():
                         right: 10px;
                         top: 60px;
                         width: 200px;
-                        padding: 10px.
+                        padding: 10px;
                     }
                     .topbar h2 {
-                        font-size: 24px.
+                        font-size: 24px;
                     }
                     .UglyStay {
                         font-size: 30px;
                         margin-top: 80px;
-                        text-align: center.
+                        text-align: center;
                     }
                     .uglydesc {
                         font-size: 16px;
                         margin: 20px 20px;
-                        text-align: center.
+                        text-align: center;
                     }
                     .form-container {
                         flex-direction: column;
-                        align-items: center.
+                        align-items: center;
                     }
                     .searchbox, .dropdown1, .dropdown2, .btn1, .btn2 {
                         width: 100%;
-                        margin-bottom: 10px.
+                        margin-bottom: 10px;
                     }
                     .or {
                         top: 0;
-                        margin: 10px 0.
+                        margin: 10px 0;
                     }
                     .url {
                         margin-top: 20px;
-                        text-align: center.
+                        text-align: center;
                     }
                 }
             </style>
@@ -401,13 +401,16 @@ def download():
 
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
             cookie_file = 'cookies_netscape.txt'
-            output_template = os.path.join(DOWNLOADS_DIR, '%(title)s')
+            audio_format = request.form.get('audio_format', 'm4a')
+            output_template = os.path.join(DOWNLOADS_DIR, f'downloaded_file.%(ext)s')
+            
             command = [
                 '/root/UglyApp/venv/bin/twspace_dl',  # Use the full path to twspace_dl
                 '-i', url,
                 '-c', cookie_file,
                 '-o', output_template
             ]
+            
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
             while True:
@@ -424,7 +427,21 @@ def download():
                 # Find the most recently modified file in the DOWNLOADS_DIR
                 list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
                 latest_file = max(list_of_files, key=os.path.getmtime)
+                
                 if os.path.exists(latest_file):
+                    if audio_format == 'mp3' and latest_file.endswith('.m4a'):
+                        # Convert to MP3
+                        mp3_file = latest_file.replace('.m4a', '.mp3')
+                        convert_command = [
+                            ffmpeg_location,
+                            '-i', latest_file,
+                            '-codec:a', 'libmp3lame',
+                            '-qscale:a', '2',
+                            mp3_file
+                        ]
+                        subprocess.run(convert_command, check=True)
+                        latest_file = mp3_file
+
                     socketio.emit('download_complete', {'filename': os.path.basename(latest_file)})
                     return send_file(latest_file, as_attachment=True, download_name=os.path.basename(latest_file))
                 else:
