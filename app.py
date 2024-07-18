@@ -9,10 +9,9 @@ import sqlalchemy as sa
 import glob
 import base64
 import shutil
-import requests
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'default_secret_key')  # Use environment variable for secret key
+app.secret_key = 'your_secret_key'  # Needed for flashing messages
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -29,17 +28,14 @@ class User(db.Model):
     name = db.Column(db.String(80), unique=True, nullable=False)
 
 def is_valid_url(url):
-    """Check if the provided URL is valid."""
     parsed = urlparse(url)
     return bool(parsed.netloc) and bool(parsed.scheme)
 
 def get_base64_image(image_path):
-    """Convert image to base64 string."""
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
 
 def get_base64_font(font_path):
-    """Convert font to base64 string."""
     with open(font_path, "rb") as font_file:
         return base64.b64encode(font_file.read()).decode('utf-8')
 
@@ -399,31 +395,53 @@ def download():
         return redirect(url_for('index'))
 
     try:
+        # Paths to ffmpeg and ffprobe
+        ffmpeg_location = '/usr/bin/ffmpeg'
+        ffprobe_location = '/usr/bin/ffprobe'
+
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
             cookie_file = 'cookies_netscape.txt'
-            output_template = os.path.join(DOWNLOADS_DIR, 'downloaded_file.%(ext)s')
+            output_template = os.path.join(DOWNLOADS_DIR, 'downloaded_file')
             command = [
                 'twspace_dl',
                 '-i', url,
                 '-c', cookie_file,
                 '-o', output_template
             ]
-            subprocess.run(command, check=True)
-            # Find the most recently modified file in the DOWNLOADS_DIR
-            list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
-            latest_file = max(list_of_files, key=os.path.getmtime)
-            if os.path.exists(latest_file):
-                # Notify the user via flash message
-                flash(f"Download complete: {os.path.basename(latest_file)}")
-                return send_file(latest_file, as_attachment=True, download_name=os.path.basename(latest_file))
+            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+            while True:
+                output = process.stdout.readline()
+                if process.poll() is not None:
+                    break
+                if output:
+                    print(output.strip())
+                    socketio.emit('eta', {'data': output.strip()})
+
+            process.wait()
+
+            if process.returncode == 0:
+                # Find the most recently modified file in the DOWNLOADS_DIR
+                list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
+                latest_file = max(list_of_files, key=os.path.getmtime)
+                if os.path.exists(latest_file):
+                    socketio.emit('download_complete', {'filename': os.path.basename(latest_file)})
+                    return send_file(latest_file, as_attachment=True, download_name=os.path.basename(latest_file))
+                else:
+                    flash("File not found after download.")
+                    return redirect(url_for('index'))
             else:
-                flash("File not found after download.")
+                flash("Error during the download process.")
                 return redirect(url_for('index'))
         else:
             ydl_opts = {
-                'outtmpl': os.path.join(DOWNLOADS_DIR, 'downloaded_file.%(ext)s'),
-                'cookiefile': 'cookies_netscape.txt'
+                'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
+                'ffmpeg_location': ffmpeg_location,
+                'ffprobe_location': ffprobe_location,
+                'cookiefile': 'cookies_netscape.txt',
+                'hls_use_mpegts': True  # Ensure HLS processing for all formats
             }
+            
             if format == 'audio':
                 audio_format = request.form['audio_format']
                 ydl_opts.update({
@@ -437,27 +455,50 @@ def download():
             else:
                 video_format = request.form['video_format']
                 ydl_opts.update({
-                    'format': f'bestvideo+bestaudio/best' if video_format == 'mp4' else f'best[ext={video_format}]',
-                    'merge_output_format': video_format
+                    'format': 'bestvideo+bestaudio/best',
+                    'merge_output_format': 'mp4'
                 })
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info_dict = ydl.extract_info(url, download=True)
                 file_path = ydl.prepare_filename(info_dict)
 
-                # Manually rename the file to the correct extension
                 if format == 'audio':
-                    new_file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
+                    file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
                 else:
-                    new_file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
-                
-                print(f"Original file path: {file_path}")
-                print(f"New file path: {new_file_path}")
-
+                    if video_format == 'mov':
+                        file_path = file_path.replace('.mp4', f'.mp4')
+                    else:
+                        file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
+                    
                 if os.path.exists(file_path):
-                    shutil.move(file_path, new_file_path)
-                    flash(f"Download complete: {os.path.basename(new_file_path)}")
-                    return send_file(new_file_path, as_attachment=True, download_name=os.path.basename(new_file_path))
+                    if format == 'audio' and audio_format == 'mp3':
+                        mp3_file = file_path.replace('.m4a', '.mp3')
+                        convert_command = [
+                            ffmpeg_location,
+                            '-i', file_path,
+                            '-codec:a', 'libmp3lame',
+                            '-qscale:a', '2',
+                            mp3_file
+                        ]
+                        subprocess.run(convert_command, check=True)
+                        file_to_send = mp3_file
+                    elif format == 'video' and video_format == 'mov':
+                        mov_file = file_path.replace('.mp4', '.mov')
+                        convert_command = [
+                            ffmpeg_location,
+                            '-i', file_path,
+                            '-c:v', 'copy',
+                            '-c:a', 'copy',
+                            mov_file
+                        ]
+                        subprocess.run(convert_command, check=True)
+                        file_to_send = mov_file
+                    else:
+                        file_to_send = file_path
+
+                    socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
+                    return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
                 else:
                     flash("File not found after download.")
                     return redirect(url_for('index'))
@@ -473,11 +514,12 @@ def upload(filename):
     uploads = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
     return send_from_directory(uploads, filename)
 
-# Database initialization logic
+# Database initialization logic for Render
 engine = sa.create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
 inspector = sa.inspect(engine)
 if not inspector.has_table("user"):
     with app.app_context():
+        db.drop_all()
         db.create_all()
         app.logger.info('Initialized the database!')
 else:
