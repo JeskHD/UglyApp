@@ -401,7 +401,7 @@ def download():
     try:
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
             cookie_file = 'cookies_netscape.txt'
-            output_template = os.path.join(DOWNLOADS_DIR, 'downloaded_file')
+            output_template = os.path.join(DOWNLOADS_DIR, '%(title)s')
             command = [
                 'twspace_dl',
                 '-i', url,
@@ -421,7 +421,7 @@ def download():
                 return redirect(url_for('index'))
         else:
             ydl_opts = {
-                'outtmpl': os.path.join(DOWNLOADS_DIR, 'downloaded_file'),
+                'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s'),
                 'cookiefile': 'cookies_netscape.txt'
             }
             if format == 'audio':
