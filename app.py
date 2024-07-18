@@ -11,7 +11,7 @@ import base64
 import logging
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'
+app.secret_key = 'your_secret_key'  # Needed for flashing messages
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -298,7 +298,7 @@ def index():
                     }
                     .url {
                         margin-top: 20px;
-                        text-align: center.
+                        text-align: center;
                     }
                 }
             </style>
@@ -381,7 +381,7 @@ def index():
                 </main>
             </div>
         </body>
-        </html>
+        </html>        
         '''
         return render_template_string(html_content, background_base64=background_base64, font_base64=font_base64)
     except Exception as e:
@@ -403,20 +403,8 @@ def download():
         # Paths to ffmpeg and ffprobe
         ffmpeg_location = '/usr/bin/ffmpeg'
         ffprobe_location = '/usr/bin/ffprobe'
-        cookie_file = 'cookies.txt'  # Specify the path to your cookies file
-
-        ydl_opts = {
-            'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
-            'ffmpeg_location': ffmpeg_location,
-            'ffprobe_location': ffprobe_location,
-            'cookiefile': cookie_file,
-            'hls_use_mpegts': True  # Ensure HLS processing for all formats
-            'username': 'oauth2',
-            'password': '',
-        }
 
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
-            logger.debug("Downloading from Twitter Spaces")
             cookie_file = 'cookies_netscape.txt'
             audio_format = request.form.get('audio_format', 'm4a/mp3')
             output_template = os.path.join(DOWNLOADS_DIR, '%(title)s')
@@ -435,7 +423,7 @@ def download():
                 if process.poll() is not None:
                     break
                 if output:
-                    logger.debug(output.strip())
+                    print(output.strip())
                     socketio.emit('eta', {'data': output.strip()})
 
             process.wait()
@@ -468,6 +456,16 @@ def download():
                 flash("Error during the download process.")
                 return redirect(url_for('index'))
         else:
+            ydl_opts = {
+                'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
+                'ffmpeg_location': ffmpeg_location,
+                'ffprobe_location': ffprobe_location,
+                'cookiefile': 'youtube_cookies.txt',
+                'hls_use_mpegts': True,  # Ensure HLS processing for all formats
+                'username': 'oauth2',
+                'password': ''
+            }
+            
             if format == 'audio':
                 audio_format = request.form['audio_format']
                 ydl_opts.update({
@@ -486,7 +484,6 @@ def download():
                 })
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                logger.debug("Starting download with yt-dlp")
                 info_dict = ydl.extract_info(url, download=True)
                 file_path = ydl.prepare_filename(info_dict)
 
@@ -497,7 +494,7 @@ def download():
                         file_path = file_path.replace('.mp4', f'.mp4')
                     else:
                         file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
-
+                    
                 if os.path.exists(file_path):
                     if format == 'audio' and audio_format == 'mp3':
                         mp3_file = file_path.replace('.m4a', '.mp3')
