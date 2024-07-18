@@ -11,7 +11,7 @@ import base64
 import logging
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Needed for flashing messages
+app.secret_key = 'your_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -298,7 +298,7 @@ def index():
                     }
                     .url {
                         margin-top: 20px;
-                        text-align: center;
+                        text-align: center.
                     }
                 }
             </style>
@@ -381,7 +381,7 @@ def index():
                 </main>
             </div>
         </body>
-        </html>        
+        </html>
         '''
         return render_template_string(html_content, background_base64=background_base64, font_base64=font_base64)
     except Exception as e:
@@ -403,18 +403,17 @@ def download():
         # Paths to ffmpeg and ffprobe
         ffmpeg_location = '/usr/bin/ffmpeg'
         ffprobe_location = '/usr/bin/ffprobe'
+        cookie_file = 'cookies.txt'  # Specify the path to your cookies file
 
         ydl_opts = {
             'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
             'ffmpeg_location': ffmpeg_location,
             'ffprobe_location': ffprobe_location,
+            'cookiefile': cookie_file,
             'hls_use_mpegts': True  # Ensure HLS processing for all formats
         }
 
-        if "youtube.com" in url:
-            logger.debug("Downloading from YouTube")
-            ydl_opts['cookiefile'] = 'youtube_cookies.txt'
-        elif "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
+        if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
             logger.debug("Downloading from Twitter Spaces")
             cookie_file = 'cookies_netscape.txt'
             audio_format = request.form.get('audio_format', 'm4a/mp3')
