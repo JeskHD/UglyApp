@@ -8,7 +8,6 @@ from urllib.parse import urlparse
 import sqlalchemy as sa
 import glob
 import base64
-import shutil
 import logging
 
 app = Flask(__name__)
@@ -48,6 +47,7 @@ def get_base64_font(font_path):
 def index():
     try:
         background_base64 = get_base64_image('uglygif.gif')
+        logo_base64 = get_base64_image('uglylogo.png')
         font_base64 = get_base64_font('PORKH___.TTF.ttf')
 
         html_content = '''
@@ -404,17 +404,7 @@ def download():
         ffmpeg_location = '/usr/bin/ffmpeg'
         ffprobe_location = '/usr/bin/ffprobe'
 
-        ydl_opts = {
-            'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
-            'ffmpeg_location': ffmpeg_location,
-            'ffprobe_location': ffprobe_location,
-            'hls_use_mpegts': True  # Ensure HLS processing for all formats
-        }
-
-        if "youtube.com" in url or "youtu.be" in url:
-            logger.debug("Downloading from YouTube")
-        elif "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
-            logger.debug("Downloading from Twitter Spaces")
+        if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
             cookie_file = 'cookies_netscape.txt'
             audio_format = request.form.get('audio_format', 'm4a/mp3')
             output_template = os.path.join(DOWNLOADS_DIR, '%(title)s')
@@ -433,7 +423,7 @@ def download():
                 if process.poll() is not None:
                     break
                 if output:
-                    logger.debug(output.strip())
+                    print(output.strip())
                     socketio.emit('eta', {'data': output.strip()})
 
             process.wait()
@@ -466,6 +456,16 @@ def download():
                 flash("Error during the download process.")
                 return redirect(url_for('index'))
         else:
+            ydl_opts = {
+                'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
+                'ffmpeg_location': ffmpeg_location,
+                'ffprobe_location': ffprobe_location,
+                'cookiefile': 'youtube_cookies.txt',
+                'hls_use_mpegts': True,  # Ensure HLS processing for all formats
+                'username': 'oauth2',
+                'password': ''
+            }
+            
             if format == 'audio':
                 audio_format = request.form['audio_format']
                 ydl_opts.update({
@@ -484,7 +484,6 @@ def download():
                 })
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                logger.debug("Starting download with yt-dlp")
                 info_dict = ydl.extract_info(url, download=True)
                 file_path = ydl.prepare_filename(info_dict)
 
@@ -495,24 +494,13 @@ def download():
                         file_path = file_path.replace('.mp4', f'.mp4')
                     else:
                         file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
-
-                # Check if file already exists and rename if necessary
-                base, ext = os.path.splitext(file_path)
-                counter = 1
-                new_file_path = file_path
-                while os.path.exists(new_file_path):
-                    new_file_path = f"{base}_{counter}{ext}"
-                    counter += 1
-
-                if new_file_path != file_path:
-                    os.rename(file_path, new_file_path)
-
-                if os.path.exists(new_file_path):
+                    
+                if os.path.exists(file_path):
                     if format == 'audio' and audio_format == 'mp3':
-                        mp3_file = new_file_path.replace('.m4a', '.mp3')
+                        mp3_file = file_path.replace('.m4a', '.mp3')
                         convert_command = [
                             ffmpeg_location,
-                            '-i', new_file_path,
+                            '-i', file_path,
                             '-codec:a', 'libmp3lame',
                             '-qscale:a', '2',
                             mp3_file
@@ -520,10 +508,10 @@ def download():
                         subprocess.run(convert_command, check=True)
                         file_to_send = mp3_file
                     elif format == 'video' and video_format == 'mov':
-                        mov_file = new_file_path.replace('.mp4', '.mov')
+                        mov_file = file_path.replace('.mp4', '.mov')
                         convert_command = [
                             ffmpeg_location,
-                            '-i', new_file_path,
+                            '-i', file_path,
                             '-c:v', 'copy',
                             '-c:a', 'copy',
                             mov_file
@@ -531,7 +519,7 @@ def download():
                         subprocess.run(convert_command, check=True)
                         file_to_send = mov_file
                     else:
-                        file_to_send = new_file_path
+                        file_to_send = file_path
 
                     socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
                     return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
