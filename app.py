@@ -1,6 +1,7 @@
 import os
 import subprocess
 import yt_dlp
+import youtube_dl
 from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory
 from flask_socketio import SocketIO, emit
 from flask_sqlalchemy import SQLAlchemy
@@ -486,50 +487,73 @@ def download():
                     'merge_output_format': 'mp4'
                 })
 
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                logger.debug("Starting download with yt-dlp")
-                info_dict = ydl.extract_info(url, download=True)
-                file_path = ydl.prepare_filename(info_dict)
+            def download_with_ytdlp():
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    logger.debug("Starting download with yt-dlp")
+                    info_dict = ydl.extract_info(url, download=True)
+                    file_path = ydl.prepare_filename(info_dict)
 
-                if format == 'audio':
-                    file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
-                else:
-                    if video_format == 'mov':
-                        file_path = file_path.replace('.mp4', f'.mp4')
+                    if format == 'audio':
+                        file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
                     else:
-                        file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
+                        if video_format == 'mov':
+                            file_path = file_path.replace('.mp4', f'.mp4')
+                        else:
+                            file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
+                    return file_path
 
-                if os.path.exists(file_path):
-                    if format == 'audio' and audio_format == 'mp3':
-                        mp3_file = file_path.replace('.m4a', '.mp3')
-                        convert_command = [
-                            ffmpeg_location,
-                            '-i', file_path,
-                            '-codec:a', 'libmp3lame',
-                            '-qscale:a', '2',
-                            mp3_file
-                        ]
-                        subprocess.run(convert_command, check=True)
-                        file_to_send = mp3_file
-                    elif format == 'video' and video_format == 'mov':
-                        mov_file = file_path.replace('.mp4', '.mov')
-                        convert_command = [
-                            ffmpeg_location,
-                            '-i', file_path,
-                            '-c:v', 'copy',
-                            '-c:a', 'copy',
-                            mov_file
-                        ]
-                        subprocess.run(convert_command, check=True)
-                        file_to_send = mov_file
+            def download_with_youtubedl():
+                with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+                    logger.debug("Starting download with youtube-dl")
+                    info_dict = ydl.extract_info(url, download=True)
+                    file_path = ydl.prepare_filename(info_dict)
+
+                    if format == 'audio':
+                        file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
                     else:
-                        file_to_send = file_path
+                        if video_format == 'mov':
+                            file_path = file_path.replace('.mp4', f'.mp4')
+                        else:
+                            file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
+                    return file_path
 
-                    socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
-                    return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
+            try:
+                file_path = download_with_ytdlp()
+            except Exception as e:
+                logger.warning(f"yt-dlp failed with error: {str(e)}. Falling back to youtube-dl.")
+                file_path = download_with_youtubedl()
+
+            if os.path.exists(file_path):
+                if format == 'audio' and audio_format == 'mp3':
+                    mp3_file = file_path.replace('.m4a', '.mp3')
+                    convert_command = [
+                        ffmpeg_location,
+                        '-i', file_path,
+                        '-codec:a', 'libmp3lame',
+                        '-qscale:a', '2',
+                        mp3_file
+                    ]
+                    subprocess.run(convert_command, check=True)
+                    file_to_send = mp3_file
+                elif format == 'video' and video_format == 'mov':
+                    mov_file = file_path.replace('.mp4', '.mov')
+                    convert_command = [
+                        ffmpeg_location,
+                        '-i', file_path,
+                        '-c:v', 'copy',
+                        '-c:a', 'copy',
+                        mov_file
+                    ]
+                    subprocess.run(convert_command, check=True)
+                    file_to_send = mov_file
                 else:
-                    flash("File not found after download.")
-                    return redirect(url_for('index'))
+                    file_to_send = file_path
+
+                socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
+                return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
+            else:
+                flash("File not found after download.")
+                return redirect(url_for('index'))
     except subprocess.CalledProcessError as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
