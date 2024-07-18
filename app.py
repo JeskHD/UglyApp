@@ -455,7 +455,7 @@ def download():
                 'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
                 'ffmpeg_location': ffmpeg_location,
                 'ffprobe_location': ffprobe_location,
-                'cookiefile': 'cookies_netscape.txt',
+                'cookiefile': 'youtube_cookies.txt',  # Added cookie file path for YouTube
                 'hls_use_mpegts': True  # Ensure HLS processing for all formats
             }
             
