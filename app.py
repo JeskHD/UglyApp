@@ -1,7 +1,6 @@
 import os
 import subprocess
 import yt_dlp
-import youtube_dl
 from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory
 from flask_socketio import SocketIO, emit
 from flask_sqlalchemy import SQLAlchemy
@@ -49,7 +48,6 @@ def get_base64_font(font_path):
 def index():
     try:
         background_base64 = get_base64_image('uglygif.gif')
-        logo_base64 = get_base64_image('uglylogo.png')
         font_base64 = get_base64_font('PORKH___.TTF.ttf')
 
         html_content = '''
@@ -413,10 +411,8 @@ def download():
             'hls_use_mpegts': True  # Ensure HLS processing for all formats
         }
 
-        if "youtube.com" in url:
+        if "youtube.com" in url or "youtu.be" in url:
             logger.debug("Downloading from YouTube")
-            ydl_opts['username'] = 'oauth2'
-            ydl_opts['password'] = ''
         elif "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
             logger.debug("Downloading from Twitter Spaces")
             cookie_file = 'cookies_netscape.txt'
@@ -487,73 +483,61 @@ def download():
                     'merge_output_format': 'mp4'
                 })
 
-            def download_with_ytdlp():
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    logger.debug("Starting download with yt-dlp")
-                    info_dict = ydl.extract_info(url, download=True)
-                    file_path = ydl.prepare_filename(info_dict)
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                logger.debug("Starting download with yt-dlp")
+                info_dict = ydl.extract_info(url, download=True)
+                file_path = ydl.prepare_filename(info_dict)
 
-                    if format == 'audio':
-                        file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
-                    else:
-                        if video_format == 'mov':
-                            file_path = file_path.replace('.mp4', f'.mp4')
-                        else:
-                            file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
-                    return file_path
-
-            def download_with_youtubedl():
-                with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-                    logger.debug("Starting download with youtube-dl")
-                    info_dict = ydl.extract_info(url, download=True)
-                    file_path = ydl.prepare_filename(info_dict)
-
-                    if format == 'audio':
-                        file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
-                    else:
-                        if video_format == 'mov':
-                            file_path = file_path.replace('.mp4', f'.mp4')
-                        else:
-                            file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
-                    return file_path
-
-            try:
-                file_path = download_with_ytdlp()
-            except Exception as e:
-                logger.warning(f"yt-dlp failed with error: {str(e)}. Falling back to youtube-dl.")
-                file_path = download_with_youtubedl()
-
-            if os.path.exists(file_path):
-                if format == 'audio' and audio_format == 'mp3':
-                    mp3_file = file_path.replace('.m4a', '.mp3')
-                    convert_command = [
-                        ffmpeg_location,
-                        '-i', file_path,
-                        '-codec:a', 'libmp3lame',
-                        '-qscale:a', '2',
-                        mp3_file
-                    ]
-                    subprocess.run(convert_command, check=True)
-                    file_to_send = mp3_file
-                elif format == 'video' and video_format == 'mov':
-                    mov_file = file_path.replace('.mp4', '.mov')
-                    convert_command = [
-                        ffmpeg_location,
-                        '-i', file_path,
-                        '-c:v', 'copy',
-                        '-c:a', 'copy',
-                        mov_file
-                    ]
-                    subprocess.run(convert_command, check=True)
-                    file_to_send = mov_file
+                if format == 'audio':
+                    file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
                 else:
-                    file_to_send = file_path
+                    if video_format == 'mov':
+                        file_path = file_path.replace('.mp4', f'.mp4')
+                    else:
+                        file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
 
-                socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
-                return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
-            else:
-                flash("File not found after download.")
-                return redirect(url_for('index'))
+                # Check if file already exists and rename if necessary
+                base, ext = os.path.splitext(file_path)
+                counter = 1
+                new_file_path = file_path
+                while os.path.exists(new_file_path):
+                    new_file_path = f"{base}_{counter}{ext}"
+                    counter += 1
+
+                if new_file_path != file_path:
+                    os.rename(file_path, new_file_path)
+
+                if os.path.exists(new_file_path):
+                    if format == 'audio' and audio_format == 'mp3':
+                        mp3_file = new_file_path.replace('.m4a', '.mp3')
+                        convert_command = [
+                            ffmpeg_location,
+                            '-i', new_file_path,
+                            '-codec:a', 'libmp3lame',
+                            '-qscale:a', '2',
+                            mp3_file
+                        ]
+                        subprocess.run(convert_command, check=True)
+                        file_to_send = mp3_file
+                    elif format == 'video' and video_format == 'mov':
+                        mov_file = new_file_path.replace('.mp4', '.mov')
+                        convert_command = [
+                            ffmpeg_location,
+                            '-i', new_file_path,
+                            '-c:v', 'copy',
+                            '-c:a', 'copy',
+                            mov_file
+                        ]
+                        subprocess.run(convert_command, check=True)
+                        file_to_send = mov_file
+                    else:
+                        file_to_send = new_file_path
+
+                    socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
+                    return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
+                else:
+                    flash("File not found after download.")
+                    return redirect(url_for('index'))
     except subprocess.CalledProcessError as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
