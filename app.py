@@ -25,6 +25,7 @@ os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 # Example model for demonstration
 class User(db.Model):
@@ -385,6 +386,7 @@ def index():
         '''
         return render_template_string(html_content, background_base64=background_base64, font_base64=font_base64)
     except Exception as e:
+        logger.error(f"Error rendering page: {str(e)}")
         return f"Error rendering page: {str(e)}"
 
 @app.route('/download', methods=['POST'])
@@ -411,9 +413,11 @@ def download():
         }
 
         if "youtube.com" in url:
+            logger.debug("Downloading from YouTube")
             ydl_opts['username'] = 'oauth2'
             ydl_opts['password'] = ''
         elif "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
+            logger.debug("Downloading from Twitter Spaces")
             cookie_file = 'cookies_netscape.txt'
             audio_format = request.form.get('audio_format', 'm4a/mp3')
             output_template = os.path.join(DOWNLOADS_DIR, '%(title)s')
@@ -432,7 +436,7 @@ def download():
                 if process.poll() is not None:
                     break
                 if output:
-                    app.logger.debug(output.strip())
+                    logger.debug(output.strip())
                     socketio.emit('eta', {'data': output.strip()})
 
             process.wait()
@@ -483,6 +487,7 @@ def download():
                 })
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                logger.debug("Starting download with yt-dlp")
                 info_dict = ydl.extract_info(url, download=True)
                 file_path = ydl.prepare_filename(info_dict)
 
@@ -532,6 +537,7 @@ def download():
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
     except Exception as e:
+        logger.error(f"An unexpected error occurred: {str(e)}")
         flash(f"An unexpected error occurred: {str(e)}")
         return redirect(url_for('index'))
 
