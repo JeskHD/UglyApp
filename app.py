@@ -464,17 +464,41 @@ def download():
                 file_path = ydl.prepare_filename(info_dict)
 
                 if format == 'audio':
-                    new_file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
+                    file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
                 else:
                     if video_format == 'mov':
-                        new_file_path = file_path.replace('.mp4', f'.mp4')
+                        file_path = file_path.replace('.mp4', f'.mp4')
                     else:
-                        new_file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
-                
+                        file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
+                    
                 if os.path.exists(file_path):
-                    shutil.move(file_path, new_file_path)
-                    flash(f"Download complete: {os.path.basename(new_file_path)}")
-                    return send_file(new_file_path, as_attachment=True, download_name=os.path.basename(new_file_path))
+                    if format == 'audio' and audio_format == 'mp3':
+                        mp3_file = file_path.replace('.m4a', '.mp3')
+                        convert_command = [
+                            ffmpeg_location,
+                            '-i', file_path,
+                            '-codec:a', 'libmp3lame',
+                            '-qscale:a', '2',
+                            mp3_file
+                        ]
+                        subprocess.run(convert_command, check=True)
+                        file_to_send = mp3_file
+                    elif format == 'video' and video_format == 'mov':
+                        mov_file = file_path.replace('.mp4', '.mov')
+                        convert_command = [
+                            ffmpeg_location,
+                            '-i', file_path,
+                            '-c:v', 'copy',
+                            '-c:a', 'copy',
+                            mov_file
+                        ]
+                        subprocess.run(convert_command, check=True)
+                        file_to_send = mov_file
+                    else:
+                        file_to_send = file_path
+
+                    socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
+                    return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
                 else:
                     flash("File not found after download.")
                     return redirect(url_for('index'))
