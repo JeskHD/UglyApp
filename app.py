@@ -460,10 +460,8 @@ def download():
                 'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
                 'ffmpeg_location': ffmpeg_location,
                 'ffprobe_location': ffprobe_location,
-                'cookiefile': 'youtube_cookies.txt',
+                'cookiefile': 'soundcloud_cookies.txt',  # Use the cookies file for SoundCloud
                 'hls_use_mpegts': True,  # Ensure HLS processing for all formats
-                'username': 'oauth2',
-                'password': ''
             }
             
             if format == 'audio':
