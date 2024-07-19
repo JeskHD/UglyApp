@@ -127,11 +127,11 @@ def index():
                     height: 65px;
                     width: auto;
                     position: relative;
-                    top: 2px;
+                    top: 2px.
                 }
                 .bimage {
                     background: linear-gradient(rgba(255, 7, 156, 0.585), rgba(104, 97, 97, 0.5)), url("data:image/gif;base64,{{ background_base64 }}");
-                    height: 800px;
+                    height: 800px.
                     width: 100%;
                     background-repeat: no-repeat;
                     background-position: center;
@@ -145,172 +145,172 @@ def index():
                 }
                 .Wrapper {
                     text-align: center;
-                    padding: 20px;
+                    padding: 20px.
                 }
                 .UglyStay {
                     color: rgb(255, 136, 237);
                     font-size: 50px;
                     font-weight: 800;
                     font-style: italic;
-                    margin: 0 20px;
+                    margin: 0 20px.
                     text-align: center;
-                    width: 100%;
+                    width: 100%.
                 }
                 .uglydesc {
                     color: whitesmoke;
                     margin: 20px 10px;
                     font-size: 18px;
                     text-align: center;
-                    width: 100%;
+                    width: 100%.
                 }
                 .form-container {
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    gap: 10px;
-                    margin-top: 20px;
-                    flex-wrap: wrap;
+                    gap: 10px.
+                    margin-top: 20px.
+                    flex-wrap: wrap.
                 }
                 .searchbox {
-                    width: 300px;
-                    height: 40px;
-                    background-color: black;
-                    border-radius: 50px 0 0 50px;
-                    color: white;
-                    font-family: "Poppins", sans-serif;
-                    text-align: center;
-                    border: none;
-                    padding-left: 20px;
+                    width: 300px.
+                    height: 40px.
+                    background-color: black.
+                    border-radius: 50px 0 0 50px.
+                    color: white.
+                    font-family: "Poppins", sans-serif.
+                    text-align: center.
+                    border: none.
+                    padding-left: 20px.
                 }
                 .searchbox:hover {
-                    border: 1px solid #ff78df;
+                    border: 1px solid #ff78df.
                 }
                 .dropdown1, .dropdown2 {
-                    height: 38px;
-                    border-radius: 0;
-                    padding: 0 9px;
-                    border: none;
-                    font-family: "Poppins", sans-serif;
-                    background-color: #ff78df;
-                    color: white;
+                    height: 38px.
+                    border-radius: 0.
+                    padding: 0 9px.
+                    border: none.
+                    font-family: "Poppins", sans-serif.
+                    background-color: #ff78df.
+                    color: white.
                 }
                 .btn1, .btn2 {
-                    height: 38px;
-                    border-radius: 0 50px 50px 0;
-                    padding: 0 7px;
-                    background-color: #fa50d3;
-                    color: white;
-                    border: none;
-                    cursor: pointer;
-                    font-family: "Poppins", sans-serif;
+                    height: 38px.
+                    border-radius: 0 50px 50px 0.
+                    padding: 0 7px.
+                    background-color: #fa50d3.
+                    color: white.
+                    border: none.
+                    cursor: pointer.
+                    font-family: "Poppins", sans-serif.
                 }
                 .btn1:active, .btn2:active {
-                    color: #fb85df;
-                    background-color: #f8a1e4;
+                    color: #fb85df.
+                    background-color: #f8a1e4.
                 }
                 .btn1:hover, .btn2:hover {
-                    background-color: #e767c7;
+                    background-color: #e767c7.
                 }
                 .or {
-                    position: relative;
-                    top: 15px;
-                    color: white;
-                    font-size: 18px;
-                    margin: 10px 0;
+                    position: relative.
+                    top: 15px.
+                    color: white.
+                    font-size: 18px.
+                    margin: 10px 0.
                 }
                 .url {
-                    text-shadow: 0px 3px 5px 0 #c255a7;
-                    color: white;
-                    font-size: 14px;
-                    margin-top: 10px;
-                    width: 100%;
-                    text-align: center;
+                    text-shadow: 0px 3px 5px 0 #c255a7.
+                    color: white.
+                    font-size: 14px.
+                    margin-top: 10px.
+                    width: 100%.
+                    text-align: center.
                 }
                 .sp li:hover {
-                    color: #1d9bf0 !important;
+                    color: #1d9bf0 !important.
                 }
                 .ua {
-                    font-family: 'Porkys';
-                    color: #f50da1;
-                    font-size: 40px;
-                    text-shadow: 1px 1px 2px #27f1e6;
+                    font-family: 'Porkys'.
+                    color: #f50da1.
+                    font-size: 40px.
+                    text-shadow: 1px 1px 2px #27f1e6.
                 }
                 .flashes {
-                    color: red;
-                    list-style: none;
-                    text-align: center;
-                    margin-top: 10px;
+                    color: red.
+                    list-style: none.
+                    text-align: center.
+                    margin-top: 10px.
                 }
                 /* Responsive Design */
                 @media (max-width: 800px) {
                     .topbar {
-                        flex-direction: row;
-                        align-items: center;
-                        padding: 10px 10px;
+                        flex-direction: row.
+                        align-items: center.
+                        padding: 10px 10px.
                     }
                     .topbar .menu-toggle {
-                        display: block;
+                        display: block.
                     }
                     .topbar ul {
-                        display: none;
-                        flex-direction: column;
-                        align-items: center;
-                        width: 100%;
-                        margin-top: 10px;
+                        display: none.
+                        flex-direction: column.
+                        align-items: center.
+                        width: 100%.
+                        margin-top: 10px.
                     }
                     .topbar ul.active {
-                        display: flex;
-                        font-size: 10px;
-                        top: 11px;
-                        border: 1px solid white;
-                        flex-direction: column;
-                        position: absolute;
-                        background-color: rgba(0, 0, 0, 0.8);
-                        right: 10px;
-                        top: 60px;
-                        width: 200px;
-                        padding: 10px;
+                        display: flex.
+                        font-size: 10px.
+                        top: 11px.
+                        border: 1px solid white.
+                        flex-direction: column.
+                        position: absolute.
+                        background-color: rgba(0, 0, 0, 0.8).
+                        right: 10px.
+                        top: 60px.
+                        width: 200px.
+                        padding: 10px.
                     }
                     .topbar h2 {
-                        font-size: 24px;
+                        font-size: 24px.
                     }
                     .UglyStay {
-                        font-size: 30px;
-                        margin-top: 80px;
-                        text-align: center;
+                        font-size: 30px.
+                        margin-top: 80px.
+                        text-align: center.
                     }
                     .uglydesc {
-                        font-size: 16px;
-                        margin: 20px 20px;
-                        text-align: center;
+                        font-size: 16px.
+                        margin: 20px 20px.
+                        text-align: center.
                     }
                     .form-container {
-                        flex-direction: column;
-                        align-items: center;
+                        flex-direction: column.
+                        align-items: center.
                     }
                     .searchbox, .dropdown1, .dropdown2, .btn1, .btn2 {
-                        width: 100%;
-                        margin-bottom: 10px;
+                        width: 100%.
+                        margin-bottom: 10px.
                     }
                     .or {
-                        top: 0;
-                        margin: 10px 0;
+                        top: 0.
+                        margin: 10px 0.
                     }
                     .url {
-                        margin-top: 20px;
-                        text-align: center;
+                        margin-top: 20px.
+                        text-align: center.
                     }
                 }
             </style>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
             <script>
-                var socket = io();
+                var socket = io().
                 socket.on('connect', function() {
-                    console.log('Connected to server');
-                });
+                    console.log('Connected to server').
+                }).
                 socket.on('download_complete', function(data) {
-                    alert('Download complete: ' + data.filename);
-                });
+                    alert('Download complete: ' + data.filename).
+                }).
             </script>
         </head>
         <body>
@@ -405,137 +405,139 @@ def download():
         ffprobe_location = '/usr/bin/ffprobe'
 
         cookie_file = None
+        ydl_opts = {
+            'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
+            'ffmpeg_location': ffmpeg_location,
+            'ffprobe_location': ffprobe_location,
+            'hls_use_mpegts': True,  # Ensure HLS processing for all formats
+        }
+
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
             cookie_file = 'cookies_netscape.txt'
-        elif 'youtube.com' in url:
-            cookie_file = 'youtube_cookies.txt'
-        elif 'soundcloud.com' in url:
-            cookie_file = 'soundcloud_cookies.txt'
-        
-        if cookie_file:
-            if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
-                audio_format = request.form.get('audio_format', 'm4a/mp3')
-                output_template = os.path.join(DOWNLOADS_DIR, '%(title)s')
+            audio_format = request.form.get('audio_format', 'm4a/mp3')
+            output_template = os.path.join(DOWNLOADS_DIR, '%(title)s')
+            
+            command = [
+                '/root/UglyApp/venv/bin/twspace_dl',  # Use the full path to twspace_dl
+                '-i', url,
+                '-c', cookie_file,
+                '-o', output_template
+            ]
+            
+            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+            while True:
+                output = process.stdout.readline()
+                if process.poll() is not None:
+                    break
+                if output:
+                    print(output.strip())
+                    socketio.emit('eta', {'data': output.strip()})
+
+            process.wait()
+
+            if process.returncode == 0:
+                # Find the most recently modified file in the DOWNLOADS_DIR
+                list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
+                latest_file = max(list_of_files, key=os.path.getmtime)
                 
-                command = [
-                    '/root/UglyApp/venv/bin/twspace_dl',  # Use the full path to twspace_dl
-                    '-i', url,
-                    '-c', cookie_file,
-                    '-o', output_template
-                ]
-                
-                process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                if os.path.exists(latest_file):
+                    if audio_format == 'mp3' and latest_file.endswith('.m4a'):
+                        # Convert to MP3
+                        mp3_file = latest_file.replace('.m4a', '.mp3')
+                        convert_command = [
+                            ffmpeg_location,
+                            '-i', latest_file,
+                            '-codec:a', 'libmp3lame',
+                            '-qscale:a', '2',
+                            mp3_file
+                        ]
+                        subprocess.run(convert_command, check=True)
+                        latest_file = mp3_file
 
-                while True:
-                    output = process.stdout.readline()
-                    if process.poll() is not None:
-                        break
-                    if output:
-                        print(output.strip())
-                        socketio.emit('eta', {'data': output.strip()})
-
-                process.wait()
-
-                if process.returncode == 0:
-                    # Find the most recently modified file in the DOWNLOADS_DIR
-                    list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
-                    latest_file = max(list_of_files, key=os.path.getmtime)
-                    
-                    if os.path.exists(latest_file):
-                        if audio_format == 'mp3' and latest_file.endswith('.m4a'):
-                            # Convert to MP3
-                            mp3_file = latest_file.replace('.m4a', '.mp3')
-                            convert_command = [
-                                ffmpeg_location,
-                                '-i', latest_file,
-                                '-codec:a', 'libmp3lame',
-                                '-qscale:a', '2',
-                                mp3_file
-                            ]
-                            subprocess.run(convert_command, check=True)
-                            latest_file = mp3_file
-
-                        socketio.emit('download_complete', {'filename': os.path.basename(latest_file)})
-                        return send_file(latest_file, as_attachment=True, download_name=os.path.basename(latest_file))
-                    else:
-                        flash("File not found after download.")
-                        return redirect(url_for('index'))
+                    socketio.emit('download_complete', {'filename': os.path.basename(latest_file)})
+                    return send_file(latest_file, as_attachment=True, download_name=os.path.basename(latest_file))
                 else:
-                    flash("Error during the download process.")
+                    flash("File not found after download.")
                     return redirect(url_for('index'))
             else:
-                ydl_opts = {
-                    'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
-                    'ffmpeg_location': ffmpeg_location,
-                    'ffprobe_location': ffprobe_location,
-                    'cookiefile': cookie_file,
-                    'hls_use_mpegts': True,  # Ensure HLS processing for all formats
-                }
-                
-                if format == 'audio':
-                    audio_format = request.form['audio_format']
-                    ydl_opts.update({
-                        'format': 'bestaudio/best',
-                        'postprocessors': [{
-                            'key': 'FFmpegExtractAudio',
-                            'preferredcodec': audio_format,
-                            'preferredquality': '192',
-                        }]
-                    })
-                else:
-                    video_format = request.form['video_format']
-                    ydl_opts.update({
-                        'format': 'bestvideo+bestaudio/best',
-                        'merge_output_format': 'mp4'
-                    })
+                flash("Error during the download process.")
+                return redirect(url_for('index'))
+        
+        elif 'youtube.com' in url:
+            cookie_file = 'youtube_cookies.txt'
+            ydl_opts.update({
+                'cookiefile': cookie_file,
+                'username': 'oauth2',
+                'password': '',
+            })
 
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    info_dict = ydl.extract_info(url, download=True)
-                    file_path = ydl.prepare_filename(info_dict)
-
-                    if format == 'audio':
-                        file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
-                    else:
-                        if video_format == 'mov':
-                            file_path = file_path.replace('.mp4', f'.mp4')
-                        else:
-                            file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
-                        
-                    if os.path.exists(file_path):
-                        if format == 'audio' and audio_format == 'mp3':
-                            mp3_file = file_path.replace('.m4a', '.mp3')
-                            convert_command = [
-                                ffmpeg_location,
-                                '-i', file_path,
-                                '-codec:a', 'libmp3lame',
-                                '-qscale:a', '2',
-                                mp3_file
-                            ]
-                            subprocess.run(convert_command, check=True)
-                            file_to_send = mp3_file
-                        elif format == 'video' and video_format == 'mov':
-                            mov_file = file_path.replace('.mp4', '.mov')
-                            convert_command = [
-                                ffmpeg_location,
-                                '-i', file_path,
-                                '-c:v', 'copy',
-                                '-c:a', 'copy',
-                                mov_file
-                            ]
-                            subprocess.run(convert_command, check=True)
-                            file_to_send = mov_file
-                        else:
-                            file_to_send = file_path
-
-                        socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
-                        return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
-                    else:
-                        flash("File not found after download.")
-                        return redirect(url_for('index'))
+        elif 'soundcloud.com' in url:
+            cookie_file = 'soundcloud_cookies.txt'
+            ydl_opts.update({
+                'cookiefile': cookie_file,
+            })
+        
+        if format == 'audio':
+            audio_format = request.form['audio_format']
+            ydl_opts.update({
+                'format': 'bestaudio/best',
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': audio_format,
+                    'preferredquality': '192',
+                }]
+            })
         else:
-            flash("Service not supported.")
-            return redirect(url_for('index'))
+            video_format = request.form['video_format']
+            ydl_opts.update({
+                'format': 'bestvideo+bestaudio/best',
+                'merge_output_format': 'mp4'
+            })
 
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(url, download=True)
+            file_path = ydl.prepare_filename(info_dict)
+
+            if format == 'audio':
+                file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
+            else:
+                if video_format == 'mov':
+                    file_path = file_path.replace('.mp4', f'.mp4')
+                else:
+                    file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
+                
+            if os.path.exists(file_path):
+                if format == 'audio' and audio_format == 'mp3':
+                    mp3_file = file_path.replace('.m4a', '.mp3')
+                    convert_command = [
+                        ffmpeg_location,
+                        '-i', file_path,
+                        '-codec:a', 'libmp3lame',
+                        '-qscale:a', '2',
+                        mp3_file
+                    ]
+                    subprocess.run(convert_command, check=True)
+                    file_to_send = mp3_file
+                elif format == 'video' and video_format == 'mov':
+                    mov_file = file_path.replace('.mp4', '.mov')
+                    convert_command = [
+                        ffmpeg_location,
+                        '-i', file_path,
+                        '-c:v', 'copy',
+                        '-c:a', 'copy',
+                        mov_file
+                    ]
+                    subprocess.run(convert_command, check=True)
+                    file_to_send = mov_file
+                else:
+                    file_to_send = file_path
+
+                socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
+                return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
+            else:
+                flash("File not found after download.")
+                return redirect(url_for('index'))
     except subprocess.CalledProcessError as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
