@@ -1,0 +1,37 @@
+# Netscape HTTP Cookie File
+# http://curl.haxx.se/rfc/cookie_spec.html
+# This is a generated file!  Do not edit.
+
+.soundcloud.com	TRUE	/	FALSE	1728882248	_fbp	fb.1.1712946384788.841074772
+.soundcloud.com	TRUE	/	TRUE	1744482385	OptanonAlertBoxClosed	2024-04-12T18:26:25.758Z
+.soundcloud.com	TRUE	/	TRUE	1744482385	eupubconsent-v2	CP89vGAP89vGAAcABBENAwEsAP_gAEPgAAYgKEtX_H__bW9r8X73aft0eY1P99j77sQxBhfJE-4FzLvW_JwXx2ExNA36tqIKmRIEu3bBIQNlHJDUTVigaogVryDMakWcgTNKJ6BkiFMRO2dYCF5vmwtj-QKY5vp993dx2Det_dv83dzyz4VHn3a5_2e0WJCdA58tDfv9bROb-9IPd_58v4v0_F_rE2_eT1l_tevp7D8-ct87_XW-9_fff79LlgoQAWYaFRAH2RISEGgYRQIAVBWEBFAgAAABIGiAgBMGBTsDAJdYSIAQAoABggBAACjIAEAAAkACEQASAFAgAAgECgABAAAEAgAYGAAMAFgIBAACA6BCmBBAoFgAkZkRCmBAFAkEBLZUIJAECCuEIRZ4EEAiJgoAAASACsAAQFgsBiSQErEggS4g2gAAIAEAghAqEUnZgCCBM2WqvFE2jK0gLR8AAAAA.f_wACHwAAAAA
+.soundcloud.com	TRUE	/	FALSE	1746815185	__qca	P0-1752668532-1712946383926
+.soundcloud.com	TRUE	/	FALSE	1749333277	_tt_enable_cookie	1
+.soundcloud.com	TRUE	/	FALSE	1749333277	_ttp	ynw4Xq1tb_S5D13OR_XjBTysOwg
+.soundcloud.com	TRUE	/	FALSE	1752883431	ajs_anonymous_id	%228b6b40f7-04bb-4547-8a08-32a278b2675e%22
+.soundcloud.com	TRUE	/	FALSE	1755907429	sc_anonymous_id	739125-467690-427162-382363
+.soundcloud.com	TRUE	/	FALSE	1750199599	_ga_7M47J83R8Y	GS1.1.1715639598.5.0.1715639598.0.0.0
+soundcloud.com	FALSE	/	TRUE	1751565670	oauth_token	2-296444-305390293-twKSbaP7rSKONC
+.soundcloud.com	TRUE	/	FALSE	1752883429	ajs_user_id	%22soundcloud%3Ausers%3A305390293%22
+.soundcloud.com	TRUE	/	FALSE	1723939428	ja	0
+.soundcloud.com	TRUE	/	FALSE	1754216457	_scid	4ea607cf-84c4-49b4-a396-9b338d0ec1f9
+.soundcloud.com	TRUE	/	FALSE	1728592341	_gcl_au	1.1.1391881173.1720816341
+.soundcloud.com	TRUE	/	FALSE	1755261930	_scid_r	4ea607cf-84c4-49b4-a396-9b338d0ec1f9
+.soundcloud.com	TRUE	/	FALSE	1721680033	_ScCbts	%5B%5D
+.soundcloud.com	TRUE	/	FALSE	1755261932	_sctr	1%7C1721016000000
+.soundcloud.com	TRUE	/	TRUE	1751151991	__gads	ID=2e7fad13d4808d3a:T=1717455991:RT=1721100370:S=ALNI_MaSHJJc9_OvZw67SlUY7Iew-_DH3w
+.soundcloud.com	TRUE	/	TRUE	1751151991	__gpi	UID=00000e3808c74f7f:T=1717455991:RT=1721100370:S=ALNI_MaTX8vhyNDW56I4PH1weeGfWyrCsg
+.soundcloud.com	TRUE	/	TRUE	1733007991	__eoi	ID=4bc89dbb876f6840:T=1717455991:RT=1721100370:S=AA-AfjZIqzXC4xCr4fdIyC1ZuhKB
+soundcloud.com	FALSE	/	FALSE	1755043429	_scor_uid	cdd7488e959c47269fa596701df7da23
+.soundcloud.com	TRUE	/	TRUE	1728976903	_rdt_uuid	1712946388630.07712607-e634-4a55-9937-92efe2c3d574
+.soundcloud.com	TRUE	/	FALSE	1721433829	_gid	GA1.2.1812342941.1721346664
+.soundcloud.com	TRUE	/	FALSE	1755907382	_ga_7LNW7LLBZQ	GS1.1.1721346663.1.1.1721347381.60.0.0
+.soundcloud.com	TRUE	/	FALSE	0	cookie_consent	1
+.soundcloud.com	TRUE	/	FALSE	0	moe_uuid	7793a2ca-48e1-4448-8327-11a475816866
+.soundcloud.com	TRUE	/	TRUE	0	connect_session	1
+.soundcloud.com	TRUE	/	TRUE	0	soundcloud_session_hint	1
+.soundcloud.com	TRUE	/	TRUE	1752883429	OptanonConsent	isGpcEnabled=0&datestamp=Thu+Jul+18+2024+20%3A03%3A49+GMT-0400+(hora+est%C3%A1ndar+del+Atl%C3%A1ntico)&version=202404.1.0&browserGpcFlag=0&isIABGlobal=false&hosts=&consentId=641034-942220-18661-412026&interactionCount=1&landingPath=NotLandingPage&groups=C0001%3A1%2CC0003%3A1%2CC0004%3A1%2CC0002%3A1%2CC0005%3A1%2CC0007%3A1%2CV2STACK42%3A1&iType=1&geolocation=DO%3B01&AwaitingReconsent=false&identifierType=Cookie+Unique+Id&isAnonUser=1
+.soundcloud.com	TRUE	/	TRUE	1755907430	_ga_HXKL0JJB2D	GS1.1.1721347390.44.1.1721347429.21.0.338253716
+.soundcloud.com	TRUE	/	FALSE	1755907430	_ga	GA1.2.147008228.1712946385
+.soundcloud.com	TRUE	/	FALSE	1721952231	sc_session	{%22id%22:%22AEB37117-2D4C-4AC3-AD8A-0DBF1D2F3CBC%22%2C%22lastBecameInactive%22:%222024-07-19T00:03:51.364Z%22}
+.soundcloud.com	TRUE	/	TRUE	1752883440	datadome	4q5ejCDGYWdGuC2u_nGdh9sl4zfp7Xfd_rX2a0ZxIPjSKu2p3T7NWFPpUDsgtqE1OVx_R6ixAfsGfulDqiF8UTFuB9xpvC~wJy2_eZcuNagVj9hcfrAIc9yWyiPid8fH
