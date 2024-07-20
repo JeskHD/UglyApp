@@ -293,11 +293,11 @@ def index():
                         margin-bottom: 10px.
                     }
                     .or {
-                        top: 0;
+                        top: 0.
                         margin: 10px 0.
                     }
                     .url {
-                        margin-top: 20px;
+                        margin-top: 20px.
                         text-align: center.
                     }
                 }
@@ -417,9 +417,9 @@ def download():
             output_template = os.path.join(DOWNLOADS_DIR, '%(title)s')
 
             command = [
-                '/root/UglyApp/venv/bin/python3', '-m', 'space_dl',
-                '-d', DOWNLOADS_DIR,
-                url
+                '/root/UglyApp/venv/bin/python3', '-m', 'twspace_dl',
+                '-c', '/mnt/data/cookies_netscape.txt',  # Use the cookies file uploaded
+                '-i', url
             ]
 
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
