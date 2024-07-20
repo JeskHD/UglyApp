@@ -9,6 +9,7 @@ import sqlalchemy as sa
 import glob
 import base64
 import logging
+import space_dl
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
@@ -413,56 +414,21 @@ def download():
         }
 
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
-            cookie_file = 'cookies_netscape.txt'
-            audio_format = request.form.get('audio_format', 'm4a/mp3')
-            output_template = os.path.join(DOWNLOADS_DIR, '%(title)s')
-
-            command = [
-                '/root/UglyApp/venv/bin/twspace_dl',  # Use the full path to twspace_dl
-                '-i', url,
-                '-c', cookie_file,
-                '-o', output_template,
-                '-n'  # Skip overwriting prompts
-            ]
-            
-            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-
-            while True:
-                output = process.stdout.readline()
-                if process.poll() is not None:
-                    break
-                if output:
-                    print(output.strip())
-                    socketio.emit('eta', {'data': output.strip()})
-
-            process.wait()
-
-            if process.returncode == 0:
-                # Find the most recently modified file in the DOWNLOADS_DIR
-                list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
-                latest_file = max(list_of_files, key=os.path.getmtime)
+            try:
+                output_dir = DOWNLOADS_DIR
+                s = space_dl.Space.from_url(url, out_dir=output_dir, verbose=True)
+                playlist_file_path = s.playlist_file_path
+                m4a_file_path = os.path.join(output_dir, 'output.m4a')
+                s.merge_into_m4a(m4a_file_path)
                 
-                if os.path.exists(latest_file):
-                    if audio_format == 'mp3' and latest_file.endswith('.m4a'):
-                        # Convert to MP3
-                        mp3_file = latest_file.replace('.m4a', '.mp3')
-                        convert_command = [
-                            ffmpeg_location,
-                            '-i', latest_file,
-                            '-codec:a', 'libmp3lame',
-                            '-qscale:a', '2',
-                            mp3_file
-                        ]
-                        subprocess.run(convert_command, check=True)
-                        latest_file = mp3_file
-
-                    socketio.emit('download_complete', {'filename': os.path.basename(latest_file)})
-                    return send_file(latest_file, as_attachment=True, download_name=os.path.basename(latest_file))
+                if os.path.exists(m4a_file_path):
+                    socketio.emit('download_complete', {'filename': os.path.basename(m4a_file_path)})
+                    return send_file(m4a_file_path, as_attachment=True, download_name=os.path.basename(m4a_file_path))
                 else:
                     flash("File not found after download.")
                     return redirect(url_for('index'))
-            else:
-                flash("Error during the download process.")
+            except Exception as e:
+                flash(f"Error during the download process: {str(e)}")
                 return redirect(url_for('index'))
         
         elif 'youtube.com' in url:
