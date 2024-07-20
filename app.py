@@ -342,7 +342,7 @@ def index():
                     <i class="fa fa-bars"></i>
                 </div>
                 <ul class="menu">
-                    <li>About Us</li>
+                    <li>About Usd</li>
                     <li>Collection</li>
                     <li>Media</li>
                     <li>FAQ</li>
