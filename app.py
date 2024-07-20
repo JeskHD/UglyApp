@@ -418,7 +418,7 @@ def download():
 
             command = [
                 '/root/UglyApp/venv/bin/python3', '-m', 'twspace_dl',
-                '-c', 'cookies_netscape.txt',  # Use the cookies file uploaded
+                '-c', '/usr/cookies_netscape.txt',  # Use the cookies file uploaded
                 '-i', url
             ]
 
