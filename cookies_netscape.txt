@@ -12,4 +12,3 @@
 x.com	FALSE	/	FALSE	0	lang	en
 .x.com	TRUE	/	TRUE	1755995414	personalization_id	"v1_U1ouckg7T/bP06N9MsIxdQ=="
 .x.com	TRUE	/	TRUE	1722040215	external_referer	8e8t2xd8A2w%3D|0|F8C7rVpldvGNltGxuH%2ByoRY%2FzjrflHIZH061f%2B5OiIwP17ZTz34ZGg%3D%3D
-
