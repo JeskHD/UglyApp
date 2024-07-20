@@ -1,0 +1,16 @@
+# Netscape HTTP Cookie File
+# http://curl.haxx.se/rfc/cookie_spec.html
+# This is a generated file!  Do not edit.
+
+.x.com	TRUE	/	TRUE	1747795135	guest_id	v1%3A171424268299300694
+.x.com	TRUE	/	TRUE	1752971418	twid	u%3D1530731171230932992
+.x.com	TRUE	/	TRUE	1747795135	auth_token	5d571cec60dcbf730581df24ecb5325f8efbfc87
+.x.com	TRUE	/	TRUE	1755995414	guest_id_ads	v1%3A171424268299300694
+.x.com	TRUE	/	TRUE	1755995414	guest_id_marketing	v1%3A171424268299300694
+.x.com	TRUE	/	TRUE	1750819135	ct0	ea0f80cb666ec857187d0cec28a865c9ca2d147d48abb6840fec2b74a91fe29b4cbc8e0723d1ec2d089fcf58dbe060f55aa82bfb70c939c53b9977963409ee1a31f6b92f714f9ac20d46623fdc126889
+.x.com	TRUE	/	FALSE	1750819137	_ga	GA1.2.300564058.1716259137
+x.com	FALSE	/	FALSE	0	lang	en
+.x.com	TRUE	/	TRUE	1755995414	personalization_id	"v1_U1ouckg7T/bP06N9MsIxdQ=="
+.x.com	TRUE	/	TRUE	1722040215	external_referer	8e8t2xd8A2w%3D|0|F8C7rVpldvGNltGxuH%2ByoRY%2FzjrflHIZH061f%2B5OiIwP17ZTz34ZGg%3D%3D
+
+
