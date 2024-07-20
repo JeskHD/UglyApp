@@ -11,22 +11,19 @@ import base64
 import logging
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Needed for flashing messages
+app.secret_key = 'your_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 socketio = SocketIO(app)
 db = SQLAlchemy(app)
 
-# Ensure the downloads directory exists in the user's Downloads folder
 DOWNLOADS_DIR = os.path.join(os.path.expanduser("~"), 'Downloads')
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
-# Configure logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# Example model for demonstration
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)
@@ -400,7 +397,6 @@ def download():
         return redirect(url_for('index'))
 
     try:
-        # Paths to ffmpeg and ffprobe
         ffmpeg_location = '/usr/bin/ffmpeg'
         ffprobe_location = '/usr/bin/ffprobe'
 
@@ -408,21 +404,17 @@ def download():
             'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
             'ffmpeg_location': ffmpeg_location,
             'ffprobe_location': ffprobe_location,
-            'hls_use_mpegts': True,  # Ensure HLS processing for all formats
-            'noprogress': True,  # Do not show progress bar
+            'hls_use_mpegts': True,
+            'noprogress': True,
         }
 
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
-            audio_format = request.form.get('audio_format', 'm4a/mp3')
+            audio_format = request.form.get('audio_format', 'm4a')
             output_template = os.path.join(DOWNLOADS_DIR, '%(title)s')
-
-            username = "your_twitter_username"  # Replace with your Twitter username
-            password = "your_twitter_password"  # Replace with your Twitter password
 
             command = [
                 '/root/UglyApp/venv/bin/python3', '-m', 'space_dl',
-                '-u', username,
-                '-p', password,
+                '--netrc',
                 '-d', DOWNLOADS_DIR,
                 url
             ]
@@ -440,13 +432,11 @@ def download():
             process.wait()
 
             if process.returncode == 0:
-                # Find the most recently modified file in the DOWNLOADS_DIR
                 list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
                 latest_file = max(list_of_files, key=os.path.getmtime)
                 
                 if os.path.exists(latest_file):
                     if audio_format == 'mp3' and latest_file.endswith('.m4a'):
-                        # Convert to MP3
                         mp3_file = latest_file.replace('.m4a', '.mp3')
                         convert_command = [
                             ffmpeg_location,
@@ -496,7 +486,7 @@ def download():
             ydl_opts.update({
                 'format': 'bestvideo+bestaudio/best',
                 'merge_output_format': 'mp4',
-                'overwrites': True  # Overwrite files automatically
+                'overwrites': True
             })
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -553,14 +543,13 @@ def download():
         flash(f"An unexpected error occurred: {str(e)}")
         return redirect(url_for('index'))
 
-    return redirect(url_for('index'))  # Ensure there is a return statement in all paths
+    return redirect(url_for('index'))
 
 @app.route('/uploads/<path:filename>', methods=['GET', 'POST'])
 def upload(filename):
     uploads = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
     return send_from_directory(uploads, filename)
 
-# Database initialization logic for Render
 engine = sa.create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
 inspector = sa.inspect(engine)
 if not inspector.has_table("user"):
@@ -573,4 +562,6 @@ else:
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
+    socketio.run(app, host='0.0.0.0', port=port)
+
     socketio.run(app, host='0.0.0.0', port=port)
