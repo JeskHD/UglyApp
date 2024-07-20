@@ -412,7 +412,7 @@ def download():
             'noprogress': True,  # Do not show progress bar
         }
 
-        if "x.com/i/spaces" in url or "twitter.com/i/spaces" in url:
+        if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
             cookie_file = 'cookies_netscape.txt'
             audio_format = request.form.get('audio_format', 'm4a/mp3')
             output_template = os.path.join(DOWNLOADS_DIR, '%(title)s')
