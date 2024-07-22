@@ -1,8 +1,7 @@
 import os
 import subprocess
 import yt_dlp
-import tweepy
-from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory
+from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, session
 from flask_socketio import SocketIO, emit
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
@@ -10,6 +9,9 @@ import sqlalchemy as sa
 import glob
 import base64
 import logging
+from requests_oauthlib import OAuth2Session
+import json
+import redis
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
@@ -27,9 +29,17 @@ os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# Twitter API credentials
-BEARER_TOKEN = 'YOUR_TWITTER_BEARER_TOKEN'
-client = tweepy.Client(bearer_token=BEARER_TOKEN)
+# Redis for storing OAuth tokens
+REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
+r = redis.from_url(REDIS_URL)
+
+# OAuth 2.0 details
+client_id = os.environ.get("CLIENT_ID")
+client_secret = os.environ.get("CLIENT_SECRET")
+auth_url = "https://twitter.com/i/oauth2/authorize"
+token_url = "https://api.twitter.com/2/oauth2/token"
+redirect_uri = os.environ.get("REDIRECT_URI", "http://localhost:5000/oauth/callback")
+scopes = ["tweet.read", "users.read", "tweet.write", "offline.access"]
 
 # Example model for demonstration
 class User(db.Model):
@@ -229,7 +239,7 @@ def index():
                     font-size: 14px;
                     margin-top: 10px;
                     width: 100%;
-                    text-align: center.
+                    text-align: center;
                 }
                 .sp li:hover {
                     color: #1d9bf0 !important;
@@ -251,17 +261,17 @@ def index():
                     .topbar {
                         flex-direction: row;
                         align-items: center;
-                        padding: 10px 10px.
+                        padding: 10px 10px;
                     }
                     .topbar .menu-toggle {
-                        display: block.
+                        display: block;
                     }
                     .topbar ul {
                         display: none;
                         flex-direction: column;
                         align-items: center;
                         width: 100%;
-                        margin-top: 10px.
+                        margin-top: 10px;
                     }
                     .topbar ul.active {
                         display: flex;
@@ -274,15 +284,15 @@ def index():
                         right: 10px;
                         top: 60px;
                         width: 200px;
-                        padding: 10px.
+                        padding: 10px;
                     }
                     .topbar h2 {
-                        font-size: 24px.
+                        font-size: 24px;
                     }
                     .UglyStay {
                         font-size: 30px;
                         margin-top: 80px;
-                        text-align: center.
+                        text-align: center;
                     }
                     .uglydesc {
                         font-size: 16px;
@@ -393,6 +403,21 @@ def index():
         logger.error(f"Error rendering page: {str(e)}")
         return f"Error rendering page: {str(e)}"
 
+@app.route('/oauth')
+def oauth():
+    twitter = OAuth2Session(client_id, redirect_uri=redirect_uri, scope=scopes)
+    authorization_url, state = twitter.authorization_url(auth_url)
+    session['oauth_state'] = state
+    return redirect(authorization_url)
+
+@app.route('/oauth/callback', methods=['GET'])
+def callback():
+    twitter = OAuth2Session(client_id, state=session['oauth_state'], redirect_uri=redirect_uri)
+    token = twitter.fetch_token(token_url, client_secret=client_secret, authorization_response=request.url)
+    r.set("token", json.dumps(token))
+    flash("Logged in successfully.")
+    return redirect(url_for('index'))
+
 @app.route('/download', methods=['POST'])
 def download():
     audio_url = request.form.get('audio_url')
@@ -405,6 +430,9 @@ def download():
         return redirect(url_for('index'))
 
     try:
+        token = json.loads(r.get("token").decode("utf-8"))
+        headers = {"Authorization": f"Bearer {token['access_token']}"}
+
         # Paths to ffmpeg and ffprobe
         ffmpeg_location = '/usr/bin/ffmpeg'
         ffprobe_location = '/usr/bin/ffprobe'
@@ -421,13 +449,6 @@ def download():
             audio_format = request.form.get('audio_format', 'm4a/mp3')
             output_template = os.path.join(DOWNLOADS_DIR, '%(title)s')
 
-            # Extracting space ID from URL
-            space_id = url.split('/')[-1]
-
-            # Fetching space details
-            space = client.get_space(id=space_id)
-
-            # Process to download the audio from the space
             command = [
                 '/root/UglyApp/venv/bin/python3', '-m', 'twspace_dl',
                 '-c', '/root/UglyApp/cookies_netscape.txt',  # Use the cookies file uploaded
@@ -515,32 +536,69 @@ def download():
             else:
                 if video_format == 'mov':
                     file_path = file_path.replace('.mp4', f'.mp4')
-            
-            socketio.emit('download_complete', {'filename': os.path.basename(file_path)})
-            return send_file(file_path, as_attachment=True, download_name=os.path.basename(file_path))
+                else:
+                    file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
+                
+            if os.path.exists(file_path):
+                if format == 'audio' and audio_format == 'mp3':
+                    mp3_file = file_path.replace('.m4a', '.mp3')
+                    convert_command = [
+                        ffmpeg_location,
+                        '-i', file_path,
+                        '-codec:a', 'libmp3lame',
+                        '-qscale:a', '2',
+                        mp3_file
+                    ]
+                    subprocess.run(convert_command, check=True)
+                    file_to_send = mp3_file
+                elif format == 'video' and video_format == 'mov':
+                    mov_file = file_path.replace('.mp4', '.mov')
+                    convert_command = [
+                        ffmpeg_location,
+                        '-i', file_path,
+                        '-c:v', 'copy',
+                        '-c:a', 'copy',
+                        mov_file
+                    ]
+                    subprocess.run(convert_command, check=True)
+                    file_to_send = mov_file
+                else:
+                    file_to_send = file_path
 
+                socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
+                return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
+            else:
+                flash("File not found after download.")
+                return redirect(url_for('index'))
+    except subprocess.CalledProcessError as e:
+        flash(f"Error: {str(e)}")
+        return redirect(url_for('index'))
+    except yt_dlp.utils.DownloadError as e:
+        flash(f"Error: {str(e)}")
+        return redirect(url_for('index'))
     except Exception as e:
-        logger.error(f"Download failed: {str(e)}")
-        flash("An error occurred during the download process. Please try again.")
+        logger.error(f"An unexpected error occurred: {str(e)}")
+        flash(f"An unexpected error occurred: {str(e)}")
         return redirect(url_for('index'))
 
-@app.route('/download/<filename>')
-def download_file(filename):
-    return send_from_directory(DOWNLOADS_DIR, filename)
+    return redirect(url_for('index'))  # Ensure there is a return statement in all paths
 
-@socketio.on('connect')
-def handle_connect():
-    emit('status', {'data': 'Connected'})
+@app.route('/uploads/<path:filename>', methods=['GET', 'POST'])
+def upload(filename):
+    uploads = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
+    return send_from_directory(uploads, filename)
 
-@socketio.on('disconnect')
-def handle_disconnect():
-    emit('status', {'data': 'Disconnected'})
-
-@socketio.on('message')
-def handle_message(message):
-    emit('message', {'data': message})
+# Database initialization logic for Render
+engine = sa.create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
+inspector = sa.inspect(engine)
+if not inspector.has_table("user"):
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+        app.logger.info('Initialized the database!')
+else:
+    app.logger.info('Database already contains the users table.')
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    socketio.run(app, debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    socketio.run(app, host='0.0.0.0', port=port)
