@@ -28,8 +28,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 # Twitter API credentials
-BEARER_TOKEN = 'AAAAAAAAAAAAAAAAAAAAALDZuwEAAAAAQ5Os9CxLMHgPs4RuO8WM229o95E%3DqnRww88DdH1mNCqe7nFAsZMX4MrifEDOtzOZ3izhmzOz945KeM'
-
+BEARER_TOKEN = 'YOUR_TWITTER_BEARER_TOKEN'
 client = tweepy.Client(bearer_token=BEARER_TOKEN)
 
 # Example model for demonstration
