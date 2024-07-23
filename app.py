@@ -30,7 +30,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 # Redis for storing OAuth tokens
-REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
+REDIS_URL = os.getenv('redis-11112.c61.us-east-1-3.ec2.redns.redis-cloud.com:11112', 'redis://localhost:6379')
 r = redis.from_url(REDIS_URL)
 
 # OAuth 2.0 details
