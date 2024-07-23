@@ -34,11 +34,11 @@ REDIS_URL = os.getenv('redis-11112.c61.us-east-1-3.ec2.redns.redis-cloud.com:111
 r = redis.from_url(REDIS_URL)
 
 # OAuth 2.0 details
-client_id = os.environ.get("SUP3LgZJFxlaeM57Q8YuOZZeG")
-client_secret = os.environ.get("JeTgUvov8BT5PvofiQQTUJrnmycVyUQCJcxmkQ1eJOKNUv3rRs")
+client_id = os.environ.get("TzhibXlaV09DR0xGOERBbjh6RGk6MTpjaQ")
+client_secret = os.environ.get("_OTqgkeGvHPmi7ykdJ_fhzonMq5pxwkjVHTM6hPf3tAO7OpTEA")
 auth_url = "https://twitter.com/i/oauth2/authorize"
 token_url = "https://api.twitter.com/2/oauth2/token"
-redirect_uri = os.environ.get("http:http://146.190.252.46/", "http://localhost:5000/oauth/callback")
+redirect_url = os.environ.get("http://146.190.252.46/", "http://localhost:5000/oauth/callback")
 scopes = ["tweet.read", "users.read", "tweet.write", "offline.access"]
 
 # Example model for demonstration
