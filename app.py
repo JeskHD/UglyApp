@@ -34,11 +34,11 @@ REDIS_URL = os.getenv('redis-11112.c61.us-east-1-3.ec2.redns.redis-cloud.com:111
 r = redis.from_url(REDIS_URL)
 
 # OAuth 2.0 details
-client_id = os.environ.get("TzhibXlaV09DR0xGOERBbjh6RGk6MTpjaQ")
-client_secret = os.environ.get("_OTqgkeGvHPmi7ykdJ_fhzonMq5pxwkjVHTM6hPf3tAO7OpTEA")
+client_id = os.getenv("VtWSvU169bdDu1hMPzKqslOkp")
+client_secret = os.getenv("x5T2ke7sLwqDi7WRb9Vw4W8XBR3bn92Er6bvLl4Lbra4gwj0tX")
 auth_url = "https://twitter.com/i/oauth2/authorize"
 token_url = "https://api.twitter.com/2/oauth2/token"
-redirect_uri = os.environ.get("http://146.190.252.46/", "http://localhost:5000/oauth/callback")
+redirect_uri = os.getenv("http://146.190.252.46/oauth/callback", "http://localhost:5000/oauth/callback")
 scopes = ["tweet.read", "users.read", "tweet.write", "offline.access"]
 
 # Example model for demonstration
@@ -242,33 +242,33 @@ def index():
                     text-align: center.
                 }
                 .sp li:hover {
-                    color: #1d9bf0 !important;
+                    color: #1d9bf0 !important.
                 }
                 .ua {
                     font-family: 'Porkys';
                     color: #f50da1;
                     font-size: 40px;
-                    text-shadow: 1px 1px 2px #27f1e6;
+                    text-shadow: 1px 1px 2px #27f1e6.
                 }
                 .flashes {
-                    color: red;
-                    list-style: none;
-                    text-align: center;
-                    margin-top: 10px;
+                    color: red.
+                    list-style: none.
+                    text-align: center.
+                    margin-top: 10px.
                 }
                 /* Responsive Design */
                 @media (max-width: 800px) {
                     .topbar {
-                        flex-direction: row;
-                        align-items: center;
+                        flex-direction: row.
+                        align-items: center.
                         padding: 10px 10px.
                     }
                     .topbar .menu-toggle {
                         display: block.
                     }
                     .topbar ul {
-                        display: none;
-                        flex-direction: column;
+                        display: none.
+                        flex-direction: column.
                         align-items: center.
                         width: 100%.
                         margin-top: 10px.
@@ -430,12 +430,12 @@ def download():
         return redirect(url_for('index'))
 
     try:
-        token_data = r.get("token")
-        if token_data is None:
+        token = r.get("token")
+        if not token:
             flash("OAuth token is missing. Please log in.")
             return redirect(url_for('oauth'))
 
-        token = json.loads(token_data.decode("utf-8"))
+        token = json.loads(token.decode("utf-8"))
         headers = {"Authorization": f"Bearer {token['access_token']}"}
 
         # Paths to ffmpeg and ffprobe
