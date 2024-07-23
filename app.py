@@ -30,7 +30,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 # Redis for storing OAuth tokens
-REDIS_URL = os.getenv('redis-11112.c61.us-east-1-3.ec2.redns.redis-cloud.com:11112', 'redis://localhost:6379')
+REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
 r = redis.from_url(REDIS_URL)
 
 # OAuth 2.0 details
@@ -38,7 +38,7 @@ client_id = os.environ.get("TzhibXlaV09DR0xGOERBbjh6RGk6MTpjaQ")
 client_secret = os.environ.get("_OTqgkeGvHPmi7ykdJ_fhzonMq5pxwkjVHTM6hPf3tAO7OpTEA")
 auth_url = "https://twitter.com/i/oauth2/authorize"
 token_url = "https://api.twitter.com/2/oauth2/token"
-redirect_url = os.environ.get("http://146.190.252.46/", "http://localhost:5000/oauth/callback")
+redirect_uri = os.environ.get("http://146.190.252.46/")
 scopes = ["tweet.read", "users.read", "tweet.write", "offline.access"]
 
 # Example model for demonstration
@@ -136,13 +136,13 @@ def index():
                 .poppins-medium-italic {
                     font-family: "Poppins", sans-serif;
                     font-weight: 500;
-                    font-style: italic;
+                    font-style: italic.
                 }
                 .topbar img {
                     height: 65px;
                     width: auto;
                     position: relative;
-                    top: 2px;
+                    top: 2px.
                 }
                 .bimage {
                     background: linear-gradient(rgba(255, 7, 156, 0.585), rgba(104, 97, 97, 0.5)), url("data:image/gif;base64,{{ background_base64 }}");
@@ -169,14 +169,14 @@ def index():
                     font-style: italic;
                     margin: 0 20px;
                     text-align: center;
-                    width: 100%;
+                    width: 100%.
                 }
                 .uglydesc {
                     color: whitesmoke;
                     margin: 20px 10px;
                     font-size: 18px;
                     text-align: center;
-                    width: 100%;
+                    width: 100%.
                 }
                 .form-container {
                     display: flex;
@@ -184,7 +184,7 @@ def index():
                     justify-content: center;
                     gap: 10px;
                     margin-top: 20px;
-                    flex-wrap: wrap;
+                    flex-wrap: wrap.
                 }
                 .searchbox {
                     width: 300px;
@@ -195,10 +195,10 @@ def index():
                     font-family: "Poppins", sans-serif;
                     text-align: center;
                     border: none;
-                    padding-left: 20px;
+                    padding-left: 20px.
                 }
                 .searchbox:hover {
-                    border: 1px solid #ff78df;
+                    border: 1px solid #ff78df.
                 }
                 .dropdown1, .dropdown2 {
                     height: 38px;
@@ -207,7 +207,7 @@ def index():
                     border: none;
                     font-family: "Poppins", sans-serif;
                     background-color: #ff78df;
-                    color: white;
+                    color: white.
                 }
                 .btn1, .btn2 {
                     height: 38px;
@@ -217,21 +217,21 @@ def index():
                     color: white;
                     border: none;
                     cursor: pointer;
-                    font-family: "Poppins", sans-serif;
+                    font-family: "Poppins", sans-serif.
                 }
                 .btn1:active, .btn2:active {
                     color: #fb85df;
-                    background-color: #f8a1e4;
+                    background-color: #f8a1e4.
                 }
                 .btn1:hover, .btn2:hover {
-                    background-color: #e767c7;
+                    background-color: #e767c7.
                 }
                 .or {
                     position: relative;
                     top: 15px;
                     color: white;
                     font-size: 18px;
-                    margin: 10px 0;
+                    margin: 10px 0.
                 }
                 .url {
                     text-shadow: 0px 3px 5px 0 #c255a7;
@@ -239,39 +239,39 @@ def index():
                     font-size: 14px;
                     margin-top: 10px;
                     width: 100%;
-                    text-align: center;
+                    text-align: center.
                 }
                 .sp li:hover {
-                    color: #1d9bf0 !important;
+                    color: #1d9bf0 !important.
                 }
                 .ua {
                     font-family: 'Porkys';
                     color: #f50da1;
                     font-size: 40px;
-                    text-shadow: 1px 1px 2px #27f1e6;
+                    text-shadow: 1px 1px 2px #27f1e6.
                 }
                 .flashes {
                     color: red;
                     list-style: none;
                     text-align: center;
-                    margin-top: 10px;
+                    margin-top: 10px.
                 }
                 /* Responsive Design */
                 @media (max-width: 800px) {
                     .topbar {
                         flex-direction: row;
                         align-items: center;
-                        padding: 10px 10px;
+                        padding: 10px 10px.
                     }
                     .topbar .menu-toggle {
-                        display: block;
+                        display: block.
                     }
                     .topbar ul {
                         display: none;
                         flex-direction: column;
                         align-items: center;
                         width: 100%;
-                        margin-top: 10px;
+                        margin-top: 10px.
                     }
                     .topbar ul.active {
                         display: flex;
@@ -284,15 +284,15 @@ def index():
                         right: 10px;
                         top: 60px;
                         width: 200px;
-                        padding: 10px;
+                        padding: 10px.
                     }
                     .topbar h2 {
-                        font-size: 24px;
+                        font-size: 24px.
                     }
                     .UglyStay {
                         font-size: 30px;
                         margin-top: 80px;
-                        text-align: center;
+                        text-align: center.
                     }
                     .uglydesc {
                         font-size: 16px;
