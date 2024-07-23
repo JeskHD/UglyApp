@@ -38,7 +38,7 @@ client_id = os.getenv("VtWSvU169bdDu1hMPzKqslOkp")
 client_secret = os.getenv("x5T2ke7sLwqDi7WRb9Vw4W8XBR3bn92Er6bvLl4Lbra4gwj0tX")
 auth_url = "https://twitter.com/i/oauth2/authorize"
 token_url = "https://api.twitter.com/2/oauth2/token"
-redirect_uri = os.getenv("http://146.190.252.46/oauth/callback", "http://localhost:5000/oauth/callback")
+redirect_uri = os.getenv("http://146.190.252.46", "http://localhost:5000/oauth/callback")
 scopes = ["tweet.read", "users.read", "tweet.write", "offline.access"]
 
 # Example model for demonstration
