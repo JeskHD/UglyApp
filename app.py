@@ -30,15 +30,15 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 # Redis for storing OAuth tokens
-REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
+REDIS_URL = os.getenv('redis-11112.c61.us-east-1-3.ec2.redns.redis-cloud.com:11112', 'redis://localhost:6379')
 r = redis.from_url(REDIS_URL)
 
 # OAuth 2.0 details
-client_id = os.environ.get("CLIENT_ID")
-client_secret = os.environ.get("CLIENT_SECRET")
+client_id = os.environ.get("TzhibXlaV09DR0xGOERBbjh6RGk6MTpjaQ")
+client_secret = os.environ.get("_OTqgkeGvHPmi7ykdJ_fhzonMq5pxwkjVHTM6hPf3tAO7OpTEA")
 auth_url = "https://twitter.com/i/oauth2/authorize"
 token_url = "https://api.twitter.com/2/oauth2/token"
-redirect_uri = os.environ.get("REDIRECT_URI", "http://localhost:5000/oauth/callback")
+redirect_uri = os.environ.get("http://146.190.252.46/", "http://localhost:5000/oauth/callback")
 scopes = ["tweet.read", "users.read", "tweet.write", "offline.access"]
 
 # Example model for demonstration
