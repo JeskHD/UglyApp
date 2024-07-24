@@ -152,7 +152,8 @@ def download_tweets():
     username = request.form['username']
     session = get_authenticated_session()
 
-    url = f"https://api.twitter.com/2/tweets?username={username}"
+    # Correct API endpoint
+    url = f"https://api.twitter.com/2/tweets/search/recent?query=from:{username}"
     response = session.get(url)
 
     if response.status_code == 200:
