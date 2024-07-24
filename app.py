@@ -11,6 +11,7 @@ from flask_sqlalchemy import SQLAlchemy
 import sqlalchemy as sa
 import glob
 import base64
+import yt_dlp  # Add this import
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
@@ -115,7 +116,6 @@ def index():
         font_base64 = get_base64_font('PORKH___.TTF.ttf')
 
         html_content = '''
-       !DOCTYPE html>
 <!DOCTYPE html>
 <html lang="en">
 <head>
