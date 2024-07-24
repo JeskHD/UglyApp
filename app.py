@@ -20,6 +20,8 @@ CREDENTIALS_FILE = "twitter_credentials.json"
 logging.basicConfig(level=logging.DEBUG)
 logging.getLogger("requests").setLevel(logging.DEBUG)
 logging.getLogger("urllib3").setLevel(logging.DEBUG)
+logging.getLogger("oauthlib").setLevel(logging.DEBUG)
+logging.getLogger("requests_oauthlib").setLevel(logging.DEBUG)
 
 def authenticate():
     consumer_key = os.getenv("CONSUMER_KEY")
