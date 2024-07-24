@@ -2,8 +2,9 @@ import json
 import os
 import logging
 from requests_oauthlib import OAuth1Session
-from flask import Flask, render_template_string, redirect, url_for, request, flash
+from flask import Flask, render_template_string, redirect, url_for, request, flash, send_file
 from dotenv import load_dotenv
+import requests
 
 # Load environment variables
 load_dotenv()
@@ -80,6 +81,17 @@ def authenticate():
         logging.error(f"Error during authentication: {e}")
         return None
 
+def get_authenticated_session():
+    with open(CREDENTIALS_FILE, 'r') as file:
+        creds = json.load(file)
+    consumer_key = creds["consumer_key"]
+    consumer_secret = creds["consumer_secret"]
+    access_token = creds["access_token"]
+    access_token_secret = creds["access_token_secret"]
+
+    return OAuth1Session(consumer_key, client_secret=consumer_secret,
+                         resource_owner_key=access_token, resource_owner_secret=access_token_secret)
+
 @app.route('/')
 def home():
     html_content = '''
@@ -105,6 +117,15 @@ def home():
                 </div>
               {% endif %}
             {% endwith %}
+            <hr>
+            <h1>Download Tweets</h1>
+            <form method="post" action="{{ url_for('download_tweets') }}">
+                <div class="form-group">
+                    <label for="username">Twitter Username:</label>
+                    <input type="text" class="form-control" id="username" name="username" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Download</button>
+            </form>
         </div>
     </body>
     </html>
@@ -121,6 +142,25 @@ def authorize():
         flash("Authorization failed. Check logs for details.", "danger")
         logging.error("Authorization failed.")
     return redirect(url_for('home'))
+
+@app.route('/download_tweets', methods=['POST'])
+def download_tweets():
+    username = request.form['username']
+    session = get_authenticated_session()
+
+    url = f"https://api.twitter.com/2/tweets?username={username}"
+    response = session.get(url)
+
+    if response.status_code == 200:
+        tweets = response.json()
+        with open(f"{username}_tweets.json", 'w') as file:
+            json.dump(tweets, file)
+        logging.info(f"Tweets for {username} downloaded successfully.")
+        return send_file(f"{username}_tweets.json", as_attachment=True)
+    else:
+        flash("Failed to download tweets. Check username and try again.", "danger")
+        logging.error(f"Failed to download tweets: {response.status_code} {response.text}")
+        return redirect(url_for('home'))
 
 if __name__ == '__main__':
     app.run(debug=True)
