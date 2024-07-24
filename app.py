@@ -1,14 +1,17 @@
 import os
-import json
 import subprocess
-from flask import Flask, request, redirect, url_for, flash, render_template_string, send_file
-import logging
-import redis
+import yt_dlp
+from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, session, current_app
+from flask_socketio import SocketIO, emit
+from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
-from flask_socketio import SocketIO
+import sqlalchemy as sa
 import glob
 import base64
-import requests
+import logging
+import json
+import redis
+from requests_oauthlib import OAuth1Session
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
@@ -16,6 +19,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 socketio = SocketIO(app)
+db = SQLAlchemy(app)
 
 # Ensure the downloads directory exists in the user's Downloads folder
 DOWNLOADS_DIR = os.path.join(os.path.expanduser("~"), 'Downloads')
@@ -26,114 +30,469 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 # Redis for storing OAuth tokens
-REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
+REDIS_URL = os.getenv('redis-11112.c61.us-east-1-3.ec2.redns.redis-cloud.com:11112', 'redis://localhost:6379')
 r = redis.from_url(REDIS_URL)
 
-# File to save credentials
+# OAuth details
 CREDENTIALS_FILE = "twitter_credentials.json"
-COOKIES_FILE = 'cookies_netscape.txt'
 
-# Function to check if URL is valid
+def authenticate():
+    consumer_key = os.getenv("CONSUMER_KEY")
+    consumer_secret = os.getenv("CONSUMER_SECRET")
+
+    if consumer_key is None or consumer_secret is None:
+        logger.error("Consumer key or consumer secret is missing.")
+        return None, None, None, None
+
+    # Check if credentials file exists
+    if os.path.exists(CREDENTIALS_FILE):
+        with open(CREDENTIALS_FILE, 'r') as file:
+            creds = json.load(file)
+            return creds["consumer_key"], creds["consumer_secret"], creds["access_token"], creds["access_token_secret"]
+
+    # If credentials file doesn't exist, proceed with authentication
+    try:
+        # Get request token
+        request_token_url = "https://api.twitter.com/oauth/request_token?oauth_callback=oob&x_auth_access_type=write"
+        oauth = OAuth1Session(consumer_key, client_secret=consumer_secret)
+        fetch_response = oauth.fetch_request_token(request_token_url)
+
+        resource_owner_key = fetch_response.get("oauth_token")
+        resource_owner_secret = fetch_response.get("oauth_token_secret")
+
+        # Get authorization
+        base_authorization_url = "https://api.twitter.com/oauth/authorize"
+        authorization_url = oauth.authorization_url(base_authorization_url)
+        
+        logger.info("Please go here and authorize: %s", authorization_url)
+        verifier = input("Paste the PIN here: ")
+
+        # Get the access token
+        access_token_url = "https://api.twitter.com/oauth/access_token"
+        oauth = OAuth1Session(
+            consumer_key,
+            client_secret=consumer_secret,
+            resource_owner_key=resource_owner_key,
+            resource_owner_secret=resource_owner_secret,
+            verifier=verifier,
+        )
+        oauth_tokens = oauth.fetch_access_token(access_token_url)
+
+        access_token = oauth_tokens["oauth_token"]
+        access_token_secret = oauth_tokens["oauth_token_secret"]
+
+        # Save the credentials to a file
+        with open(CREDENTIALS_FILE, 'w') as file:
+            json.dump({
+                "consumer_key": consumer_key,
+                "consumer_secret": consumer_secret,
+                "access_token": access_token,
+                "access_token_secret": access_token_secret
+            }, file)
+
+        return consumer_key, consumer_secret, access_token, access_token_secret
+
+    except Exception as e:
+        logger.error("Authentication failed: %s", e)
+        return None, None, None, None
+
+# Example model for demonstration
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), unique=True, nullable=False)
+
 def is_valid_url(url):
     parsed = urlparse(url)
     return bool(parsed.netloc) and bool(parsed.scheme)
 
-# Function to get base64 encoded image
 def get_base64_image(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
 
-# Function to get base64 encoded font
 def get_base64_font(font_path):
     with open(font_path, "rb") as font_file:
         return base64.b64encode(font_file.read()).decode('utf-8')
 
-# Function to load cookies from file
-def load_cookies(file_path):
-    cookies = {}
-    with open(file_path, 'r') as f:
-        for line in f:
-            if not line.startswith('#') and line.strip():
-                parts = line.strip().split('\t')
-                cookies[parts[5]] = parts[6]
-    return cookies
-
-# Route to render the home page
 @app.route('/')
 def index():
     try:
         background_base64 = get_base64_image('uglygif.gif')
+        logo_base64 = get_base64_image('uglylogo.png')
         font_base64 = get_base64_font('PORKH___.TTF.ttf')
 
         html_content = '''
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="HTML WEB DESIGN" content="Web Design">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ugly Downloader</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    <style>
-        @font-face {
-            font-family: 'Porkys';
-            src: url(data:font/ttf;base64,{{ font_base64 }}) format('truetype');
-        }
-        /* Styles omitted for brevity */
-    </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
-    <script>
-        var socket = io();
-        socket.on('connect', function() {
-            console.log('Connected to server');
-        });
-        socket.on('download_complete', function(data) {
-            alert('Download complete: ' + data.filename);
-        });
-    </script>
-</head>
-<body>
-    <!-- HTML content omitted for brevity -->
-</body>
-</html>
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="HTML WEB DESIGN" content="Web Design">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Ugly Downloader</title>
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+            <style>
+                @font-face {
+                    font-family: 'Porkys';
+                    src: url(data:font/ttf;base64,{{ font_base64 }}) format('truetype');
+                }
+                * {
+                    box-sizing: border-box;
+                    margin: 0;
+                    padding: 0;
+                }
+                body {
+                    font-family: "Poppins", sans-serif;
+                    width: 100%;
+                    overflow-x: hidden;
+                }
+                .topbar {
+                    font-family: "Montserrat", "Poppins", "Avenir";
+                    width: 100%;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 10px 50px;
+                    background: rgba(0, 0, 0, 0.5);
+                    position: absolute;
+                    top: 0;
+                    z-index: 1000;
+                }
+                .topbar nav {
+                    display: flex;
+                    align-items: center;
+                    width: 100%;
+                }
+                .topbar .menu-toggle {
+                    display: none;
+                    font-size: 24px;
+                    color: white;
+                    cursor: pointer;
+                    position: absolute;
+                    right: 40px;
+                }
+                .topbar ul {
+                    list-style-type: none;
+                    padding: 0;
+                    margin: 0;
+                    display: flex;
+                    gap: 20px;
+                    position: absolute;
+                    right: 50px;
+                }
+                .topbar ul li {
+                    color: white;
+                }
+                .topbar ul li:hover {
+                    color: rgb(255, 120, 223);
+                    cursor: pointer;
+                }
+                .poppins-medium-italic {
+                    font-family: "Poppins", sans-serif;
+                    font-weight: 500;
+                    font-style: italic;
+                }
+                .topbar img {
+                    height: 65px;
+                    width: auto;
+                    position: relative;
+                    top: 2px;
+                }
+                .bimage {
+                    background: linear-gradient(rgba(255, 7, 156, 0.585), rgba(104, 97, 97, 0.5)), url("data:image/gif;base64,{{ background_base64 }}");
+                    height: 800px;
+                    width: 100%;
+                    background-repeat: no-repeat;
+                    background-position: center;
+                    background-size: cover;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: center;
+                    text-align: center;
+                    padding-top: 100px; /* Adjusted to move content closer to the topbar */
+                }
+                .Wrapper {
+                    text-align: center;
+                    padding: 20px;
+                }
+                .UglyStay {
+                    color: rgb(255, 136, 237);
+                    font-size: 50px;
+                    font-weight: 800;
+                    font-style: italic;
+                    margin: 0 20px;
+                    text-align: center;
+                    width: 100%;
+                }
+                .uglydesc {
+                    color: whitesmoke;
+                    margin: 20px 10px;
+                    font-size: 18px;
+                    text-align: center;
+                    width: 100%;
+                }
+                .form-container {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
+                    margin-top: 20px;
+                    flex-wrap: wrap;
+                }
+                .searchbox {
+                    width: 300px;
+                    height: 40px;
+                    background-color: black;
+                    border-radius: 50px 0 0 50px;
+                    color: white;
+                    font-family: "Poppins", sans-serif;
+                    text-align: center;
+                    border: none;
+                    padding-left: 20px;
+                }
+                .searchbox:hover {
+                    border: 1px solid #ff78df;
+                }
+                .dropdown1, .dropdown2 {
+                    height: 38px;
+                    border-radius: 0;
+                    padding: 0 9px;
+                    border: none;
+                    font-family: "Poppins", sans-serif;
+                    background-color: #ff78df;
+                    color: white;
+                }
+                .btn1, .btn2 {
+                    height: 38px;
+                    border-radius: 0 50px 50px 0;
+                    padding: 0 7px;
+                    background-color: #fa50d3;
+                    color: white;
+                    border: none;
+                    cursor: pointer;
+                    font-family: "Poppins", sans-serif;
+                }
+                .btn1:active, .btn2:active {
+                    color: #fb85df;
+                    background-color: #f8a1e4;
+                }
+                .btn1:hover, .btn2:hover {
+                    background-color: #e767c7;
+                }
+                .or {
+                    position: relative;
+                    top: 15px;
+                    color: white;
+                    font-size: 18px;
+                    margin: 10px 0;
+                }
+                .url {
+                    text-shadow: 0px 3px 5px 0 #c255a7;
+                    color: white;
+                    font-size: 14px;
+                    margin-top: 10px;
+                    width: 100%;
+                    text-align: center;
+                }
+                .sp li:hover {
+                    color: #1d9bf0 !important;
+                }
+                .ua {
+                    font-family: 'Porkys';
+                    color: #f50da1;
+                    font-size: 40px;
+                    text-shadow: 1px 1px 2px #27f1e6;
+                }
+                .flashes {
+                    color: red;
+                    list-style: none;
+                    text-align: center;
+                    margin-top: 10px;
+                }
+                /* Responsive Design */
+                @media (max-width: 800px) {
+                    .topbar {
+                        flex-direction: row;
+                        align-items: center;
+                        padding: 10px 10px;
+                    }
+                    .topbar .menu-toggle {
+                        display: block;
+                    }
+                    .topbar ul {
+                        display: none;
+                        flex-direction: column;
+                        align-items: center;
+                        width: 100%;
+                        margin-top: 10px;
+                    }
+                    .topbar ul.active {
+                        display: flex;
+                        font-size: 10px;
+                        top: 11px;
+                        border: 1px solid white;
+                        flex-direction: column;
+                        position: absolute;
+                        background-color: rgba(0, 0, 0, 0.8);
+                        right: 10px;
+                        top: 60px;
+                        width: 200px;
+                        padding: 10px;
+                    }
+                    .topbar h2 {
+                        font-size: 24px;
+                    }
+                    .UglyStay {
+                        font-size: 30px;
+                        margin-top: 80px;
+                        text-align: center;
+                    }
+                    .uglydesc {
+                        font-size: 16px;
+                        margin: 20px 20px;
+                        text-align: center.
+                    }
+                    .form-container {
+                        flex-direction: column;
+                        align-items: center.
+                    }
+                    .searchbox, .dropdown1, .dropdown2, .btn1, .btn2 {
+                        width: 100%;
+                        margin-bottom: 10px.
+                    }
+                    .or {
+                        top: 0.
+                        margin: 10px 0.
+                    }
+                    .url {
+                        margin-top: 20px.
+                        text-align: center.
+                    }
+                }
+            </style>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+            <script>
+                var socket = io();
+                socket.on('connect', function() {
+                    console.log('Connected to server');
+                });
+                socket.on('download_complete', function(data) {
+                    alert('Download complete: ' + data.filename);
+                });
+            </script>
+        </head>
+        <body>
+            <div class="topbar">
+                <header>
+                    <nav>
+                        <h2 class="ua">Ugly Downloader</h2>
+                        <div class="menu-toggle">
+                            <i class="fa fa-bars"></i>
+                        </div>
+                        <ul class="menu">
+                            <li>About Us</li>
+                            <li>Collection</li>
+                            <li>Media</li>
+                            <li>FAQ</li>
+                            <li>Downloader</li>
+                            <div class="sp">
+                                <li><i class="fa fa-twitter"></i></li>
+                            </div>
+                        </ul>
+                    </nav>
+                </header>
+            </div>
+            <div class="bimage">
+                <main>
+                    <h1></h1>
+                    <section class="Wrapper">
+                        <article>
+                            <div>
+                                <h2 class="UglyStay">Stay Ugly With Our Media</h2>
+                                <p class="uglydesc">Download Ugly Bros' art, music, and videos swiftly with UglyDownloader. Quality and simplicity in one click.</p>
+                                <br>
+                                <div class="form-container">
+                                    <form action="/download" method="post" enctype="multipart/form-data">
+                                        <div class="AllC">
+                                            <input type="text" name="audio_url" placeholder="Enter audio URL" class="searchbox">
+                                            <select name="audio_format" class="dropdown1">
+                                                <option value="mp3">MP3</option>
+                                                <option value="m4a">M4A</option>
+                                            </select>
+                                            <button type="submit" name="format" value="audio" class="btn1">Download Audio</button>
+                                            <br>
+                                            <p class="or">OR</p><br>
+                                            <input type="text" name="video_url" placeholder="Enter video URL" class="searchbox">
+                                            <select name="video_format" class="dropdown2">
+                                                <option value="mp4">MP4</option>
+                                                <option value="mov">MOV</option>
+                                            </select>
+                                            <button type="submit" name="format" value="video" class="btn2">Download Video</button>
+                                            <br><br>
+                                    </form>
+                                    <p class="url">Enter your desired URL and let it do the trick</p>
+                                    <div class="message">
+                                        {% with messages = get_flashed_messages() %}
+                                            {% if messages %}
+                                                <ul class="flashes">
+                                                {% for message in messages %}
+                                                    <li>{{ message }}</li>
+                                                {% endfor %}
+                                                </ul>
+                                            {% endif %}
+                                        {% endwith %}
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+                    </section>
+                </main>
+            </div>
+        </body>
+        </html>        
         '''
         return render_template_string(html_content, background_base64=background_base64, font_base64=font_base64)
     except Exception as e:
         logger.error(f"Error rendering page: {str(e)}")
         return f"Error rendering page: {str(e)}"
 
-# Route to handle the download request
+@app.route('/oauth')
+def oauth():
+    consumer_key, consumer_secret, access_token, access_token_secret = authenticate()
+    if access_token:
+        r.set("token", json.dumps({
+            "access_token": access_token,
+            "access_token_secret": access_token_secret
+        }))
+        flash("Logged in successfully.")
+        return redirect(url_for('index'))
+    else:
+        flash("Authentication failed.")
+        return redirect(url_for('index'))
+
 @app.route('/download', methods=['POST'])
 def download():
     audio_url = request.form.get('audio_url')
     video_url = request.form.get('video_url')
     format = request.form['format']
     url = audio_url if format == 'audio' else video_url
-
+    
     if not is_valid_url(url):
         flash("Invalid URL. Please enter a valid URL.")
         return redirect(url_for('index'))
 
     try:
-        twitter_credentials = r.get("twitter_credentials")
-        if not twitter_credentials:
+        token_data = r.get("token")
+        if not token_data:
             flash("OAuth token is missing. Please log in.")
             return redirect(url_for('oauth'))
 
-        creds = json.loads(twitter_credentials.decode("utf-8"))
-
-        if not os.path.exists(COOKIES_FILE):
-            flash("Cookies file not found.")
-            return redirect(url_for('index'))
-
+        token = json.loads(token_data.decode("utf-8"))
         headers = {
-            "Authorization": f"Bearer {creds['access_token']}",
-            "Consumer-Key": creds["consumer_key"],
-            "Consumer-Secret": creds["consumer_secret"],
-            "Access-Token-Secret": creds["access_token_secret"]
+            "Authorization": f"Bearer {token['access_token']}",
+            "oauth_token_secret": token['access_token_secret']
         }
 
         # Paths to ffmpeg and ffprobe
@@ -148,19 +507,14 @@ def download():
             'noprogress': True,  # Do not show progress bar
         }
 
-        # Log details of the operation
-        logger.debug(f"Starting download for URL: {url}")
-        logger.debug(f"Using cookies file: {COOKIES_FILE}")
-
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
             audio_format = request.form.get('audio_format', 'm4a/mp3')
             output_template = os.path.join(DOWNLOADS_DIR, '%(title)s')
 
             command = [
                 '/root/UglyApp/venv/bin/python3', '-m', 'twspace_dl',
-                '-c', COOKIES_FILE,  # Use the cookies file uploaded
-                '-i', url,
-                '-v'
+                '-c', '/root/UglyApp/cookies_netscape.txt',  # Use the cookies file uploaded
+                '-i', url
             ]
 
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -170,7 +524,7 @@ def download():
                 if process.poll() is not None:
                     break
                 if output:
-                    logger.debug(output.strip())
+                    print(output.strip())
                     socketio.emit('eta', {'data': output.strip()})
 
             process.wait()
@@ -197,21 +551,92 @@ def download():
                     socketio.emit('download_complete', {'filename': os.path.basename(latest_file)})
                     return send_file(latest_file, as_attachment=True, download_name=os.path.basename(latest_file))
                 else:
-                    logger.error("File not found after download.")
                     flash("File not found after download.")
                     return redirect(url_for('index'))
             else:
-                logger.error("Error during the download process.")
                 flash("Error during the download process.")
                 return redirect(url_for('index'))
+        
+        elif 'youtube.com' in url:
+            cookie_file = 'youtube_cookies.txt'
+            ydl_opts.update({
+                'cookiefile': cookie_file,
+                'username': 'oauth2',
+                'password': '',
+            })
 
+        elif 'soundcloud.com' in url:
+            cookie_file = 'soundcloud_cookies.txt'
+            ydl_opts.update({
+                'cookiefile': cookie_file,
+            })
+        
+        if format == 'audio':
+            audio_format = request.form['audio_format']
+            ydl_opts.update({
+                'format': 'bestaudio/best',
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': audio_format,
+                    'preferredquality': '192',
+                }]
+            })
+        else:
+            video_format = request.form['video_format']
+            ydl_opts.update({
+                'format': 'bestvideo+bestaudio/best',
+                'merge_output_format': 'mp4',
+                'overwrites': True  # Overwrite files automatically
+            })
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(url, download=True)
+            file_path = ydl.prepare_filename(info_dict)
+
+            if format == 'audio':
+                file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
+            else:
+                if video_format == 'mov':
+                    file_path = file_path.replace('.mp4', f'.mp4')
+                else:
+                    file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
+                
+            if os.path.exists(file_path):
+                if format == 'audio' and audio_format == 'mp3':
+                    mp3_file = file_path.replace('.m4a', '.mp3')
+                    convert_command = [
+                        ffmpeg_location,
+                        '-i', file_path,
+                        '-codec:a', 'libmp3lame',
+                        '-qscale:a', '2',
+                        mp3_file
+                    ]
+                    subprocess.run(convert_command, check=True)
+                    file_to_send = mp3_file
+                elif format == 'video' and video_format == 'mov':
+                    mov_file = file_path.replace('.mp4', '.mov')
+                    convert_command = [
+                        ffmpeg_location,
+                        '-i', file_path,
+                        '-c:v', 'copy',
+                        '-c:a', 'copy',
+                        mov_file
+                    ]
+                    subprocess.run(convert_command, check=True)
+                    file_to_send = mov_file
+                else:
+                    file_to_send = file_path
+
+                socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
+                return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
+            else:
+                flash("File not found after download.")
+                return redirect(url_for('index'))
     except subprocess.CalledProcessError as e:
-        logger.error(f"Subprocess error: {str(e)}")
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
-    except requests.exceptions.HTTPError as e:
-        logger.error(f"HTTP error: {e.response.status_code} - {e.response.text}")
-        flash(f"HTTP error: {e.response.status_code} - {e.response.text}")
+    except yt_dlp.utils.DownloadError as e:
+        flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
     except Exception as e:
         logger.error(f"An unexpected error occurred: {str(e)}")
@@ -219,6 +644,22 @@ def download():
         return redirect(url_for('index'))
 
     return redirect(url_for('index'))  # Ensure there is a return statement in all paths
+
+@app.route('/uploads/<path:filename>', methods=['GET', 'POST'])
+def upload(filename):
+    uploads = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
+    return send_from_directory(uploads, filename)
+
+# Database initialization logic for Render
+engine = sa.create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
+inspector = sa.inspect(engine)
+if not inspector.has_table("user"):
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+        app.logger.info('Initialized the database!')
+else:
+    app.logger.info('Database already contains the users table.')
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
