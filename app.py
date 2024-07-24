@@ -11,7 +11,6 @@ import base64
 import logging
 from requests_oauthlib import OAuth1Session
 import json
-import redis
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
@@ -29,12 +28,25 @@ os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# Redis for storing OAuth tokens
-REDIS_URL = os.getenv('redis-11112.c61.us-east-1-3.ec2.redns.redis-cloud.com:11112', 'redis://localhost:6379')
-r = redis.from_url(REDIS_URL)
-
-# Twitter OAuth credentials
+# File to save credentials
 CREDENTIALS_FILE = "twitter_credentials.json"
+
+# Example model for demonstration
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), unique=True, nullable=False)
+
+def is_valid_url(url):
+    parsed = urlparse(url)
+    return bool(parsed.netloc) and bool(parsed.scheme)
+
+def get_base64_image(image_path):
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode('utf-8')
+
+def get_base64_font(font_path):
+    with open(font_path, "rb") as font_file:
+        return base64.b64encode(font_file.read()).decode('utf-8')
 
 def authenticate():
     consumer_key = os.environ.get("CONSUMER_KEY")
@@ -44,13 +56,11 @@ def authenticate():
         logger.error("Consumer key or consumer secret is missing.")
         return None, None, None, None
 
-    # Check if credentials file exists
     if os.path.exists(CREDENTIALS_FILE):
         with open(CREDENTIALS_FILE, 'r') as file:
             creds = json.load(file)
             return creds["consumer_key"], creds["consumer_secret"], creds["access_token"], creds["access_token_secret"]
 
-    # Get request token
     request_token_url = "https://api.twitter.com/oauth/request_token?oauth_callback=oob&x_auth_access_type=write"
     oauth = OAuth1Session(consumer_key, client_secret=consumer_secret)
     fetch_response = oauth.fetch_request_token(request_token_url)
@@ -58,14 +68,12 @@ def authenticate():
     resource_owner_key = fetch_response.get("oauth_token")
     resource_owner_secret = fetch_response.get("oauth_token_secret")
 
-    # Get authorization
     base_authorization_url = "https://api.twitter.com/oauth/authorize"
     authorization_url = oauth.authorization_url(base_authorization_url)
-
-    logger.info(f"Please go here and authorize: {authorization_url}")
+    
+    logger.info("Please go here and authorize: " + authorization_url)
     verifier = input("Paste the PIN here: ")
 
-    # Get the access token
     access_token_url = "https://api.twitter.com/oauth/access_token"
     oauth = OAuth1Session(
         consumer_key,
@@ -79,7 +87,6 @@ def authenticate():
     access_token = oauth_tokens["oauth_token"]
     access_token_secret = oauth_tokens["oauth_token_secret"]
 
-    # Save the credentials to a file
     with open(CREDENTIALS_FILE, 'w') as file:
         json.dump({
             "consumer_key": consumer_key,
@@ -89,18 +96,6 @@ def authenticate():
         }, file)
 
     return consumer_key, consumer_secret, access_token, access_token_secret
-
-def is_valid_url(url):
-    parsed = urlparse(url)
-    return bool(parsed.netloc) and bool(parsed.scheme)
-
-def get_base64_image(image_path):
-    with open(image_path, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode('utf-8')
-
-def get_base64_font(font_path):
-    with open(font_path, "rb") as font_file:
-        return base64.b64encode(font_file.read()).decode('utf-8')
 
 @app.route('/')
 def index():
@@ -449,13 +444,10 @@ def index():
 
 @app.route('/oauth')
 def oauth():
-    consumer_key, consumer_secret, access_token, access_token_secret = authenticate()
-    if not access_token:
-        flash("Authentication failed.")
+    consumer_key, consumer_secret, _, _ = authenticate()
+    if not consumer_key or not consumer_secret:
+        flash("Consumer key or consumer secret is missing.")
         return redirect(url_for('index'))
-    session['oauth_token'] = access_token
-    session['oauth_token_secret'] = access_token_secret
-    flash("Logged in successfully.")
     return redirect(url_for('index'))
 
 @app.route('/download', methods=['POST'])
@@ -470,13 +462,9 @@ def download():
         return redirect(url_for('index'))
 
     try:
-        access_token = session.get('oauth_token')
-        access_token_secret = session.get('oauth_token_secret')
-        if not access_token or not access_token_secret:
-            flash("OAuth token is missing. Please log in.")
-            return redirect(url_for('oauth'))
-
-        headers = {"Authorization": f"Bearer {access_token}"}
+        with open(CREDENTIALS_FILE, 'r') as file:
+            creds = json.load(file)
+            headers = {"Authorization": f"Bearer {creds['access_token']}"}
 
         # Paths to ffmpeg and ffprobe
         ffmpeg_location = '/usr/bin/ffmpeg'
