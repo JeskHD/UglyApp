@@ -11,6 +11,7 @@ import base64
 import logging
 from requests_oauthlib import OAuth1Session
 import json
+import redis
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
@@ -28,13 +29,66 @@ os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# File to save credentials
+# Redis for storing OAuth tokens
+REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
+r = redis.from_url(REDIS_URL)
+
+# Twitter OAuth credentials
 CREDENTIALS_FILE = "twitter_credentials.json"
 
-# Example model for demonstration
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80), unique=True, nullable=False)
+def authenticate():
+    consumer_key = os.environ.get("CONSUMER_KEY")
+    consumer_secret = os.environ.get("CONSUMER_SECRET")
+
+    if consumer_key is None or consumer_secret is None:
+        logger.error("Consumer key or consumer secret is missing.")
+        return None, None, None, None
+
+    # Check if credentials file exists
+    if os.path.exists(CREDENTIALS_FILE):
+        with open(CREDENTIALS_FILE, 'r') as file:
+            creds = json.load(file)
+            return creds["consumer_key"], creds["consumer_secret"], creds["access_token"], creds["access_token_secret"]
+
+    # Get request token
+    request_token_url = "https://api.twitter.com/oauth/request_token?oauth_callback=oob&x_auth_access_type=write"
+    oauth = OAuth1Session(consumer_key, client_secret=consumer_secret)
+    fetch_response = oauth.fetch_request_token(request_token_url)
+
+    resource_owner_key = fetch_response.get("oauth_token")
+    resource_owner_secret = fetch_response.get("oauth_token_secret")
+
+    # Get authorization
+    base_authorization_url = "https://api.twitter.com/oauth/authorize"
+    authorization_url = oauth.authorization_url(base_authorization_url)
+
+    logger.info(f"Please go here and authorize: {authorization_url}")
+    verifier = input("Paste the PIN here: ")
+
+    # Get the access token
+    access_token_url = "https://api.twitter.com/oauth/access_token"
+    oauth = OAuth1Session(
+        consumer_key,
+        client_secret=consumer_secret,
+        resource_owner_key=resource_owner_key,
+        resource_owner_secret=resource_owner_secret,
+        verifier=verifier,
+    )
+    oauth_tokens = oauth.fetch_access_token(access_token_url)
+
+    access_token = oauth_tokens["oauth_token"]
+    access_token_secret = oauth_tokens["oauth_token_secret"]
+
+    # Save the credentials to a file
+    with open(CREDENTIALS_FILE, 'w') as file:
+        json.dump({
+            "consumer_key": consumer_key,
+            "consumer_secret": consumer_secret,
+            "access_token": access_token,
+            "access_token_secret": access_token_secret
+        }, file)
+
+    return consumer_key, consumer_secret, access_token, access_token_secret
 
 def is_valid_url(url):
     parsed = urlparse(url)
@@ -52,6 +106,7 @@ def get_base64_font(font_path):
 def index():
     try:
         background_base64 = get_base64_image('uglygif.gif')
+        logo_base64 = get_base64_image('uglylogo.png')
         font_base64 = get_base64_font('PORKH___.TTF.ttf')
 
         html_content = '''
@@ -59,6 +114,7 @@ def index():
         <html lang="en">
         <head>
             <meta charset="UTF-8">
+            <meta name="HTML WEB DESIGN" content="Web Design">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Ugly Downloader</title>
             <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -227,72 +283,72 @@ def index():
                     font-size: 14px;
                     margin-top: 10px;
                     width: 100%;
-                    text-align: center;
+                    text-align: center.
                 }
                 .sp li:hover {
-                    color: #1d9bf0 !important;
+                    color: #1d9bf0 !important.
                 }
                 .ua {
                     font-family: 'Porkys';
                     color: #f50da1;
                     font-size: 40px;
-                    text-shadow: 1px 1px 2px #27f1e6;
+                    text-shadow: 1px 1px 2px #27f1e6.
                 }
                 .flashes {
-                    color: red;
-                    list-style: none;
-                    text-align: center;
-                    margin-top: 10px;
+                    color: red.
+                    list-style: none.
+                    text-align: center.
+                    margin-top: 10px.
                 }
                 /* Responsive Design */
                 @media (max-width: 800px) {
                     .topbar {
-                        flex-direction: row;
-                        align-items: center;
-                        padding: 10px 10px;
+                        flex-direction: row.
+                        align-items: center.
+                        padding: 10px 10px.
                     }
                     .topbar .menu-toggle {
-                        display: block;
+                        display: block.
                     }
                     .topbar ul {
-                        display: none;
-                        flex-direction: column;
-                        align-items: center;
-                        width: 100%;
-                        margin-top: 10px;
+                        display: none.
+                        flex-direction: column.
+                        align-items: center.
+                        width: 100%.
+                        margin-top: 10px.
                     }
                     .topbar ul.active {
-                        display: flex;
-                        font-size: 10px;
-                        top: 11px;
-                        border: 1px solid white;
-                        flex-direction: column;
-                        position: absolute;
-                        background-color: rgba(0, 0, 0, 0.8);
-                        right: 10px;
-                        top: 60px;
-                        width: 200px;
-                        padding: 10px;
+                        display: flex.
+                        font-size: 10px.
+                        top: 11px.
+                        border: 1px solid white.
+                        flex-direction: column.
+                        position: absolute.
+                        background-color: rgba(0, 0, 0, 0.8).
+                        right: 10px.
+                        top: 60px.
+                        width: 200px.
+                        padding: 10px.
                     }
                     .topbar h2 {
-                        font-size: 24px;
+                        font-size: 24px.
                     }
                     .UglyStay {
-                        font-size: 30px;
-                        margin-top: 80px;
-                        text-align: center;
+                        font-size: 30px.
+                        margin-top: 80px.
+                        text-align: center.
                     }
                     .uglydesc {
-                        font-size: 16px;
-                        margin: 20px 20px;
+                        font-size: 16px.
+                        margin: 20px 20px.
                         text-align: center.
                     }
                     .form-container {
-                        flex-direction: column;
+                        flex-direction: column.
                         align-items: center.
                     }
                     .searchbox, .dropdown1, .dropdown2, .btn1, .btn2 {
-                        width: 100%;
+                        width: 100%.
                         margin-bottom: 10px.
                     }
                     .or {
@@ -391,60 +447,16 @@ def index():
         logger.error(f"Error rendering page: {str(e)}")
         return f"Error rendering page: {str(e)}"
 
-def authenticate():
-    consumer_key = os.environ.get("CONSUMER_KEY")
-    consumer_secret = os.environ.get("CONSUMER_SECRET")
-
-    if consumer_key is None or consumer_secret is None:
-        flash("Consumer key or consumer secret is missing.")
+@app.route('/oauth')
+def oauth():
+    consumer_key, consumer_secret, access_token, access_token_secret = authenticate()
+    if not access_token:
+        flash("Authentication failed.")
         return redirect(url_for('index'))
-
-    # Check if credentials file exists
-    if os.path.exists(CREDENTIALS_FILE):
-        with open(CREDENTIALS_FILE, 'r') as file:
-            creds = json.load(file)
-            return creds["consumer_key"], creds["consumer_secret"], creds["access_token"], creds["access_token_secret"]
-
-    # If credentials file doesn't exist, proceed with authentication
-    # Get request token
-    request_token_url = "https://api.twitter.com/oauth/request_token?oauth_callback=oob&x_auth_access_type=write"
-    oauth = OAuth1Session(consumer_key, client_secret=consumer_secret)
-    fetch_response = oauth.fetch_request_token(request_token_url)
-
-    resource_owner_key = fetch_response.get("oauth_token")
-    resource_owner_secret = fetch_response.get("oauth_token_secret")
-
-    # Get authorization
-    base_authorization_url = "https://api.twitter.com/oauth/authorize"
-    authorization_url = oauth.authorization_url(base_authorization_url)
-    
-    print("Please go here and authorize:", authorization_url)
-    verifier = input("Paste the PIN here: ")
-
-    # Get the access token
-    access_token_url = "https://api.twitter.com/oauth/access_token"
-    oauth = OAuth1Session(
-        consumer_key,
-        client_secret=consumer_secret,
-        resource_owner_key=resource_owner_key,
-        resource_owner_secret=resource_owner_secret,
-        verifier=verifier,
-    )
-    oauth_tokens = oauth.fetch_access_token(access_token_url)
-
-    access_token = oauth_tokens["oauth_token"]
-    access_token_secret = oauth_tokens["oauth_token_secret"]
-
-    # Save the credentials to a file
-    with open(CREDENTIALS_FILE, 'w') as file:
-        json.dump({
-            "consumer_key": consumer_key,
-            "consumer_secret": consumer_secret,
-            "access_token": access_token,
-            "access_token_secret": access_token_secret
-        }, file)
-
-    return consumer_key, consumer_secret, access_token, access_token_secret
+    session['oauth_token'] = access_token
+    session['oauth_token_secret'] = access_token_secret
+    flash("Logged in successfully.")
+    return redirect(url_for('index'))
 
 @app.route('/download', methods=['POST'])
 def download():
@@ -458,8 +470,12 @@ def download():
         return redirect(url_for('index'))
 
     try:
-        creds = authenticate()
-        consumer_key, consumer_secret, access_token, access_token_secret = creds
+        access_token = session.get('oauth_token')
+        access_token_secret = session.get('oauth_token_secret')
+        if not access_token or not access_token_secret:
+            flash("OAuth token is missing. Please log in.")
+            return redirect(url_for('oauth'))
+
         headers = {"Authorization": f"Bearer {access_token}"}
 
         # Paths to ffmpeg and ffprobe
