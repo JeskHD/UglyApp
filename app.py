@@ -9,7 +9,7 @@ import sqlalchemy as sa
 import glob
 import base64
 import logging
-from requests_oauthlib import OAuth1Session
+from requests_oauthlib import OAuth2Session
 import json
 import redis
 import hashlib
@@ -35,67 +35,16 @@ logger = logging.getLogger(__name__)
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
 r = redis.from_url(REDIS_URL)
 
-# OAuth 1.0a details
+# OAuth 2.0 details
+client_id = os.getenv("CLIENT_ID")
+client_secret = os.getenv("CLIENT_SECRET")
+redirect_uri = os.getenv("REDIRECT_URI", "http://localhost:5000/oauth/callback")
+auth_url = "https://twitter.com/i/oauth2/authorize"
+token_url = "https://api.twitter.com/2/oauth2/token"
+scopes = ["tweet.read", "users.read", "tweet.write", "offline.access"]
+
+# Credentials file
 CREDENTIALS_FILE = "twitter_credentials.json"
-
-def authenticate():
-    consumer_key = os.environ.get("CONSUMER_KEY")
-    consumer_secret = os.environ.get("CONSUMER_SECRET")
-
-    if consumer_key is None or consumer_secret is None:
-        print("Consumer key or consumer secret is missing.")
-
-    # Check if credentials file exists
-    if os.path.exists(CREDENTIALS_FILE):
-        with open(CREDENTIALS_FILE, 'r') as file:
-            creds = json.load(file)
-            return creds["consumer_key"], creds["consumer_secret"], creds["access_token"], creds["access_token_secret"]
-
-    # If credentials file doesn't exist, proceed with authentication
-    # Get request token
-    request_token_url = "https://api.twitter.com/oauth/request_token?oauth_callback=oob&x_auth_access_type=write"
-    oauth = OAuth1Session(consumer_key, client_secret=consumer_secret)
-    fetch_response = oauth.fetch_request_token(request_token_url)
-
-    resource_owner_key = fetch_response.get("oauth_token")
-    resource_owner_secret = fetch_response.get("oauth_token_secret")
-
-    # Get authorization
-    base_authorization_url = "https://api.twitter.com/oauth/authorize"
-    authorization_url = oauth.authorization_url(base_authorization_url)
-    
-    print("Please go here and authorize:", authorization_url)
-    verifier = input("Paste the PIN here: ")
-
-    # Get the access token
-    access_token_url = "https://api.twitter.com/oauth/access_token"
-    oauth = OAuth1Session(
-        consumer_key,
-        client_secret=consumer_secret,
-        resource_owner_key=resource_owner_key,
-        resource_owner_secret=resource_owner_secret,
-        verifier=verifier,
-    )
-    oauth_tokens = oauth.fetch_access_token(access_token_url)
-
-    access_token = oauth_tokens["oauth_token"]
-    access_token_secret = oauth_tokens["oauth_token_secret"]
-
-    # Save the credentials to a file
-    with open(CREDENTIALS_FILE, 'w') as file:
-        json.dump({
-            "consumer_key": consumer_key,
-            "consumer_secret": consumer_secret,
-            "access_token": access_token,
-            "access_token_secret": access_token_secret
-        }, file)
-
-    return consumer_key, consumer_secret, access_token, access_token_secret
-
-# Example model for demonstration
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80), unique=True, nullable=False)
 
 def is_valid_url(url):
     parsed = urlparse(url)
@@ -108,6 +57,21 @@ def get_base64_image(image_path):
 def get_base64_font(font_path):
     with open(font_path, "rb") as font_file:
         return base64.b64encode(font_file.read()).decode('utf-8')
+
+def generate_pkce_pair():
+    code_verifier = base64.urlsafe_b64encode(os.urandom(30)).decode("utf-8").rstrip('=')
+    code_verifier = re.sub("[^a-zA-Z0-9]+", "", code_verifier)
+    code_challenge = hashlib.sha256(code_verifier.encode("utf-8")).digest()
+    code_challenge = base64.urlsafe_b64encode(code_challenge).decode("utf-8").rstrip('=')
+    return code_verifier, code_challenge
+
+def authenticate():
+    if os.path.exists(CREDENTIALS_FILE):
+        with open(CREDENTIALS_FILE, 'r') as file:
+            creds = json.load(file)
+            return creds
+
+    return None
 
 @app.route('/')
 def index():
@@ -360,7 +324,7 @@ def index():
             }
             .or {
                 top: 0;
-                margin: 10px 0.
+                margin: 10px 0;
             }
             .url {
                 margin-top: 20px;
@@ -456,6 +420,12 @@ def index():
 
 @app.route('/oauth')
 def oauth():
+    creds = authenticate()
+    if creds:
+        session['oauth_token'] = creds
+        flash("Logged in successfully.")
+        return redirect(url_for('index'))
+
     code_verifier, code_challenge = generate_pkce_pair()
     session['code_verifier'] = code_verifier
 
@@ -474,7 +444,12 @@ def callback():
     code_verifier = session.get('code_verifier')
     twitter = OAuth2Session(client_id, state=session['oauth_state'], redirect_uri=redirect_uri)
     token = twitter.fetch_token(token_url, client_secret=client_secret, authorization_response=request.url, code_verifier=code_verifier)
-    r.set("token", json.dumps(token))
+    
+    # Save the credentials to a file
+    with open(CREDENTIALS_FILE, 'w') as file:
+        json.dump(token, file)
+    
+    session['oauth_token'] = token
     flash("Logged in successfully.")
     return redirect(url_for('index'))
 
@@ -490,12 +465,11 @@ def download():
         return redirect(url_for('index'))
 
     try:
-        token = r.get("token")
+        token = session.get('oauth_token')
         if not token:
             flash("OAuth token is missing. Please log in.")
             return redirect(url_for('oauth'))
 
-        token = json.loads(token.decode("utf-8"))
         headers = {"Authorization": f"Bearer {token['access_token']}"}
 
         # Paths to ffmpeg and ffprobe
