@@ -19,21 +19,24 @@ def index():
 
 @app.route('/download', methods=['POST'])
 def download_file():
+    url = request.form['url']
+    if not url:
+        return jsonify({'error': 'No URL provided'}), 400
+    
+    output_path = os.path.join(DOWNLOADS_DIR, 'bar.mp3')
+    
     try:
-        url = request.form['url']
-        if not url:
-            return jsonify({'error': 'No URL provided'}), 400
-        
-        output_path = os.path.join(DOWNLOADS_DIR, 'bar.mp3')
-        
         # Download the audio using ffmpeg
-        subprocess.run(['ffmpeg', '-i', url, '-b:a', '192K', '-vn', output_path], check=True)
-        
+        result = subprocess.run(
+            ['ffmpeg', '-i', url, '-b:a', '192K', '-vn', output_path],
+            capture_output=True,
+            text=True,
+            check=True
+        )
         return send_file(output_path, as_attachment=True, download_name='bar.mp3')
     except subprocess.CalledProcessError as e:
-        return jsonify({'error': str(e)}), 500
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        error_message = e.stderr
+        return jsonify({'error': error_message}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
