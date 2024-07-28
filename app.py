@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 import sqlalchemy as sa
 import glob
 import base64
+import hashlib
 import logging
 from requests_oauthlib import OAuth2Session
 import json
@@ -57,6 +58,12 @@ def get_base64_image(image_path):
 def get_base64_font(font_path):
     with open(font_path, "rb") as font_file:
         return base64.b64encode(font_file.read()).decode('utf-8')
+
+def generate_pkce_pair():
+    """Generate a code verifier and a code challenge for PKCE."""
+    code_verifier = base64.urlsafe_b64encode(os.urandom(30)).decode('utf-8').rstrip('=')
+    code_challenge = base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode('utf-8')).digest()).decode('utf-8').rstrip('=')
+    return code_verifier, code_challenge
 
 @app.route('/')
 def index():
@@ -297,23 +304,23 @@ def index():
                     .uglydesc {
                         font-size: 16px;
                         margin: 20px 20px;
-                        text-align: center.
+                        text-align: center;
                     }
                     .form-container {
-                        flex-direction: column.
-                        align-items: center.
+                        flex-direction: column;
+                        align-items: center;
                     }
                     .searchbox, .dropdown1, .dropdown2, .btn1, .btn2 {
-                        width: 100%.
-                        margin-bottom: 10px.
+                        width: 100%;
+                        margin-bottom: 10px;
                     }
                     .or {
-                        top: 0.
-                        margin: 10px 0.
+                        top: 0;
+                        margin: 10px 0;
                     }
                     .url {
-                        margin-top: 20px.
-                        text-align: center.
+                        margin-top: 20px;
+                        text-align: center;
                     }
                 }
             </style>
@@ -405,8 +412,15 @@ def index():
 
 @app.route('/oauth')
 def oauth():
+    code_verifier, code_challenge = generate_pkce_pair()
+    session['code_verifier'] = code_verifier
+
     twitter = OAuth2Session(client_id, redirect_uri=redirect_uri, scope=scopes)
-    authorization_url, state = twitter.authorization_url(auth_url)
+    authorization_url, state = twitter.authorization_url(
+        auth_url,
+        code_challenge=code_challenge,
+        code_challenge_method='S256'
+    )
     session['oauth_state'] = state
     logger.debug(f"OAuth state set to: {state}")
     return redirect(authorization_url)
@@ -417,11 +431,26 @@ def callback():
         flash("OAuth state missing in session.")
         return redirect(url_for('index'))
 
+    code_verifier = session.get('code_verifier')
+    if not code_verifier:
+        flash("Missing code verifier.")
+        return redirect(url_for('index'))
+
     twitter = OAuth2Session(client_id, state=session['oauth_state'], redirect_uri=redirect_uri)
-    token = twitter.fetch_token(token_url, client_secret=client_secret, authorization_response=request.url)
-    r.set("token", json.dumps(token))
-    flash("Logged in successfully.")
-    return redirect(url_for('index'))
+    try:
+        token = twitter.fetch_token(
+            token_url,
+            client_secret=client_secret,
+            authorization_response=request.url,
+            code_verifier=code_verifier
+        )
+        r.set("token", json.dumps(token))
+        flash("Logged in successfully.")
+        return redirect(url_for('index'))
+    except Exception as e:
+        app.logger.error(f"OAuth2 error: {str(e)}")
+        flash(f"An error occurred: {str(e)}")
+        return redirect(url_for('index'))
 
 @app.route('/download', methods=['POST'])
 def download():
