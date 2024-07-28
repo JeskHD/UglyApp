@@ -1,7 +1,7 @@
 import os
 import subprocess
 import yt_dlp
-from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, session
+from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, session
 from flask_socketio import SocketIO, emit
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
@@ -13,9 +13,10 @@ from requests_oauthlib import OAuth2Session
 import json
 import redis
 import hashlib
+import re
 
 app = Flask(__name__)
-app.secret_key = os.urandom(50)
+app.secret_key = 'your_secret_key'  # Needed for flashing messages
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -37,7 +38,7 @@ r = redis.from_url(REDIS_URL)
 # OAuth 2.0 details
 client_id = os.getenv("CLIENT_ID")
 client_secret = os.getenv("CLIENT_SECRET")
-redirect_uri = os.getenv("REDIRECT_URI", "http://127.0.0.1:5000/oauth/callback")
+redirect_uri = os.getenv("REDIRECT_URI", "http://localhost:5000/oauth/callback")
 auth_url = "https://twitter.com/i/oauth2/authorize"
 token_url = "https://api.twitter.com/2/oauth2/token"
 scopes = ["tweet.read", "users.read", "tweet.write", "offline.access"]
@@ -61,6 +62,7 @@ def get_base64_font(font_path):
 
 def generate_pkce_pair():
     code_verifier = base64.urlsafe_b64encode(os.urandom(30)).decode("utf-8").rstrip('=')
+    code_verifier = re.sub("[^a-zA-Z0-9]+", "", code_verifier)
     code_challenge = hashlib.sha256(code_verifier.encode("utf-8")).digest()
     code_challenge = base64.urlsafe_b64encode(code_challenge).decode("utf-8").rstrip('=')
     return code_verifier, code_challenge
@@ -304,23 +306,23 @@ def index():
             .uglydesc {
                 font-size: 16px;
                 margin: 20px 20px;
-                text-align: center.
+                text-align: center;
             }
             .form-container {
-                flex-direction: column.
-                align-items: center.
+                flex-direction: column;
+                align-items: center;
             }
             .searchbox, .dropdown1, .dropdown2, .btn1, .btn2 {
-                width: 100%.
-                margin-bottom: 10px.
+                width: 100%;
+                margin-bottom: 10px;
             }
             .or {
-                top: 0.
-                margin: 10px 0.
+                top: 0;
+                margin: 10px 0;
             }
             .url {
-                margin-top: 20px.
-                text-align: center.
+                margin-top: 20px;
+                text-align: center;
             }
         }
     </style>
@@ -458,26 +460,24 @@ def download():
         ffmpeg_location = '/usr/bin/ffmpeg'
         ffprobe_location = '/usr/bin/ffprobe'
 
-        cookie_file = None
         ydl_opts = {
             'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
             'ffmpeg_location': ffmpeg_location,
             'ffprobe_location': ffprobe_location,
             'hls_use_mpegts': True,  # Ensure HLS processing for all formats
+            'noprogress': True,  # Do not show progress bar
         }
 
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
-            cookie_file = 'cookies_netscape.txt'
             audio_format = request.form.get('audio_format', 'm4a/mp3')
             output_template = os.path.join(DOWNLOADS_DIR, '%(title)s')
-            
+
             command = [
-                '/root/UglyApp/venv/bin/twspace_dl',  # Use the full path to twspace_dl
-                '-i', url,
-                '-c', cookie_file,
-                '-o', output_template
+                '/root/UglyApp/venv/bin/python3', '-m', 'twspace_dl',
+                '-c', '/root/UglyApp/cookies_netscape.txt',  # Use the cookies file uploaded
+                '-i', url
             ]
-            
+
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
             while True:
@@ -546,7 +546,8 @@ def download():
             video_format = request.form['video_format']
             ydl_opts.update({
                 'format': 'bestvideo+bestaudio/best',
-                'merge_output_format': 'mp4'
+                'merge_output_format': 'mp4',
+                'overwrites': True  # Overwrite files automatically
             })
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
