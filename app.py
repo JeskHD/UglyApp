@@ -1,7 +1,7 @@
 import os
 import subprocess
 import yt_dlp
-from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory
+from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, session
 from flask_socketio import SocketIO, emit
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
@@ -9,9 +9,13 @@ import sqlalchemy as sa
 import glob
 import base64
 import logging
+from requests_oauthlib import OAuth2Session
+import json
+import redis
+import hashlib
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Needed for flashing messages
+app.secret_key = os.urandom(50)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -25,6 +29,18 @@ os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+# Redis for storing OAuth tokens
+REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
+r = redis.from_url(REDIS_URL)
+
+# OAuth 2.0 details
+client_id = os.getenv("CLIENT_ID")
+client_secret = os.getenv("CLIENT_SECRET")
+redirect_uri = os.getenv("REDIRECT_URI", "http://127.0.0.1:5000/oauth/callback")
+auth_url = "https://twitter.com/i/oauth2/authorize"
+token_url = "https://api.twitter.com/2/oauth2/token"
+scopes = ["tweet.read", "users.read", "tweet.write", "offline.access"]
 
 # Example model for demonstration
 class User(db.Model):
@@ -42,6 +58,12 @@ def get_base64_image(image_path):
 def get_base64_font(font_path):
     with open(font_path, "rb") as font_file:
         return base64.b64encode(font_file.read()).decode('utf-8')
+
+def generate_pkce_pair():
+    code_verifier = base64.urlsafe_b64encode(os.urandom(30)).decode("utf-8").rstrip('=')
+    code_challenge = hashlib.sha256(code_verifier.encode("utf-8")).digest()
+    code_challenge = base64.urlsafe_b64encode(code_challenge).decode("utf-8").rstrip('=')
+    return code_verifier, code_challenge
 
 @app.route('/')
 def index():
@@ -282,23 +304,23 @@ def index():
             .uglydesc {
                 font-size: 16px;
                 margin: 20px 20px;
-                text-align: center;
+                text-align: center.
             }
             .form-container {
-                flex-direction: column;
-                align-items: center;
+                flex-direction: column.
+                align-items: center.
             }
             .searchbox, .dropdown1, .dropdown2, .btn1, .btn2 {
-                width: 100%;
-                margin-bottom: 10px;
+                width: 100%.
+                margin-bottom: 10px.
             }
             .or {
-                top: 0;
-                margin: 10px 0;
+                top: 0.
+                margin: 10px 0.
             }
             .url {
-                margin-top: 20px;
-                text-align: center;
+                margin-top: 20px.
+                text-align: center.
             }
         }
     </style>
@@ -388,6 +410,30 @@ def index():
         logger.error(f"Error rendering page: {str(e)}")
         return f"Error rendering page: {str(e)}"
 
+@app.route('/oauth')
+def oauth():
+    code_verifier, code_challenge = generate_pkce_pair()
+    session['code_verifier'] = code_verifier
+
+    twitter = OAuth2Session(client_id, redirect_uri=redirect_uri, scope=scopes)
+    authorization_url, state = twitter.authorization_url(auth_url, code_challenge=code_challenge, code_challenge_method='S256')
+    session['oauth_state'] = state
+    logger.debug(f"OAuth state set to: {state}")
+    return redirect(authorization_url)
+
+@app.route('/oauth/callback', methods=['GET'])
+def callback():
+    if 'oauth_state' not in session:
+        flash("OAuth state missing in session.")
+        return redirect(url_for('index'))
+
+    code_verifier = session.get('code_verifier')
+    twitter = OAuth2Session(client_id, state=session['oauth_state'], redirect_uri=redirect_uri)
+    token = twitter.fetch_token(token_url, client_secret=client_secret, authorization_response=request.url, code_verifier=code_verifier)
+    r.set("token", json.dumps(token))
+    flash("Logged in successfully.")
+    return redirect(url_for('index'))
+
 @app.route('/download', methods=['POST'])
 def download():
     audio_url = request.form.get('audio_url')
@@ -400,6 +446,14 @@ def download():
         return redirect(url_for('index'))
 
     try:
+        token = r.get("token")
+        if not token:
+            flash("OAuth token is missing. Please log in.")
+            return redirect(url_for('oauth'))
+
+        token = json.loads(token.decode("utf-8"))
+        headers = {"Authorization": f"Bearer {token['access_token']}"}
+
         # Paths to ffmpeg and ffprobe
         ffmpeg_location = '/usr/bin/ffmpeg'
         ffprobe_location = '/usr/bin/ffprobe'
