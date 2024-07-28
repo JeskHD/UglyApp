@@ -62,7 +62,8 @@ def get_base64_font(font_path):
 
 def generate_pkce_pair():
     code_verifier = base64.urlsafe_b64encode(os.urandom(40)).decode('utf-8').rstrip('=')
-    code_challenge = base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode('utf-8')).digest()).decode('utf-8').rstrip('=')
+    code_challenge = hashlib.sha256(code_verifier.encode('utf-8')).digest()
+    code_challenge = base64.urlsafe_b64encode(code_challenge).decode('utf-8').rstrip('=')
     return code_verifier, code_challenge
 
 @app.route('/')
@@ -246,64 +247,64 @@ def index():
                     font-size: 14px;
                     margin-top: 10px;
                     width: 100%;
-                    text-align: center.
+                    text-align: center;
                 }
                 .sp li:hover {
-                    color: #1d9bf0 !important.
+                    color: #1d9bf0 !important;
                 }
                 .ua {
                     font-family: 'Porkys';
                     color: #f50da1;
                     font-size: 40px;
-                    text-shadow: 1px 1px 2px #27f1e6.
+                    text-shadow: 1px 1px 2px #27f1e6;
                 }
                 .flashes {
-                    color: red.
-                    list-style: none.
-                    text-align: center.
-                    margin-top: 10px.
+                    color: red;
+                    list-style: none;
+                    text-align: center;
+                    margin-top: 10px;
                 }
                 /* Responsive Design */
                 @media (max-width: 800px) {
                     .topbar {
-                        flex-direction: row.
-                        align-items: center.
-                        padding: 10px 10px.
+                        flex-direction: row;
+                        align-items: center;
+                        padding: 10px 10px;
                     }
                     .topbar .menu-toggle {
-                        display: block.
+                        display: block;
                     }
                     .topbar ul {
-                        display: none.
-                        flex-direction: column.
-                        align-items: center.
-                        width: 100%.
-                        margin-top: 10px.
+                        display: none;
+                        flex-direction: column;
+                        align-items: center;
+                        width: 100%;
+                        margin-top: 10px;
                     }
                     .topbar ul.active {
-                        display: flex.
-                        font-size: 10px.
-                        top: 11px.
-                        border: 1px solid white.
-                        flex-direction: column.
-                        position: absolute.
-                        background-color: rgba(0, 0, 0, 0.8).
-                        right: 10px.
-                        top: 60px.
-                        width: 200px.
-                        padding: 10px.
+                        display: flex;
+                        font-size: 10px;
+                        top: 11px;
+                        border: 1px solid white;
+                        flex-direction: column;
+                        position: absolute;
+                        background-color: rgba(0, 0, 0, 0.8);
+                        right: 10px;
+                        top: 60px;
+                        width: 200px;
+                        padding: 10px;
                     }
                     .topbar h2 {
-                        font-size: 24px.
+                        font-size: 24px;
                     }
                     .UglyStay {
-                        font-size: 30px.
-                        margin-top: 80px.
-                        text-align: center.
+                        font-size: 30px;
+                        margin-top: 80px;
+                        text-align: center;
                     }
                     .uglydesc {
-                        font-size: 16px.
-                        margin: 20px 20px.
+                        font-size: 16px;
+                        margin: 20px 20px;
                         text-align: center.
                     }
                     .form-container {
@@ -414,15 +415,11 @@ def index():
 def oauth():
     code_verifier, code_challenge = generate_pkce_pair()
     session['code_verifier'] = code_verifier
+
     twitter = OAuth2Session(client_id, redirect_uri=redirect_uri, scope=scopes)
-    authorization_url, state = twitter.authorization_url(
-        auth_url,
-        code_challenge=code_challenge,
-        code_challenge_method='S256'
-    )
+    authorization_url, state = twitter.authorization_url(auth_url, code_challenge=code_challenge, code_challenge_method='S256')
     session['oauth_state'] = state
     logger.debug(f"OAuth state set to: {state}")
-    logger.debug(f"Code challenge: {code_challenge}")
     return redirect(authorization_url)
 
 @app.route('/oauth/callback', methods=['GET'])
@@ -430,19 +427,10 @@ def callback():
     if 'oauth_state' not in session:
         flash("OAuth state missing in session.")
         return redirect(url_for('index'))
-    
-    code_verifier = session.pop('code_verifier', None)
-    if not code_verifier:
-        flash("Code verifier missing in session.")
-        return redirect(url_for('index'))
 
+    code_verifier = session.get('code_verifier')
     twitter = OAuth2Session(client_id, state=session['oauth_state'], redirect_uri=redirect_uri)
-    token = twitter.fetch_token(
-        token_url,
-        client_secret=client_secret,
-        code_verifier=code_verifier,
-        authorization_response=request.url
-    )
+    token = twitter.fetch_token(token_url, client_secret=client_secret, authorization_response=request.url, code_verifier=code_verifier)
     r.set("token", json.dumps(token))
     flash("Logged in successfully.")
     return redirect(url_for('index'))
