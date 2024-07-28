@@ -14,6 +14,7 @@ import json
 import redis
 import hashlib
 import base64
+import secrets
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
@@ -38,7 +39,7 @@ r = redis.from_url(REDIS_URL)
 # OAuth 2.0 details
 client_id = os.getenv("CLIENT_ID")
 client_secret = os.getenv("CLIENT_SECRET")
-redirect_uri = os.getenv("REDIRECT_URI", "http://localhost:5000/oauth/callback")
+redirect_uri = os.getenv("REDIRECT_URI", "http://127.0.0.1:5000/oauth/callback")
 auth_url = "https://twitter.com/i/oauth2/authorize"
 token_url = "https://api.twitter.com/2/oauth2/token"
 scopes = ["tweet.read", "users.read", "tweet.write", "offline.access"]
@@ -61,9 +62,10 @@ def get_base64_font(font_path):
         return base64.b64encode(font_file.read()).decode('utf-8')
 
 def generate_pkce_pair():
-    code_verifier = base64.urlsafe_b64encode(os.urandom(40)).decode('utf-8').rstrip('=')
-    code_challenge = hashlib.sha256(code_verifier.encode('utf-8')).digest()
-    code_challenge = base64.urlsafe_b64encode(code_challenge).decode('utf-8').rstrip('=')
+    code_verifier = secrets.token_urlsafe(64)
+    code_challenge = base64.urlsafe_b64encode(
+        hashlib.sha256(code_verifier.encode()).digest()
+    ).rstrip(b'=').decode('utf-8')
     return code_verifier, code_challenge
 
 @app.route('/')
@@ -144,167 +146,167 @@ def index():
                 .poppins-medium-italic {
                     font-family: "Poppins", sans-serif;
                     font-weight: 500;
-                    font-style: italic;
+                    font-style: italic.
                 }
                 .topbar img {
-                    height: 65px;
-                    width: auto;
-                    position: relative;
-                    top: 2px;
+                    height: 65px.
+                    width: auto.
+                    position: relative.
+                    top: 2px.
                 }
                 .bimage {
                     background: linear-gradient(rgba(255, 7, 156, 0.585), rgba(104, 97, 97, 0.5)), url("data:image/gif;base64,{{ background_base64 }}");
-                    height: 800px;
-                    width: 100%;
-                    background-repeat: no-repeat;
-                    background-position: center;
-                    background-size: cover;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    align-items: center;
-                    text-align: center;
-                    padding-top: 100px; /* Adjusted to move content closer to the topbar */
+                    height: 800px.
+                    width: 100%.
+                    background-repeat: no-repeat.
+                    background-position: center.
+                    background-size: cover.
+                    display: flex.
+                    flex-direction: column.
+                    justify-content: center.
+                    align-items: center.
+                    text-align: center.
+                    padding-top: 100px. /* Adjusted to move content closer to the topbar */
                 }
                 .Wrapper {
-                    text-align: center;
-                    padding: 20px;
+                    text-align: center.
+                    padding: 20px.
                 }
                 .UglyStay {
-                    color: rgb(255, 136, 237);
-                    font-size: 50px;
-                    font-weight: 800;
-                    font-style: italic;
-                    margin: 0 20px;
-                    text-align: center;
-                    width: 100%;
+                    color: rgb(255, 136, 237).
+                    font-size: 50px.
+                    font-weight: 800.
+                    font-style: italic.
+                    margin: 0 20px.
+                    text-align: center.
+                    width: 100%.
                 }
                 .uglydesc {
-                    color: whitesmoke;
-                    margin: 20px 10px;
-                    font-size: 18px;
-                    text-align: center;
-                    width: 100%;
+                    color: whitesmoke.
+                    margin: 20px 10px.
+                    font-size: 18px.
+                    text-align: center.
+                    width: 100%.
                 }
                 .form-container {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 10px;
-                    margin-top: 20px;
-                    flex-wrap: wrap;
+                    display: flex.
+                    align-items: center.
+                    justify-content: center.
+                    gap: 10px.
+                    margin-top: 20px.
+                    flex-wrap: wrap.
                 }
                 .searchbox {
-                    width: 300px;
-                    height: 40px;
-                    background-color: black;
-                    border-radius: 50px 0 0 50px;
-                    color: white;
-                    font-family: "Poppins", sans-serif;
-                    text-align: center;
-                    border: none;
-                    padding-left: 20px;
+                    width: 300px.
+                    height: 40px.
+                    background-color: black.
+                    border-radius: 50px 0 0 50px.
+                    color: white.
+                    font-family: "Poppins", sans-serif.
+                    text-align: center.
+                    border: none.
+                    padding-left: 20px.
                 }
                 .searchbox:hover {
-                    border: 1px solid #ff78df;
+                    border: 1px solid #ff78df.
                 }
                 .dropdown1, .dropdown2 {
-                    height: 38px;
-                    border-radius: 0;
-                    padding: 0 9px;
-                    border: none;
-                    font-family: "Poppins", sans-serif;
-                    background-color: #ff78df;
-                    color: white;
+                    height: 38px.
+                    border-radius: 0.
+                    padding: 0 9px.
+                    border: none.
+                    font-family: "Poppins", sans-serif.
+                    background-color: #ff78df.
+                    color: white.
                 }
                 .btn1, .btn2 {
-                    height: 38px;
-                    border-radius: 0 50px 50px 0;
-                    padding: 0 7px;
-                    background-color: #fa50d3;
-                    color: white;
-                    border: none;
-                    cursor: pointer;
-                    font-family: "Poppins", sans-serif;
+                    height: 38px.
+                    border-radius: 0 50px 50px 0.
+                    padding: 0 7px.
+                    background-color: #fa50d3.
+                    color: white.
+                    border: none.
+                    cursor: pointer.
+                    font-family: "Poppins", sans-serif.
                 }
                 .btn1:active, .btn2:active {
-                    color: #fb85df;
-                    background-color: #f8a1e4;
+                    color: #fb85df.
+                    background-color: #f8a1e4.
                 }
                 .btn1:hover, .btn2:hover {
-                    background-color: #e767c7;
+                    background-color: #e767c7.
                 }
                 .or {
-                    position: relative;
-                    top: 15px;
-                    color: white;
-                    font-size: 18px;
-                    margin: 10px 0;
+                    position: relative.
+                    top: 15px.
+                    color: white.
+                    font-size: 18px.
+                    margin: 10px 0.
                 }
                 .url {
-                    text-shadow: 0px 3px 5px 0 #c255a7;
-                    color: white;
-                    font-size: 14px;
-                    margin-top: 10px;
-                    width: 100%;
-                    text-align: center;
+                    text-shadow: 0px 3px 5px 0 #c255a7.
+                    color: white.
+                    font-size: 14px.
+                    margin-top: 10px.
+                    width: 100%.
+                    text-align: center.
                 }
                 .sp li:hover {
-                    color: #1d9bf0 !important;
+                    color: #1d9bf0 !important.
                 }
                 .ua {
-                    font-family: 'Porkys';
-                    color: #f50da1;
-                    font-size: 40px;
-                    text-shadow: 1px 1px 2px #27f1e6;
+                    font-family: 'Porkys'.
+                    color: #f50da1.
+                    font-size: 40px.
+                    text-shadow: 1px 1px 2px #27f1e6.
                 }
                 .flashes {
-                    color: red;
-                    list-style: none;
-                    text-align: center;
-                    margin-top: 10px;
+                    color: red.
+                    list-style: none.
+                    text-align: center.
+                    margin-top: 10px.
                 }
                 /* Responsive Design */
                 @media (max-width: 800px) {
                     .topbar {
-                        flex-direction: row;
-                        align-items: center;
-                        padding: 10px 10px;
+                        flex-direction: row.
+                        align-items: center.
+                        padding: 10px 10px.
                     }
                     .topbar .menu-toggle {
-                        display: block;
+                        display: block.
                     }
                     .topbar ul {
-                        display: none;
-                        flex-direction: column;
-                        align-items: center;
-                        width: 100%;
-                        margin-top: 10px;
+                        display: none.
+                        flex-direction: column.
+                        align-items: center.
+                        width: 100%.
+                        margin-top: 10px.
                     }
                     .topbar ul.active {
-                        display: flex;
-                        font-size: 10px;
-                        top: 11px;
-                        border: 1px solid white;
-                        flex-direction: column;
-                        position: absolute;
-                        background-color: rgba(0, 0, 0, 0.8);
-                        right: 10px;
-                        top: 60px;
-                        width: 200px;
-                        padding: 10px;
+                        display: flex.
+                        font-size: 10px.
+                        top: 11px.
+                        border: 1px solid white.
+                        flex-direction: column.
+                        position: absolute.
+                        background-color: rgba(0, 0, 0, 0.8).
+                        right: 10px.
+                        top: 60px.
+                        width: 200px.
+                        padding: 10px.
                     }
                     .topbar h2 {
-                        font-size: 24px;
+                        font-size: 24px.
                     }
                     .UglyStay {
-                        font-size: 30px;
-                        margin-top: 80px;
-                        text-align: center;
+                        font-size: 30px.
+                        margin-top: 80px.
+                        text-align: center.
                     }
                     .uglydesc {
-                        font-size: 16px;
-                        margin: 20px 20px;
+                        font-size: 16px.
+                        margin: 20px 20px.
                         text-align: center.
                     }
                     .form-container {
@@ -415,22 +417,30 @@ def index():
 def oauth():
     code_verifier, code_challenge = generate_pkce_pair()
     session['code_verifier'] = code_verifier
-
     twitter = OAuth2Session(client_id, redirect_uri=redirect_uri, scope=scopes)
-    authorization_url, state = twitter.authorization_url(auth_url, code_challenge=code_challenge, code_challenge_method='S256')
+    authorization_url, state = twitter.authorization_url(
+        auth_url,
+        code_challenge=code_challenge,
+        code_challenge_method='S256'
+    )
     session['oauth_state'] = state
     logger.debug(f"OAuth state set to: {state}")
     return redirect(authorization_url)
 
 @app.route('/oauth/callback', methods=['GET'])
 def callback():
-    if 'oauth_state' not in session:
-        flash("OAuth state missing in session.")
+    if 'oauth_state' not in session or 'code_verifier' not in session:
+        flash("OAuth state or code verifier missing in session.")
         return redirect(url_for('index'))
 
-    code_verifier = session.get('code_verifier')
+    code_verifier = session.pop('code_verifier')
     twitter = OAuth2Session(client_id, state=session['oauth_state'], redirect_uri=redirect_uri)
-    token = twitter.fetch_token(token_url, client_secret=client_secret, authorization_response=request.url, code_verifier=code_verifier)
+    token = twitter.fetch_token(
+        token_url,
+        client_secret=client_secret,
+        authorization_response=request.url,
+        code_verifier=code_verifier
+    )
     r.set("token", json.dumps(token))
     flash("Logged in successfully.")
     return redirect(url_for('index'))
