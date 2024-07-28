@@ -12,8 +12,6 @@ import logging
 from requests_oauthlib import OAuth2Session
 import json
 import redis
-import hashlib
-import base64
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
@@ -36,11 +34,11 @@ REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
 r = redis.from_url(REDIS_URL)
 
 # OAuth 2.0 details
-client_id = os.getenv("CLIENT_ID")
-client_secret = os.getenv("CLIENT_SECRET")
-redirect_uri = os.getenv("REDIRECT_URI", "http://localhost:5000/oauth/callback")
+client_id = os.environ.get("CLIENT_ID")
+client_secret = os.environ.get("CLIENT_SECRET")
 auth_url = "https://twitter.com/i/oauth2/authorize"
 token_url = "https://api.twitter.com/2/oauth2/token"
+redirect_uri = os.environ.get("REDIRECT_URI", "http://localhost:5000/oauth/callback")
 scopes = ["tweet.read", "users.read", "tweet.write", "offline.access"]
 
 # Example model for demonstration
@@ -60,12 +58,6 @@ def get_base64_font(font_path):
     with open(font_path, "rb") as font_file:
         return base64.b64encode(font_file.read()).decode('utf-8')
 
-def generate_pkce_pair():
-    code_verifier = base64.urlsafe_b64encode(os.urandom(40)).decode('utf-8').rstrip('=')
-    code_challenge = hashlib.sha256(code_verifier.encode('utf-8')).digest()
-    code_challenge = base64.urlsafe_b64encode(code_challenge).decode('utf-8').rstrip('=')
-    return code_verifier, code_challenge
-
 @app.route('/')
 def index():
     try:
@@ -74,7 +66,7 @@ def index():
         font_base64 = get_base64_font('PORKH___.TTF.ttf')
 
         html_content = '''
-  <!DOCTYPE html>
+        <!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
@@ -308,11 +300,11 @@ def index():
                         text-align: center.
                     }
                     .form-container {
-                        flex-direction: column.
+                        flex-direction: column;
                         align-items: center.
                     }
                     .searchbox, .dropdown1, .dropdown2, .btn1, .btn2 {
-                        width: 100%.
+                        width: 100%;
                         margin-bottom: 10px.
                     }
                     .or {
@@ -404,7 +396,7 @@ def index():
                 </main>
             </div>
         </body>
-        </html>          
+        </html>        
         '''
         return render_template_string(html_content, background_base64=background_base64, font_base64=font_base64)
     except Exception as e:
@@ -413,24 +405,15 @@ def index():
 
 @app.route('/oauth')
 def oauth():
-    code_verifier, code_challenge = generate_pkce_pair()
-    session['code_verifier'] = code_verifier
-
     twitter = OAuth2Session(client_id, redirect_uri=redirect_uri, scope=scopes)
-    authorization_url, state = twitter.authorization_url(auth_url, code_challenge=code_challenge, code_challenge_method='S256')
+    authorization_url, state = twitter.authorization_url(auth_url)
     session['oauth_state'] = state
-    logger.debug(f"OAuth state set to: {state}")
     return redirect(authorization_url)
 
 @app.route('/oauth/callback', methods=['GET'])
 def callback():
-    if 'oauth_state' not in session:
-        flash("OAuth state missing in session.")
-        return redirect(url_for('index'))
-
-    code_verifier = session.get('code_verifier')
     twitter = OAuth2Session(client_id, state=session['oauth_state'], redirect_uri=redirect_uri)
-    token = twitter.fetch_token(token_url, client_secret=client_secret, authorization_response=request.url, code_verifier=code_verifier)
+    token = twitter.fetch_token(token_url, client_secret=client_secret, authorization_response=request.url)
     r.set("token", json.dumps(token))
     flash("Logged in successfully.")
     return redirect(url_for('index'))
@@ -447,12 +430,7 @@ def download():
         return redirect(url_for('index'))
 
     try:
-        token = r.get("token")
-        if not token:
-            flash("OAuth token is missing. Please log in.")
-            return redirect(url_for('oauth'))
-
-        token = json.loads(token.decode("utf-8"))
+        token = json.loads(r.get("token").decode("utf-8"))
         headers = {"Authorization": f"Bearer {token['access_token']}"}
 
         # Paths to ffmpeg and ffprobe
@@ -517,39 +495,78 @@ def download():
                 flash("Error during the download process.")
                 return redirect(url_for('index'))
         
-        elif 'youtube.com' in url or 'youtu.be' in url:
+        elif 'youtube.com' in url:
+            cookie_file = 'youtube_cookies.txt'
             ydl_opts.update({
-                'format': 'bestaudio/best' if format == 'audio' else 'bestvideo+bestaudio/best',
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': request.form['audio_format'] if format == 'audio' else None,
-                    'preferredquality': '192'
-                }] if format == 'audio' else [],
-                'merge_output_format': request.form['video_format'] if format == 'video' else None,
+                'cookiefile': cookie_file,
+                'username': 'oauth2',
+                'password': '',
             })
 
         elif 'soundcloud.com' in url:
+            cookie_file = 'soundcloud_cookies.txt'
+            ydl_opts.update({
+                'cookiefile': cookie_file,
+            })
+        
+        if format == 'audio':
+            audio_format = request.form['audio_format']
             ydl_opts.update({
                 'format': 'bestaudio/best',
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
-                    'preferredcodec': request.form['audio_format'],
-                    'preferredquality': '192'
+                    'preferredcodec': audio_format,
+                    'preferredquality': '192',
                 }]
             })
-        
+        else:
+            video_format = request.form['video_format']
+            ydl_opts.update({
+                'format': 'bestvideo+bestaudio/best',
+                'merge_output_format': 'mp4',
+                'overwrites': True  # Overwrite files automatically
+            })
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             file_path = ydl.prepare_filename(info_dict)
 
             if format == 'audio':
-                file_path = file_path.replace('.webm', f'.{request.form["audio_format"]}').replace('.opus', f'.{request.form["audio_format"]}')
+                file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
             else:
-                file_path = file_path.replace('.m4a', f'.{request.form["video_format"]}')
-
+                if video_format == 'mov':
+                    file_path = file_path.replace('.mp4', f'.mp4')
+                else:
+                    file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
+                
             if os.path.exists(file_path):
-                socketio.emit('download_complete', {'filename': os.path.basename(file_path)})
-                return send_file(file_path, as_attachment=True, download_name=os.path.basename(file_path))
+                if format == 'audio' and audio_format == 'mp3':
+                    mp3_file = file_path.replace('.m4a', '.mp3')
+                    convert_command = [
+                        ffmpeg_location,
+                        '-i', file_path,
+                        '-codec:a', 'libmp3lame',
+                        '-qscale:a', '2',
+                        mp3_file
+                    ]
+                    subprocess.run(convert_command, check=True)
+                    file_to_send = mp3_file
+                elif format == 'video' and video_format == 'mov':
+                    mov_file = file_path.replace('.mp4', '.mov')
+                    convert_command = [
+                        ffmpeg_location,
+                        '-i', file_path,
+                        '-c:v', 'copy',
+                        '-c:a', 'copy',
+                        mov_file
+                    ]
+                    subprocess.run(convert_command, check=True)
+                    file_to_send = mov_file
+                else:
+                    file_to_send = file_path
+
+                socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
+                return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
             else:
                 flash("File not found after download.")
                 return redirect(url_for('index'))
