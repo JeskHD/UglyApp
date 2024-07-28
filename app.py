@@ -8,11 +8,12 @@ from urllib.parse import urlparse
 import sqlalchemy as sa
 import glob
 import base64
-import hashlib
 import logging
 from requests_oauthlib import OAuth2Session
 import json
 import redis
+import hashlib
+import base64
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
@@ -60,8 +61,7 @@ def get_base64_font(font_path):
         return base64.b64encode(font_file.read()).decode('utf-8')
 
 def generate_pkce_pair():
-    """Generate a code verifier and a code challenge for PKCE."""
-    code_verifier = base64.urlsafe_b64encode(os.urandom(30)).decode('utf-8').rstrip('=')
+    code_verifier = base64.urlsafe_b64encode(os.urandom(40)).decode('utf-8').rstrip('=')
     code_challenge = base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode('utf-8')).digest()).decode('utf-8').rstrip('=')
     return code_verifier, code_challenge
 
@@ -246,81 +246,81 @@ def index():
                     font-size: 14px;
                     margin-top: 10px;
                     width: 100%;
-                    text-align: center;
+                    text-align: center.
                 }
                 .sp li:hover {
-                    color: #1d9bf0 !important;
+                    color: #1d9bf0 !important.
                 }
                 .ua {
                     font-family: 'Porkys';
                     color: #f50da1;
                     font-size: 40px;
-                    text-shadow: 1px 1px 2px #27f1e6;
+                    text-shadow: 1px 1px 2px #27f1e6.
                 }
                 .flashes {
-                    color: red;
-                    list-style: none;
-                    text-align: center;
-                    margin-top: 10px;
+                    color: red.
+                    list-style: none.
+                    text-align: center.
+                    margin-top: 10px.
                 }
                 /* Responsive Design */
                 @media (max-width: 800px) {
                     .topbar {
-                        flex-direction: row;
-                        align-items: center;
-                        padding: 10px 10px;
+                        flex-direction: row.
+                        align-items: center.
+                        padding: 10px 10px.
                     }
                     .topbar .menu-toggle {
-                        display: block;
+                        display: block.
                     }
                     .topbar ul {
-                        display: none;
-                        flex-direction: column;
-                        align-items: center;
-                        width: 100%;
-                        margin-top: 10px;
+                        display: none.
+                        flex-direction: column.
+                        align-items: center.
+                        width: 100%.
+                        margin-top: 10px.
                     }
                     .topbar ul.active {
-                        display: flex;
-                        font-size: 10px;
-                        top: 11px;
-                        border: 1px solid white;
-                        flex-direction: column;
-                        position: absolute;
-                        background-color: rgba(0, 0, 0, 0.8);
-                        right: 10px;
-                        top: 60px;
-                        width: 200px;
-                        padding: 10px;
+                        display: flex.
+                        font-size: 10px.
+                        top: 11px.
+                        border: 1px solid white.
+                        flex-direction: column.
+                        position: absolute.
+                        background-color: rgba(0, 0, 0, 0.8).
+                        right: 10px.
+                        top: 60px.
+                        width: 200px.
+                        padding: 10px.
                     }
                     .topbar h2 {
-                        font-size: 24px;
+                        font-size: 24px.
                     }
                     .UglyStay {
-                        font-size: 30px;
-                        margin-top: 80px;
-                        text-align: center;
+                        font-size: 30px.
+                        margin-top: 80px.
+                        text-align: center.
                     }
                     .uglydesc {
-                        font-size: 16px;
-                        margin: 20px 20px;
-                        text-align: center;
+                        font-size: 16px.
+                        margin: 20px 20px.
+                        text-align: center.
                     }
                     .form-container {
-                        flex-direction: column;
-                        align-items: center;
+                        flex-direction: column.
+                        align-items: center.
                     }
                     .searchbox, .dropdown1, .dropdown2, .btn1, .btn2 {
-                        width: 100%;
-                        margin-bottom: 10px;
+                        width: 100%.
+                        margin-bottom: 10px.
                     }
                     .or {
-                        top: 0;
-                        margin: 10px 0;
+                        top: 0.
+                        margin: 10px 0.
                     }
                     .url {
-                        margin-top: 20px;
-                        text-align: center;
+                        margin-top: 20px.
+                        text-align: center.
                     }
                 }
             </style>
@@ -414,7 +414,6 @@ def index():
 def oauth():
     code_verifier, code_challenge = generate_pkce_pair()
     session['code_verifier'] = code_verifier
-
     twitter = OAuth2Session(client_id, redirect_uri=redirect_uri, scope=scopes)
     authorization_url, state = twitter.authorization_url(
         auth_url,
@@ -423,6 +422,7 @@ def oauth():
     )
     session['oauth_state'] = state
     logger.debug(f"OAuth state set to: {state}")
+    logger.debug(f"Code challenge: {code_challenge}")
     return redirect(authorization_url)
 
 @app.route('/oauth/callback', methods=['GET'])
@@ -430,27 +430,22 @@ def callback():
     if 'oauth_state' not in session:
         flash("OAuth state missing in session.")
         return redirect(url_for('index'))
-
-    code_verifier = session.get('code_verifier')
+    
+    code_verifier = session.pop('code_verifier', None)
     if not code_verifier:
-        flash("Missing code verifier.")
+        flash("Code verifier missing in session.")
         return redirect(url_for('index'))
 
     twitter = OAuth2Session(client_id, state=session['oauth_state'], redirect_uri=redirect_uri)
-    try:
-        token = twitter.fetch_token(
-            token_url,
-            client_secret=client_secret,
-            authorization_response=request.url,
-            code_verifier=code_verifier
-        )
-        r.set("token", json.dumps(token))
-        flash("Logged in successfully.")
-        return redirect(url_for('index'))
-    except Exception as e:
-        app.logger.error(f"OAuth2 error: {str(e)}")
-        flash(f"An error occurred: {str(e)}")
-        return redirect(url_for('index'))
+    token = twitter.fetch_token(
+        token_url,
+        client_secret=client_secret,
+        code_verifier=code_verifier,
+        authorization_response=request.url
+    )
+    r.set("token", json.dumps(token))
+    flash("Logged in successfully.")
+    return redirect(url_for('index'))
 
 @app.route('/download', methods=['POST'])
 def download():
