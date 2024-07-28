@@ -1,17 +1,26 @@
 import os
-from flask import Flask, request, send_file, jsonify, abort
 import subprocess
+from flask import Flask, request, send_file, jsonify
 
 app = Flask(__name__)
 
 # Ensure the downloads directory exists
-DOWNLOADS_DIR = os.path.join(os.path.expanduser("~"), 'UglyApp')
+DOWNLOADS_DIR = os.path.join(os.path.expanduser("~"), 'Downloads')
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
+
+@app.route('/')
+def index():
+    return '''
+    <form action="/download" method="post">
+        <input type="text" name="url" placeholder="Enter m3u8 URL">
+        <input type="submit" value="Download">
+    </form>
+    '''
 
 @app.route('/download', methods=['POST'])
 def download_file():
     try:
-        url = request.json.get('url')
+        url = request.form['url']
         if not url:
             return jsonify({'error': 'No URL provided'}), 400
         
@@ -20,7 +29,7 @@ def download_file():
         # Download the audio using ffmpeg
         subprocess.run(['ffmpeg', '-i', url, '-b:a', '192K', '-vn', output_path], check=True)
         
-        return send_file(output_path, as_attachment=True)
+        return send_file(output_path, as_attachment=True, download_name='bar.mp3')
     except subprocess.CalledProcessError as e:
         return jsonify({'error': str(e)}), 500
     except Exception as e:
