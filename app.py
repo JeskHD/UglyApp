@@ -1,5 +1,6 @@
 import os
 import subprocess
+import time
 from flask import Flask, request, send_file, jsonify
 import logging
 
@@ -31,13 +32,18 @@ def download_file():
     output_path = os.path.join(DOWNLOADS_DIR, 'bar.mp3')
 
     try:
+        start_time = time.time()
+
         # Attempt to download audio using ffmpeg
         result = subprocess.run(
             ['ffmpeg', '-loglevel', 'verbose', '-i', url, '-b:a', '192K', '-vn', '-bufsize', '64k', '-threads', '4', output_path],
             capture_output=True,
             text=True,
-            timeout=10000  # Increase the timeout here
+            timeout=600  # Increase the timeout here
         )
+
+        end_time = time.time()
+        elapsed_time = end_time - start_time
 
         if result.returncode != 0:
             # Log the stderr for debugging purposes
@@ -47,6 +53,8 @@ def download_file():
                 return jsonify({'error': 'No audio stream found in the provided URL'}), 400
 
             return jsonify({'error': result.stderr}), 500
+
+        logger.info(f"Download completed in {elapsed_time:.2f} seconds")
 
         return send_file(output_path, as_attachment=True, download_name='bar.mp3')
     except subprocess.CalledProcessError as e:
