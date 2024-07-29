@@ -15,12 +15,14 @@ api_key = os.getenv('TWITTER_API_KEY')
 api_secret_key = os.getenv('TWITTER_API_SECRET_KEY')
 access_token = os.getenv('TWITTER_ACCESS_TOKEN')
 access_token_secret = os.getenv('TWITTER_ACCESS_TOKEN_SECRET')
+cookie_file = os.getenv('TWITTER_COOKIE_FILE')
 
 # Print the environment variables to verify they are loaded correctly
 print(f"API Key: {api_key}")
 print(f"API Secret Key: {api_secret_key}")
 print(f"Access Token: {access_token}")
 print(f"Access Token Secret: {access_token_secret}")
+print(f"Cookie File: {cookie_file}")
 
 # Authenticate to Twitter
 auth = tweepy.OAuth1UserHandler(api_key, api_secret_key, access_token, access_token_secret)
@@ -405,8 +407,12 @@ def download():
 
 def download_twspace(url, file_name):
     try:
-        os.system(f"twspace_dl {url} -o {file_name}")
-        return True
+        command = f"twspace_dl -c {cookie_file} -i {url} -o {file_name}"
+        os.system(command)
+        if os.path.exists(file_name):
+            return True
+        else:
+            return False
     except Exception as e:
         flash(f'Failed to download the Twitter Space: {e}')
         return False
