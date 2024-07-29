@@ -1,20 +1,26 @@
 import os
 from flask import Flask, render_template_string, request, redirect, flash, send_file
 import tweepy
-import requests
 from yt_dlp import YoutubeDL
 from dotenv import load_dotenv
 
+# Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv('FLASK_SECRET_KEY', 'defaultsecretkey')
+app.secret_key = os.getenv('FLASK_SECRET_KEY')
 
 # Twitter API credentials
 api_key = os.getenv('TWITTER_API_KEY')
 api_secret_key = os.getenv('TWITTER_API_SECRET_KEY')
 access_token = os.getenv('TWITTER_ACCESS_TOKEN')
 access_token_secret = os.getenv('TWITTER_ACCESS_TOKEN_SECRET')
+
+# Print the environment variables to verify they are loaded correctly
+print(f"API Key: {api_key}")
+print(f"API Secret Key: {api_secret_key}")
+print(f"Access Token: {access_token}")
+print(f"Access Token Secret: {access_token_secret}")
 
 # Authenticate to Twitter
 auth = tweepy.OAuth1UserHandler(api_key, api_secret_key, access_token, access_token_secret)
@@ -399,8 +405,7 @@ def download():
 
 def download_twspace(url, file_name):
     try:
-        # Assuming there is a CLI tool for downloading Twitter spaces which we call from Python
-        os.system(f"twspace-dl {url} -o {file_name}")
+        os.system(f"twspace_dl {url} -o {file_name}")
         return True
     except Exception as e:
         flash(f'Failed to download the Twitter Space: {e}')
