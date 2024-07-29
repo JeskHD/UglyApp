@@ -61,7 +61,7 @@ def get_base64_image(image_path):
         return base64.b64encode(image_file.read()).decode('utf-8')
 
 def get_base64_font(font_path):
-    with open(font_path, "rb") as font_file:
+    with open(font_path, "rb") as font_file):
         return base64.b64encode(font_file.read()).decode('utf-8')
 
 @app.route('/')
@@ -72,7 +72,7 @@ def index():
         font_base64 = get_base64_font('PORKH___.TTF.ttf')
 
         html_content = '''
-       <!DOCTYPE html>
+     <!DOCTYPE html>
 <!DOCTYPE html>
 <html lang="en">
 <head>
