@@ -2,8 +2,7 @@ import os
 from flask import Flask, render_template_string, request, redirect, flash, send_file
 import tweepy
 import requests
-from twspace_dl import TwspaceDownloader
-import yt_dlp
+from yt_dlp import YoutubeDL
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -400,8 +399,8 @@ def download():
 
 def download_twspace(url, file_name):
     try:
-        downloader = TwspaceDownloader(url)
-        downloader.download(file_name)
+        # Assuming there is a CLI tool for downloading Twitter spaces which we call from Python
+        os.system(f"twspace-dl {url} -o {file_name}")
         return True
     except Exception as e:
         flash(f'Failed to download the Twitter Space: {e}')
@@ -413,7 +412,7 @@ def download_video(url, file_name):
         'outtmpl': file_name,
     }
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        with YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
         return True
     except Exception as e:
