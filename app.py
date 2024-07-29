@@ -37,10 +37,15 @@ r = redis.from_url(REDIS_URL)
 # OAuth 1.0a details
 CONSUMER_KEY = os.environ.get("CONSUMER_KEY")
 CONSUMER_SECRET = os.environ.get("CONSUMER_SECRET")
+CALLBACK_URI = os.environ.get("CALLBACK_URI")
+
+# Check if the necessary environment variables are set
+if not all([CONSUMER_KEY, CONSUMER_SECRET, CALLBACK_URI]):
+    raise ValueError("Missing necessary environment variables: CONSUMER_KEY, CONSUMER_SECRET, CALLBACK_URI")
+
 REQUEST_TOKEN_URL = "https://api.twitter.com/oauth/request_token"
 AUTHORIZATION_URL = "https://api.twitter.com/oauth/authorize"
 ACCESS_TOKEN_URL = "https://api.twitter.com/oauth/access_token"
-CALLBACK_URI = os.environ.get("CALLBACK_URI")
 
 # Example model for demonstration
 class User(db.Model):
