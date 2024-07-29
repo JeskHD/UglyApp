@@ -26,6 +26,15 @@ def download_file():
     output_path = os.path.join(DOWNLOADS_DIR, 'bar.mp3')
     
     try:
+        # Check the M3U8 URL for audio stream
+        probe = subprocess.run(
+            ['ffprobe', '-v', 'error', '-select_streams', 'a', '-show_entries', 'stream=index', '-of', 'csv=p=0', url],
+            capture_output=True,
+            text=True
+        )
+        if not probe.stdout.strip():
+            return jsonify({'error': 'No audio stream found in the provided URL'}), 400
+        
         # Download the audio using ffmpeg
         result = subprocess.run(
             ['ffmpeg', '-i', url, '-b:a', '192K', '-vn', output_path],
