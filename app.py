@@ -84,7 +84,7 @@ def is_valid_url(url):
     return bool(parsed.netloc) and bool(parsed.scheme)
 
 def get_base64_image(image_path):
-    with open(image_path, "rb") as image_file):
+    with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
 
 def get_base64_font(font_path):
