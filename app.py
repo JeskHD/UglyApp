@@ -39,7 +39,7 @@ def download_file():
             ['ffmpeg', '-loglevel', 'verbose', '-i', url, '-b:a', '192K', '-vn', '-bufsize', '64k', '-threads', '4', output_path],
             capture_output=True,
             text=True,
-            timeout=600  # Increase the timeout here
+            timeout=10000 # Increase the timeout here
         )
 
         end_time = time.time()
