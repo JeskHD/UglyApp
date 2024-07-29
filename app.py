@@ -15,6 +15,9 @@ import redis
 import hashlib
 import re
 
+# Set environment variable to allow HTTP for OAuth 2.0
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
 app = Flask(__name__)
 app.secret_key = os.urandom(50)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
@@ -81,11 +84,11 @@ def is_valid_url(url):
     return bool(parsed.netloc) and bool(parsed.scheme)
 
 def get_base64_image(image_path):
-    with open(image_path, "rb") as image_file:
+    with open(image_path, "rb") as image_file):
         return base64.b64encode(image_file.read()).decode('utf-8')
 
 def get_base64_font(font_path):
-    with open(font_path, "rb") as font_file:
+    with open(font_path, "rb") as font_file):
         return base64.b64encode(font_file.read()).decode('utf-8')
 
 def get_stored_token():
@@ -107,7 +110,7 @@ def index():
         font_base64 = get_base64_font('PORKH___.TTF.ttf')
 
         html_content = '''
-        <!DOCTYPE html>
+      <!DOCTYPE html>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -457,7 +460,7 @@ def index():
         </main>
     </div>
 </body>
-</html>    
+</html>
         '''
         return render_template_string(html_content, background_base64=background_base64, font_base64=font_base64)
     except Exception as e:
