@@ -1,8 +1,8 @@
 import os
 import subprocess
-import time
 from flask import Flask, request, send_file, jsonify
 import logging
+import time
 
 app = Flask(__name__)
 
@@ -29,19 +29,17 @@ def download_file():
     if not url:
         return jsonify({'error': 'No URL provided'}), 400
 
-    output_path = os.path.join(DOWNLOADS_DIR, 'bar.mp3')
+    output_path = os.path.join(DOWNLOADS_DIR, 'twitter-spaces-recording.mp3')
 
     try:
         start_time = time.time()
-
         # Attempt to download audio using ffmpeg
         result = subprocess.run(
-            ['ffmpeg', '-loglevel', 'verbose', '-i', url, '-b:a', '192K', '-vn', '-bufsize', '64k', '-threads', '4', output_path],
+            ['ffmpeg', '-i', url, '-vn', '-acodec', 'libmp3lame', '-b:a', '192k', output_path],
             capture_output=True,
             text=True,
-            timeout=10000 # Increase the timeout here
+            timeout=600  # Increase the timeout here
         )
-
         end_time = time.time()
         elapsed_time = end_time - start_time
 
@@ -54,9 +52,7 @@ def download_file():
 
             return jsonify({'error': result.stderr}), 500
 
-        logger.info(f"Download completed in {elapsed_time:.2f} seconds")
-
-        return send_file(output_path, as_attachment=True, download_name='bar.mp3')
+        return send_file(output_path, as_attachment=True, download_name='twitter-spaces-recording.mp3'), {'X-Elapsed-Time': elapsed_time}
     except subprocess.CalledProcessError as e:
         error_message = e.stderr
         logger.error(error_message)
