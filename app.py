@@ -85,8 +85,19 @@ def get_base64_image(image_path):
         return base64.b64encode(image_file.read()).decode('utf-8')
 
 def get_base64_font(font_path):
-    with open(font_path, "rb") as font_file:
+    with open(font_path, "rb") as font_file):
         return base64.b64encode(font_file.read()).decode('utf-8')
+
+def get_stored_token():
+    token = r.get("token")
+    if token:
+        return json.loads(token.decode("utf-8"))
+    return None
+
+def is_token_expired(token):
+    # Implement a method to check if the token is expired
+    # For example, you can decode the token and check the expiry time
+    return False  # Simplified for this example
 
 @app.route('/')
 def index():
@@ -446,7 +457,7 @@ def index():
         </main>
     </div>
 </body>
-</html>
+</html>    
         '''
         return render_template_string(html_content, background_base64=background_base64, font_base64=font_base64)
     except Exception as e:
@@ -455,6 +466,13 @@ def index():
 
 @app.route('/oauth')
 def oauth():
+    stored_token = get_stored_token()
+    if stored_token:
+        # Check if the token is still valid
+        if not is_token_expired(stored_token):
+            flash("Already authenticated.")
+            return redirect(url_for('index'))
+    
     code_verifier, code_challenge = generate_pkce_pair()
     session['code_verifier'] = code_verifier
 
@@ -489,12 +507,11 @@ def download():
         return redirect(url_for('index'))
 
     try:
-        token = r.get("token")
-        if not token:
-            flash("OAuth token is missing. Please log in.")
+        token = get_stored_token()
+        if not token or is_token_expired(token):
+            flash("OAuth token is missing or expired. Please log in.")
             return redirect(url_for('oauth'))
 
-        token = json.loads(token.decode("utf-8"))
         headers = {"Authorization": f"Bearer {token['access_token']}"}
 
         # Paths to ffmpeg and ffprobe
@@ -515,7 +532,7 @@ def download():
 
             command = [
                 '/root/UglyApp/venv/bin/python3', '-m', 'twspace_dl',
-                '-c', '/root/UglyApp/cookies_netscape.txt',  # Use the cookies file uploaded
+                '-c', '/root/UglyApp/cookies_netscape.txt',
                 '-i', url
             ]
 
