@@ -1,22 +1,18 @@
 import os
-import subprocess
+import requests
+from requests_oauthlib import OAuth1Session
+from flask import Flask, request, redirect, url_for, session, flash, render_template_string
+import json
+import redis
+import logging
 import yt_dlp
-from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, session
-from flask_socketio import SocketIO, emit
+import glob
+from flask_socketio import SocketIO
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
 import sqlalchemy as sa
-import glob
 import base64
-import logging
-from requests_oauthlib import OAuth2Session
-import json
-import redis
-import hashlib
-import re
-
-# Set environment variable to allow HTTP for OAuth 2.0
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+import subprocess
 
 app = Flask(__name__)
 app.secret_key = os.urandom(50)
@@ -38,41 +34,13 @@ logger = logging.getLogger(__name__)
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
 r = redis.from_url(REDIS_URL)
 
-# OAuth 2.0 details
-client_id = os.environ.get("CLIENT_ID")
-client_secret = os.environ.get("CLIENT_SECRET")
-auth_url = "https://twitter.com/i/oauth2/authorize"
-token_url = "https://api.twitter.com/2/oauth2/token"
-redirect_uri = os.environ.get("REDIRECT_URI")
-scopes = ["tweet.read", "users.read", "tweet.write", "offline.access"]
-
-def generate_pkce_pair():
-    code_verifier = base64.urlsafe_b64encode(os.urandom(30)).decode("utf-8")
-    code_verifier = re.sub("[^a-zA-Z0-9]+", "", code_verifier)
-    code_challenge = hashlib.sha256(code_verifier.encode("utf-8")).digest()
-    code_challenge = base64.urlsafe_b64encode(code_challenge).decode("utf-8")
-    code_challenge = code_challenge.replace("=", "")
-    return code_verifier, code_challenge
-
-def make_token():
-    return OAuth2Session(client_id, redirect_uri=redirect_uri, scope=scopes)
-
-def parse_dog_fact():
-    url = "http://dog-api.kinduff.com/api/facts"
-    dog_fact = requests.request("GET", url).json()
-    return dog_fact["facts"][0]
-
-def post_tweet(payload, token):
-    print("Tweeting!")
-    return requests.request(
-        "POST",
-        "https://api.twitter.com/2/tweets",
-        json=payload,
-        headers={
-            "Authorization": f"Bearer {token['access_token']}",
-            "Content-Type": "application/json",
-        },
-    )
+# OAuth 1.0a details
+CONSUMER_KEY = os.environ.get("CONSUMER_KEY")
+CONSUMER_SECRET = os.environ.get("CONSUMER_SECRET")
+REQUEST_TOKEN_URL = "https://api.twitter.com/oauth/request_token"
+AUTHORIZATION_URL = "https://api.twitter.com/oauth/authorize"
+ACCESS_TOKEN_URL = "https://api.twitter.com/oauth/access_token"
+CALLBACK_URI = os.environ.get("CALLBACK_URI")
 
 # Example model for demonstration
 class User(db.Model):
@@ -91,17 +59,6 @@ def get_base64_font(font_path):
     with open(font_path, "rb") as font_file:
         return base64.b64encode(font_file.read()).decode('utf-8')
 
-def get_stored_token():
-    token = r.get("token")
-    if token:
-        return json.loads(token.decode("utf-8"))
-    return None
-
-def is_token_expired(token):
-    # Implement a method to check if the token is expired
-    # For example, you can decode the token and check the expiry time
-    return False  # Simplified for this example
-
 @app.route('/')
 def index():
     try:
@@ -110,7 +67,7 @@ def index():
         font_base64 = get_base64_font('PORKH___.TTF.ttf')
 
         html_content = '''
-      <!DOCTYPE html>
+       <!DOCTYPE html>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -469,34 +426,40 @@ def index():
 
 @app.route('/oauth')
 def oauth():
-    stored_token = get_stored_token()
-    if stored_token:
-        # Check if the token is still valid
-        if not is_token_expired(stored_token):
-            flash("Already authenticated.")
-            return redirect(url_for('index'))
-    
-    code_verifier, code_challenge = generate_pkce_pair()
-    session['code_verifier'] = code_verifier
-
-    twitter = make_token()
-    authorization_url, state = twitter.authorization_url(auth_url, code_challenge=code_challenge, code_challenge_method='S256')
-    session['oauth_state'] = state
-    logger.debug(f"OAuth state set to: {state}")
-    return redirect(authorization_url)
+    oauth = OAuth1Session(CONSUMER_KEY, client_secret=CONSUMER_SECRET, callback_uri=CALLBACK_URI)
+    try:
+        fetch_response = oauth.fetch_request_token(REQUEST_TOKEN_URL)
+        session['resource_owner_key'] = fetch_response.get('oauth_token')
+        session['resource_owner_secret'] = fetch_response.get('oauth_token_secret')
+        authorization_url = oauth.authorization_url(AUTHORIZATION_URL)
+        return redirect(authorization_url)
+    except ValueError as e:
+        logger.error(f"Error in OAuth: {str(e)}")
+        return f"Error in OAuth: {str(e)}"
 
 @app.route('/oauth/callback', methods=['GET'])
 def callback():
-    if 'oauth_state' not in session:
-        flash("OAuth state missing in session.")
-        return redirect(url_for('index'))
+    resource_owner_key = session.get('resource_owner_key')
+    resource_owner_secret = session.get('resource_owner_secret')
+    oauth_response = request.args
 
-    code_verifier = session.get('code_verifier')
-    twitter = OAuth2Session(client_id, state=session['oauth_state'], redirect_uri=redirect_uri)
-    token = twitter.fetch_token(token_url, client_secret=client_secret, authorization_response=request.url, code_verifier=code_verifier)
-    r.set("token", json.dumps(token))
-    flash("Logged in successfully.")
-    return redirect(url_for('index'))
+    oauth = OAuth1Session(CONSUMER_KEY,
+                          client_secret=CONSUMER_SECRET,
+                          resource_owner_key=resource_owner_key,
+                          resource_owner_secret=resource_owner_secret,
+                          verifier=oauth_response.get('oauth_verifier'))
+
+    try:
+        oauth_tokens = oauth.fetch_access_token(ACCESS_TOKEN_URL)
+        session['oauth_token'] = oauth_tokens.get('oauth_token')
+        session['oauth_token_secret'] = oauth_tokens.get('oauth_token_secret')
+        # Store tokens in Redis
+        r.set("token", json.dumps(oauth_tokens))
+        flash("Logged in successfully.")
+        return redirect(url_for('index'))
+    except ValueError as e:
+        logger.error(f"Error fetching access token: {str(e)}")
+        return f"Error fetching access token: {str(e)}"
 
 @app.route('/download', methods=['POST'])
 def download():
@@ -510,12 +473,13 @@ def download():
         return redirect(url_for('index'))
 
     try:
-        token = get_stored_token()
-        if not token or is_token_expired(token):
-            flash("OAuth token is missing or expired. Please log in.")
+        token = r.get("token")
+        if not token:
+            flash("OAuth token is missing. Please log in.")
             return redirect(url_for('oauth'))
 
-        headers = {"Authorization": f"Bearer {token['access_token']}"}
+        token = json.loads(token.decode("utf-8"))
+        headers = {"Authorization": f"Bearer {token['oauth_token']}"}
 
         # Paths to ffmpeg and ffprobe
         ffmpeg_location = '/usr/bin/ffmpeg'
