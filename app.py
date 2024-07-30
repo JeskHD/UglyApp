@@ -1,9 +1,8 @@
 import os
-from flask import Flask, render_template_string, request, redirect, flash, send_file, url_for
+from flask import Flask, render_template_string, request, redirect, flash, send_file
 import tweepy
 from yt_dlp import YoutubeDL
 from dotenv import load_dotenv
-import subprocess
 
 # Load environment variables from .env file
 load_dotenv()
@@ -289,6 +288,25 @@ HTML_TEMPLATE = '''
             }
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+    <script>
+        var socket = io();
+        socket.on('connect', function() {
+            console.log('Connected to server');
+        });
+        socket.on('download_complete', function(data) {
+            alert('Download complete: ' + data.filename);
+        });
+
+        document.addEventListener("DOMContentLoaded", function() {
+            var menuToggle = document.querySelector(".menu-toggle");
+            var menu = document.querySelector(".topbar ul");
+
+            menuToggle.addEventListener("click", function() {
+                menu.classList.toggle("active");
+            });
+        });
+    </script>
 </head>
 <body>
     <div class="topbar">
@@ -375,15 +393,17 @@ def download():
     if audio_url:
         file_name = f"downloaded_audio.{audio_format}"
         if download_twspace(audio_url, file_name):
+            flash(f'Audio downloaded successfully as {file_name}')
             return send_file(file_name, as_attachment=True)
 
     if video_url:
         file_name = f"downloaded_video.{video_format}"
         if download_video(video_url, file_name):
+            flash(f'Video downloaded successfully as {file_name}')
             return send_file(file_name, as_attachment=True)
 
     flash('Please provide a valid URL')
-    return redirect(url_for('index'))
+    return redirect('/')
 
 def download_twspace(url, file_name):
     if not cookie_file or cookie_file == 'None':
@@ -391,15 +411,11 @@ def download_twspace(url, file_name):
         return False
     try:
         command = f"twspace_dl -c {cookie_file} -i {url} -o {file_name}"
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        if result.returncode == 0:
-            if os.path.exists(file_name):
-                return True
-            else:
-                flash("Download completed, but the file does not exist.")
-                return False
+        result = os.system(command)
+        if result == 0 and os.path.exists(file_name):
+            return True
         else:
-            flash(f"Failed to download the Twitter Space: {result.stderr}")
+            flash('Failed to download the Twitter Space.')
             return False
     except Exception as e:
         flash(f'Failed to download the Twitter Space: {e}')
