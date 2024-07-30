@@ -1,4 +1,5 @@
 import os
+import subprocess
 from flask import Flask, render_template_string, request, redirect, flash, send_file
 import tweepy
 from yt_dlp import YoutubeDL
@@ -50,7 +51,7 @@ HTML_TEMPLATE = '''
         * {
             box-sizing: border-box;
             margin: 0;
-            padding: 0.
+            padding: 0;
         }
         body {
             font-family: "Poppins", sans-serif;
@@ -101,7 +102,7 @@ HTML_TEMPLATE = '''
         .poppins-medium-italic {
             font-family: "Poppins", sans-serif;
             font-weight: 500;
-            font-style: italic.
+            font-style: italic;
         }
         .topbar img {
             height: 65px;
@@ -127,7 +128,7 @@ HTML_TEMPLATE = '''
             text-align: center;
             padding: 20px;
             width: 100%;
-            max-width: 1200px.
+            max-width: 1200px;
         }
         .UglyStay {
             color: rgb(255, 136, 237);
@@ -136,14 +137,14 @@ HTML_TEMPLATE = '''
             font-style: italic;
             margin: 0 20px;
             text-align: center;
-            width: 100%.
+            width: 100%;
         }
         .uglydesc {
             color: whitesmoke;
             margin: 20px 10px;
             font-size: 18px;
             text-align: center;
-            width: 100%.
+            width: 100%;
         }
         .form-container {
             display: flex;
@@ -151,7 +152,7 @@ HTML_TEMPLATE = '''
             justify-content: center;
             gap: 10px;
             margin-top: 20px;
-            flex-wrap: wrap.
+            flex-wrap: wrap;
         }
         .searchbox {
             width: 300px;
@@ -162,10 +163,10 @@ HTML_TEMPLATE = '''
             font-family: "Poppins", sans-serif;
             text-align: center;
             border: none;
-            padding-left: 20px.
+            padding-left: 20px;
         }
         .searchbox:hover {
-            border: 1px solid #ff78df.
+            border: 1px solid #ff78df;
         }
         .dropdown1, .dropdown2 {
             height: 38px;
@@ -174,7 +175,7 @@ HTML_TEMPLATE = '''
             border: none;
             font-family: "Poppins", sans-serif;
             background-color: #ff78df;
-            color: white.
+            color: white;
         }
         .btn1, .btn2 {
             height: 38px;
@@ -184,21 +185,21 @@ HTML_TEMPLATE = '''
             color: white;
             border: none;
             cursor: pointer;
-            font-family: "Poppins", sans-serif.
+            font-family: "Poppins", sans-serif;
         }
         .btn1:active, .btn2:active {
             color: #fb85df;
-            background-color: #f8a1e4.
+            background-color: #f8a1e4;
         }
         .btn1:hover, .btn2:hover {
-            background-color: #e767c7.
+            background-color: #e767c7;
         }
         .or {
             position: relative;
             top: 15px;
             color: white;
             font-size: 18px;
-            margin: 10px 0.
+            margin: 10px 0;
         }
         .url {
             text-shadow: 0px 3px 5px 0 #c255a7;
@@ -206,39 +207,39 @@ HTML_TEMPLATE = '''
             font-size: 14px;
             margin-top: 10px;
             width: 100%;
-            text-align: center.
+            text-align: center;
         }
         .sp li:hover {
-            color: #1d9bf0 !important.
+            color: #1d9bf0 !important;
         }
         .ua {
             font-family: 'Porkys';
             color: #f50da1;
             font-size: 40px;
-            text-shadow: 1px 1px 2px #27f1e6.
+            text-shadow: 1px 1px 2px #27f1e6;
         }
         .flashes {
             color: red;
             list-style: none;
             text-align: center;
-            margin-top: 10px.
+            margin-top: 10px;
         }
         /* Responsive Design */
         @media (max-width: 800px) {
             .topbar {
                 flex-direction: row;
                 align-items: center;
-                padding: 10px 10px.
+                padding: 10px 10px;
             }
             .topbar .menu-toggle {
-                display: block.
+                display: block;
             }
             .topbar ul {
                 display: none;
                 flex-direction: column;
                 align-items: center;
                 width: 100%;
-                margin-top: 10px.
+                margin-top: 10px;
             }
             .topbar ul.active {
                 display: flex;
@@ -251,40 +252,40 @@ HTML_TEMPLATE = '''
                 right: 10px;
                 top: 30px;
                 width: 200px;
-                padding: 10px.
+                padding: 10px;
             }
             .topbar h2 {
-                font-size: 24px.
+                font-size: 24px;
             }
             .UglyStay {
                 font-size: 30px;
                 margin-top: 40px;
                 text-align: center;
                 position: relative;
-                right: 16px.
+                right: 16px;
             }
             .uglydesc {
                 font-size: 16px;
                 margin: 20px 20px;
                 text-align: center;
                 position: relative;
-                right: 16px.
+                right: 16px;
             }
             .form-container {
                 flex-direction: column;
-                align-items: center.
+                align-items: center;
             }
             .searchbox, .dropdown1, .dropdown2, .btn1, .btn2 {
                 width: 100%;
-                margin-bottom: 10px.
+                margin-bottom: 10px;
             }
             .or {
                 top: 0;
-                margin: 10px 0.
+                margin: 10px 0;
             }
             .url {
                 margin-top: 20px;
-                text-align: center.
+                text-align: center;
             }
         }
     </style>
@@ -390,8 +391,8 @@ def download_twspace(url, file_name):
         return False
     try:
         command = f"twspace_dl -c {cookie_file} -i {url} -o {file_name}"
-        result = os.system(command)
-        if result == 0 and os.path.exists(file_name):
+        result = subprocess.run(command, shell=True, capture_output=True, text=True)
+        if result.returncode == 0 and os.path.exists(file_name):
             return True
         else:
             flash('Failed to download the Twitter Space.')
