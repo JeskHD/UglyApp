@@ -392,8 +392,12 @@ def download_twspace(url, file_name):
     try:
         command = f"twspace_dl -c {cookie_file} -i {url} -o {file_name}"
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        if result.returncode == 0 and os.path.exists(file_name):
-            return True
+        if result.returncode == 0:
+            if os.path.exists(file_name):
+                return True
+            else:
+                flash("Download completed, but the file does not exist.")
+                return False
         else:
             flash(f"Failed to download the Twitter Space: {result.stderr}")
             return False
