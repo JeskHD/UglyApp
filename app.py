@@ -406,12 +406,16 @@ def download():
     return redirect('/')
 
 def download_twspace(url, file_name):
+    if not cookie_file or cookie_file == 'None':
+        flash('Cookie file is not set. Please check your .env configuration.')
+        return False
     try:
         command = f"twspace_dl -c {cookie_file} -i {url} -o {file_name}"
-        os.system(command)
-        if os.path.exists(file_name):
+        result = os.system(command)
+        if result == 0 and os.path.exists(file_name):
             return True
         else:
+            flash('Failed to download the Twitter Space.')
             return False
     except Exception as e:
         flash(f'Failed to download the Twitter Space: {e}')
