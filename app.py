@@ -1,5 +1,4 @@
 import os
-import subprocess
 from flask import Flask, render_template_string, request, redirect, flash, send_file
 import tweepy
 from yt_dlp import YoutubeDL
@@ -390,9 +389,8 @@ def download_twspace(url, file_name):
         flash('Cookie file is not set. Please check your .env configuration.')
         return False
     try:
-        command = f"twspace_dl -c {cookie_file} -i {url} -o {file_name}"
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        if result.returncode == 0 and os.path.exists(file_name):
+        os.system(f"twspace_dl -c {cookie_file} -i {url} -o {file_name}")
+        if os.path.exists(file_name):
             return True
         else:
             flash('Failed to download the Twitter Space.')
