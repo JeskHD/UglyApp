@@ -28,6 +28,10 @@ print(f"Cookie File: {cookie_file}")
 auth = tweepy.OAuth1UserHandler(api_key, api_secret_key, access_token, access_token_secret)
 api = tweepy.API(auth)
 
+# Set a download directory
+DOWNLOADS_DIR = os.path.join(os.path.expanduser("~"), 'downloads')
+os.makedirs(DOWNLOADS_DIR, exist_ok=True)
+
 HTML_TEMPLATE = '''
 <!DOCTYPE html>
 <html lang="en">
@@ -372,12 +376,12 @@ def download():
     video_format = request.form.get('video_format')
 
     if audio_url:
-        file_name = f"downloaded_audio.{audio_format}"
+        file_name = os.path.join(DOWNLOADS_DIR, f"downloaded_audio.{audio_format}")
         if download_twspace(audio_url, file_name):
             return send_file(file_name, as_attachment=True)
 
     if video_url:
-        file_name = f"downloaded_video.{video_format}"
+        file_name = os.path.join(DOWNLOADS_DIR, f"downloaded_video.{video_format}")
         if download_video(video_url, file_name):
             return send_file(file_name, as_attachment=True)
 
@@ -389,7 +393,8 @@ def download_twspace(url, file_name):
         flash('Cookie file is not set. Please check your .env configuration.')
         return False
     try:
-        os.system(f"twspace_dl -c {cookie_file} -i {url} -o {file_name}")
+        command = f"twspace_dl -c {cookie_file} -i {url} -o {file_name}"
+        os.system(command)
         if os.path.exists(file_name):
             return True
         else:
