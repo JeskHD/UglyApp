@@ -478,7 +478,7 @@ def download():
 
         # Use cookies for SoundCloud downloads
         elif 'soundcloud.com' in url:
-            cookie_file = '/path/to/your/soundcloud_cookies.txt'  # Update with your actual path
+            cookie_file = 'soundcloud_cookies.txt'  # Update with your actual path
             ydl_opts.update({
                 'cookiefile': cookie_file,
             })
