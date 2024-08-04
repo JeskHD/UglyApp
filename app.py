@@ -1,12 +1,11 @@
 import os
 import subprocess
 import yt_dlp
-from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory
+from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app
 from flask_socketio import SocketIO, emit
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
 import sqlalchemy as sa
-import glob
 import base64
 import logging
 
@@ -15,7 +14,7 @@ app.secret_key = 'your_secret_key'  # Needed for flashing messages
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-socketio = SocketIO(app)
+socketio = SocketIO(app, async_mode='threading')
 db = SQLAlchemy(app)
 
 # Ensure the downloads directory exists in the user's Downloads folder
@@ -43,11 +42,17 @@ def get_base64_font(font_path):
     with open(font_path, "rb") as font_file:
         return base64.b64encode(font_file.read()).decode('utf-8')
 
+def progress_hook(d):
+    if d['status'] == 'downloading':
+        percent = d.get('downloaded_bytes', 0) / d.get('total_bytes', 1) * 100
+        socketio.emit('progress', {'status': 'downloading', 'percent': percent})
+    elif d['status'] == 'finished':
+        socketio.emit('progress', {'status': 'finished', 'filename': d['filename']})
+
 @app.route('/')
 def index():
     try:
         background_base64 = get_base64_image('uglygif.gif')
-        logo_base64 = get_base64_image('uglylogo.png')
         font_base64 = get_base64_font('PORKH___.TTF.ttf')
 
         html_content = '''
@@ -55,7 +60,6 @@ def index():
         <html lang="en">
         <head>
             <meta charset="UTF-8">
-            <meta name="HTML WEB DESIGN" content="Web Design">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Ugly Downloader</title>
             <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -241,27 +245,29 @@ def index():
                     text-align: center;
                     margin-top: 10px;
                 }
-                /* Progress Bar Styles */
-                .progress-bar {
-                    width: 100%;
-                    background-color: #ddd;
+                /* Progress bar styles */
+                #progress-bar {
+                    width: 80%;
+                    background-color: #f3f3f3;
                     height: 20px;
                     border-radius: 10px;
                     overflow: hidden;
-                    margin: 10px 0;
+                    margin-top: 20px;
+                    position: relative;
+                    margin: auto;
                 }
-
-                .progress-bar-fill {
+                #progress-bar-fill {
                     height: 100%;
-                    background-color: #fa50d3;
                     width: 0;
-                    transition: width 0.2s;
+                    background-color: #fa50d3;
+                    transition: width 0.5s ease;
                 }
-
-                .progress-text {
+                #progress-text {
                     text-align: center;
+                    color: black;
+                    font-weight: bold;
                     margin-top: 5px;
-                    color: white;
+                    font-size: 16px;
                 }
                 /* Responsive Design */
                 @media (max-width: 800px) {
@@ -322,26 +328,28 @@ def index():
                         margin-top: 20px;
                         text-align: center;
                     }
+                    #progress-bar {
+                        width: 90%;
+                    }
                 }
             </style>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
             <script>
                 var socket = io();
-
                 socket.on('connect', function() {
                     console.log('Connected to server');
                 });
-
                 socket.on('download_complete', function(data) {
                     alert('Download complete: ' + data.filename);
                 });
 
                 socket.on('progress', function(data) {
-                    var percent = data.percent;
-                    var progressBar = document.querySelector('.progress-bar-fill');
-                    var progressText = document.querySelector('.progress-text');
-                    progressBar.style.width = percent + '%';
-                    progressText.innerHTML = 'Download Progress: ' + percent.toFixed(2) + '%';
+                    if (data.status === 'downloading') {
+                        document.getElementById('progress-bar-fill').style.width = data.percent + '%';
+                        document.getElementById('progress-text').innerText = 'Download Progress: ' + Math.round(data.percent) + '%';
+                    } else if (data.status === 'finished') {
+                        document.getElementById('progress-text').innerText = 'Download Completed!';
+                    }
                 });
             </script>
         </head>
@@ -373,6 +381,7 @@ def index():
                             <div>
                                 <h2 class="UglyStay">Stay Ugly With Our Media</h2>
                                 <p class="uglydesc">Download Ugly Bros' art, music, and videos swiftly with UglyDownloader. Quality and simplicity in one click.</p>
+                                <br>
                                 <div class="form-container">
                                     <form action="/download" method="post" enctype="multipart/form-data">
                                         <div class="AllC">
@@ -397,18 +406,18 @@ def index():
                                         {% with messages = get_flashed_messages() %}
                                             {% if messages %}
                                                 <ul class="flashes">
-                                                    {% for message in messages %}
-                                                        <li>{{ message }}</li>
-                                                    {% endfor %}
+                                                {% for message in messages %}
+                                                    <li>{{ message }}</li>
+                                                {% endfor %}
                                                 </ul>
                                             {% endif %}
                                         {% endwith %}
                                     </div>
+                                    <div id="progress-bar">
+                                        <div id="progress-bar-fill"></div>
+                                    </div>
+                                    <div id="progress-text">Download Progress: 0%</div>
                                 </div>
-                                <div class="progress-bar">
-                                    <div class="progress-bar-fill"></div>
-                                </div>
-                                <div class="progress-text">Download Progress: 0%</div>
                             </div>
                         </article>
                     </section>
@@ -428,7 +437,7 @@ def download():
     video_url = request.form.get('video_url')
     format = request.form['format']
     url = audio_url if format == 'audio' else video_url
-
+    
     if not is_valid_url(url):
         flash("Invalid URL. Please enter a valid URL.")
         return redirect(url_for('index'))
@@ -446,8 +455,9 @@ def download():
             'ffprobe_location': ffprobe_location,
             'hls_use_mpegts': True,  # Ensure HLS processing for all formats
             'forceoverwrites': False,  # Skip existing files instead of overwriting
-            'nopart': True,  # Don't use .part files
-            'progress_hooks': [progress_hook],  # Add progress hooks
+            'progress_hooks': [progress_hook],
+            'noprogress': True,
+            'quiet': True,
         }
 
         # Handle Twitter Spaces downloads separately
@@ -593,11 +603,6 @@ def download():
         return redirect(url_for('index'))
 
     return redirect(url_for('index'))  # Ensure there is a return statement in all paths
-
-def progress_hook(d):
-    if d['status'] == 'downloading':
-        percent = d.get('downloaded_bytes', 0) / d.get('total_bytes', 1) * 100
-        socketio.emit('progress', {'percent': percent})
 
 @app.route('/uploads/<path:filename>', methods=['GET', 'POST'])
 def upload(filename):
