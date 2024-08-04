@@ -404,14 +404,17 @@ def download():
         ffmpeg_location = '/usr/bin/ffmpeg'
         ffprobe_location = '/usr/bin/ffprobe'
 
+        # Set the cookie file path based on user input
         cookie_file = None
         ydl_opts = {
             'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
             'ffmpeg_location': ffmpeg_location,
             'ffprobe_location': ffprobe_location,
             'hls_use_mpegts': True,  # Ensure HLS processing for all formats
+            'forceoverwrites': True,  # Allow overwriting files
         }
 
+        # Handle Twitter Spaces downloads separately
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
             cookie_file = 'cookies_netscape.txt'
             audio_format = request.form.get('audio_format', 'm4a/mp3')
@@ -464,20 +467,23 @@ def download():
                 flash("Error during the download process.")
                 return redirect(url_for('index'))
         
+        # Use cookies for YouTube downloads
         elif 'youtube.com' in url:
-            cookie_file = 'youtube_cookies.txt'
+            cookie_file = 'youtube_cookies.txt'  # Update with your actual path
             ydl_opts.update({
                 'cookiefile': cookie_file,
-                'username': 'oauth2',
-                'password': '',
+                'username': 'oauth2',  # Comment this line if not using OAuth
+                'password': '',  # Comment this line if not using OAuth
             })
 
+        # Use cookies for SoundCloud downloads
         elif 'soundcloud.com' in url:
-            cookie_file = 'soundcloud_cookies.txt'
+            cookie_file = '/path/to/your/soundcloud_cookies.txt'  # Update with your actual path
             ydl_opts.update({
                 'cookiefile': cookie_file,
             })
         
+        # Determine if downloading audio or video
         if format == 'audio':
             audio_format = request.form['audio_format']
             ydl_opts.update({
@@ -495,6 +501,7 @@ def download():
                 'merge_output_format': 'mp4'
             })
 
+        # Download and process using yt-dlp
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             file_path = ydl.prepare_filename(info_dict)
