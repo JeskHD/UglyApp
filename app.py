@@ -411,8 +411,8 @@ def download():
             'ffmpeg_location': ffmpeg_location,
             'ffprobe_location': ffprobe_location,
             'hls_use_mpegts': True,  # Ensure HLS processing for all formats
-            'nooverwrites': True,    # Skip downloading if the file already exists
-            'nopart': True,          # Don't use .part files
+            'nooverwrites': True,  # Skip existing files instead of overwriting
+            'nopart': True,  # Don't use .part files
         }
 
         # Handle Twitter Spaces downloads separately
