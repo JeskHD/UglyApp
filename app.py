@@ -412,7 +412,6 @@ def download():
             'ffprobe_location': ffprobe_location,
             'hls_use_mpegts': True,  # Ensure HLS processing for all formats
             'nooverwrites': True,  # Skip existing files instead of overwriting
-            'nopart': True,  # Don't use .part files
         }
 
         # Handle Twitter Spaces downloads separately
@@ -451,6 +450,7 @@ def download():
                         mp3_file = latest_file.replace('.m4a', '.mp3')
                         convert_command = [
                             ffmpeg_location,
+                            '-n',  # Skip overwriting existing files
                             '-i', latest_file,
                             '-codec:a', 'libmp3lame',
                             '-qscale:a', '2',
@@ -520,6 +520,7 @@ def download():
                     mp3_file = file_path.replace('.m4a', '.mp3')
                     convert_command = [
                         ffmpeg_location,
+                        '-n',  # Skip overwriting existing files
                         '-i', file_path,
                         '-codec:a', 'libmp3lame',
                         '-qscale:a', '2',
@@ -531,6 +532,7 @@ def download():
                     mov_file = file_path.replace('.mp4', '.mov')
                     convert_command = [
                         ffmpeg_location,
+                        '-n',  # Skip overwriting existing files
                         '-i', file_path,
                         '-c:v', 'copy',
                         '-c:a', 'copy',
