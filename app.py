@@ -145,7 +145,7 @@ def index():
                     justify-content: center;
                     align-items: center;
                     text-align: center;
-                    padding-top: 100px; /* Adjusted to move content closer to the topbar */
+                    padding-top: 100px;
                 }
                 .Wrapper {
                     text-align: center;
