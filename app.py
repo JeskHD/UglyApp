@@ -10,22 +10,19 @@ import base64
 import logging
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Needed for flashing messages
+app.secret_key = 'your_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 socketio = SocketIO(app, async_mode='threading')
 db = SQLAlchemy(app)
 
-# Ensure the downloads directory exists in the user's Downloads folder
 DOWNLOADS_DIR = os.path.join(os.path.expanduser("~"), 'Downloads')
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
-# Configure logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# Example model for demonstration
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)
@@ -42,12 +39,12 @@ def get_base64_font(font_path):
     with open(font_path, "rb") as font_file:
         return base64.b64encode(font_file.read()).decode('utf-8')
 
-def progress_hook(d):
+def progress_hook(d, socketid):
     if d['status'] == 'downloading':
         percent = d.get('downloaded_bytes', 0) / d.get('total_bytes', 1) * 100
-        socketio.emit('progress', {'status': 'downloading', 'percent': percent})
+        socketio.emit('progress', {'status': 'downloading', 'percent': percent}, to=socketid)
     elif d['status'] == 'finished':
-        socketio.emit('progress', {'status': 'finished', 'filename': d['filename']})
+        socketio.emit('progress', {'status': 'finished', 'filename': d['filename']}, to=socketid)
 
 @app.route('/')
 def index():
@@ -245,7 +242,6 @@ def index():
                     text-align: center;
                     margin-top: 10px;
                 }
-                /* Progress bar styles */
                 #progress-bar {
                     width: 80%;
                     background-color: #f3f3f3;
@@ -269,7 +265,6 @@ def index():
                     margin-top: 5px;
                     font-size: 16px;
                 }
-                /* Responsive Design */
                 @media (max-width: 800px) {
                     .topbar {
                         flex-direction: row;
@@ -336,9 +331,13 @@ def index():
             <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
             <script>
                 var socket = io();
+                var socketID = '';
+
                 socket.on('connect', function() {
                     console.log('Connected to server');
+                    socketID = socket.id;  // Store the socket ID
                 });
+
                 socket.on('download_complete', function(data) {
                     alert('Download complete: ' + data.filename);
                 });
@@ -351,6 +350,22 @@ def index():
                         document.getElementById('progress-text').innerText = 'Download Completed!';
                     }
                 });
+
+                function startDownload(format, url, audio_format = null, video_format = null) {
+                    fetch('/download', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            url: url,
+                            format: format,
+                            audio_format: audio_format,
+                            video_format: video_format,
+                            socketid: socketID  // Send the socket ID with the request
+                        })
+                    });
+                }
             </script>
         </head>
         <body>
@@ -383,14 +398,14 @@ def index():
                                 <p class="uglydesc">Download Ugly Bros' art, music, and videos swiftly with UglyDownloader. Quality and simplicity in one click.</p>
                                 <br>
                                 <div class="form-container">
-                                    <form action="/download" method="post" enctype="multipart/form-data">
+                                    <form onsubmit="event.preventDefault(); startDownload('audio', this.audio_url.value, this.audio_format.value);">
                                         <div class="AllC">
                                             <input type="text" name="audio_url" placeholder="Enter audio URL" class="searchbox">
                                             <select name="audio_format" class="dropdown1">
                                                 <option value="mp3">MP3</option>
                                                 <option value="m4a">M4A</option>
                                             </select>
-                                            <button type="submit" name="format" value="audio" class="btn1">Download Audio</button>
+                                            <button type="submit" class="btn1">Download Audio</button>
                                             <br>
                                             <p class="or">OR</p><br>
                                             <input type="text" name="video_url" placeholder="Enter video URL" class="searchbox">
@@ -398,7 +413,7 @@ def index():
                                                 <option value="mp4">MP4</option>
                                                 <option value="mov">MOV</option>
                                             </select>
-                                            <button type="submit" name="format" value="video" class="btn2">Download Video</button>
+                                            <button type="submit" class="btn2" onclick="startDownload('video', this.form.video_url.value, null, this.form.video_format.value);">Download Video</button>
                                             <br><br>
                                     </form>
                                     <p class="url">Enter your desired URL and let it do the trick</p>
@@ -433,105 +448,33 @@ def index():
 
 @app.route('/download', methods=['POST'])
 def download():
-    audio_url = request.form.get('audio_url')
-    video_url = request.form.get('video_url')
-    format = request.form['format']
-    url = audio_url if format == 'audio' else video_url
-    
+    data = request.get_json()
+    url = data.get('url')
+    format = data.get('format')
+    audio_format = data.get('audio_format')
+    video_format = data.get('video_format')
+    socketid = data.get('socketid')
+
     if not is_valid_url(url):
         flash("Invalid URL. Please enter a valid URL.")
         return redirect(url_for('index'))
 
     try:
-        # Paths to ffmpeg and ffprobe
         ffmpeg_location = '/usr/bin/ffmpeg'
         ffprobe_location = '/usr/bin/ffprobe'
 
-        # Set the cookie file path based on user input
-        cookie_file = None
         ydl_opts = {
             'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
             'ffmpeg_location': ffmpeg_location,
             'ffprobe_location': ffprobe_location,
-            'hls_use_mpegts': True,  # Ensure HLS processing for all formats
-            'forceoverwrites': False,  # Skip existing files instead of overwriting
-            'progress_hooks': [progress_hook],
+            'hls_use_mpegts': True,
+            'forceoverwrites': False,
+            'progress_hooks': [lambda d: progress_hook(d, socketid)],
             'noprogress': True,
             'quiet': True,
         }
 
-        # Handle Twitter Spaces downloads separately
-        if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
-            cookie_file = 'cookies_netscape.txt'
-            audio_format = request.form.get('audio_format', 'm4a/mp3')
-            output_template = os.path.join(DOWNLOADS_DIR, '%(title)s')
-            
-            command = [
-                '/root/UglyApp/venv/bin/twspace_dl',  # Use the full path to twspace_dl
-                '-i', url,
-                '-c', cookie_file,
-                '-o', output_template
-            ]
-            
-            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-
-            while True:
-                output = process.stdout.readline()
-                if process.poll() is not None:
-                    break
-                if output:
-                    print(output.strip())
-                    socketio.emit('eta', {'data': output.strip()})
-
-            process.wait()
-
-            if process.returncode == 0:
-                # Find the most recently modified file in the DOWNLOADS_DIR
-                list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
-                latest_file = max(list_of_files, key=os.path.getmtime)
-                
-                if os.path.exists(latest_file):
-                    if audio_format == 'mp3' and latest_file.endswith('.m4a'):
-                        # Convert to MP3
-                        mp3_file = latest_file.replace('.m4a', '.mp3')
-                        convert_command = [
-                            ffmpeg_location,
-                            '-i', latest_file,
-                            '-codec:a', 'libmp3lame',
-                            '-qscale:a', '2',
-                            mp3_file
-                        ]
-                        subprocess.run(convert_command, check=True)
-                        latest_file = mp3_file
-
-                    socketio.emit('download_complete', {'filename': os.path.basename(latest_file)})
-                    return send_file(latest_file, as_attachment=True, download_name=os.path.basename(latest_file))
-                else:
-                    flash("File not found after download.")
-                    return redirect(url_for('index'))
-            else:
-                flash("Error during the download process.")
-                return redirect(url_for('index'))
-        
-        # Use cookies for YouTube downloads
-        elif 'youtube.com' in url:
-            cookie_file = 'youtube_cookies.txt'  # Update with your actual path
-            ydl_opts.update({
-                'cookiefile': cookie_file,
-                'username': 'oauth2',  # Comment this line if not using OAuth
-                'password': '',  # Comment this line if not using OAuth
-            })
-
-        # Use cookies for SoundCloud downloads
-        elif 'soundcloud.com' in url:
-            cookie_file = 'soundcloud_cookies.txt'  # Update with your actual path
-            ydl_opts.update({
-                'cookiefile': cookie_file,
-            })
-        
-        # Determine if downloading audio or video
         if format == 'audio':
-            audio_format = request.form['audio_format']
             ydl_opts.update({
                 'format': 'bestaudio/best',
                 'postprocessors': [{
@@ -541,56 +484,22 @@ def download():
                 }]
             })
         else:
-            video_format = request.form['video_format']
             ydl_opts.update({
                 'format': 'bestvideo+bestaudio/best',
-                'merge_output_format': 'mp4'
+                'merge_output_format': video_format,
             })
 
-        # Download and process using yt-dlp
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             file_path = ydl.prepare_filename(info_dict)
 
-            if format == 'audio':
-                file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
-            else:
-                if video_format == 'mov':
-                    file_path = file_path.replace('.mp4', f'.mp4')
-                else:
-                    file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
-                
             if os.path.exists(file_path):
-                if format == 'audio' and audio_format == 'mp3':
-                    mp3_file = file_path.replace('.m4a', '.mp3')
-                    convert_command = [
-                        ffmpeg_location,
-                        '-i', file_path,
-                        '-codec:a', 'libmp3lame',
-                        '-qscale:a', '2',
-                        mp3_file
-                    ]
-                    subprocess.run(convert_command, check=True)
-                    file_to_send = mp3_file
-                elif format == 'video' and video_format == 'mov':
-                    mov_file = file_path.replace('.mp4', '.mov')
-                    convert_command = [
-                        ffmpeg_location,
-                        '-i', file_path,
-                        '-c:v', 'copy',
-                        '-c:a', 'copy',
-                        mov_file
-                    ]
-                    subprocess.run(convert_command, check=True)
-                    file_to_send = mov_file
-                else:
-                    file_to_send = file_path
-
-                socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
-                return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
+                socketio.emit('download_complete', {'filename': os.path.basename(file_path)}, to=socketid)
+                return send_file(file_path, as_attachment=True, download_name=os.path.basename(file_path))
             else:
                 flash("File not found after download.")
                 return redirect(url_for('index'))
+
     except subprocess.CalledProcessError as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
@@ -602,7 +511,7 @@ def download():
         flash(f"An unexpected error occurred: {str(e)}")
         return redirect(url_for('index'))
 
-    return redirect(url_for('index'))  # Ensure there is a return statement in all paths
+    return redirect(url_for('index'))
 
 @app.route('/uploads/<path:filename>', methods=['GET', 'POST'])
 def upload(filename):
