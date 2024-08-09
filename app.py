@@ -10,6 +10,7 @@ import glob
 import base64
 import logging
 from tqdm import tqdm
+import requests
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
@@ -52,7 +53,7 @@ def index():
         font_base64 = get_base64_font('PORKH___.TTF.ttf')
 
         html_content = '''
-      <!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -242,21 +243,6 @@ def index():
             text-align: center;
             margin-top: 10px;
         }
-        .progress {
-            background-color: #e0e0e0;
-            border-radius: 13px;
-            padding: 3px;
-            margin-top: 20px;
-        }
-        .progress-bar {
-            background-color: #76c7c0;
-            width: 0%;
-            height: 25px;
-            border-radius: 10px;
-            text-align: center;
-            line-height: 25px;
-            color: white;
-        }
         /* Responsive Design */
         @media (max-width: 800px) {
             .topbar {
@@ -327,12 +313,6 @@ def index():
         socket.on('download_complete', function(data) {
             alert('Download complete: ' + data.filename);
         });
-        socket.on('progress', function(data) {
-            console.log("Progress received:", data.progress);
-            var progress = data.progress;
-            document.getElementById("progressBar").style.width = progress + "%";
-            document.getElementById("progressBar").innerText = Math.round(progress) + "%";
-        });
     </script>
 </head>
 <body>
@@ -397,9 +377,6 @@ def index():
                                 {% endwith %}
                             </div>
                         </div>
-                        <div class="progress">
-                            <div id="progressBar" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
-                        </div>
                     </div>
                 </article>
             </section>
@@ -438,20 +415,6 @@ def download():
             'hls_use_mpegts': True,  # Ensure HLS processing for all formats
             'nooverwrites': True,  # Skip existing files instead of overwriting
         }
-
-        def progress_hook(d):
-            if d['status'] == 'downloading':
-                total_size = d.get('total_bytes', 0)
-                downloaded_size = d.get('downloaded_bytes', 0)
-                if total_size > 0:
-                    progress = (downloaded_size / total_size) * 100
-                    print(f"Emitting progress: {progress}%")
-                    socketio.emit('progress', {'progress': progress})
-            elif d['status'] == 'finished':
-                print("Download finished, emitting 100% progress")
-                socketio.emit('progress', {'progress': 100})
-        
-        ydl_opts['progress_hooks'] = [progress_hook]
 
         # Handle Twitter Spaces downloads separately
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
@@ -543,62 +506,54 @@ def download():
 
         # Download and process using yt-dlp
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(url, download=True)
-            file_path = ydl.prepare_filename(info_dict)
+            info_dict = ydl.extract_info(url, download=False)
+            file_size = info_dict.get('filesize') or info_dict.get('filesize_approx')
+            filename = ydl.prepare_filename(info_dict)
 
-            if format == 'audio':
-                file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
-            else:
-                if video_format == 'mov':
-                    file_path = file_path.replace('.mp4', f'.mp4')
-                else:
-                    file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
-                
-            if os.path.exists(file_path):
-                if format == 'audio' and audio_format == 'mp3':
-                    mp3_file = file_path.replace('.m4a', '.mp3')
-                    convert_command = [
-                        ffmpeg_location,
-                        '-n',  # Skip overwriting existing files
-                        '-i', file_path,
-                        '-codec:a', 'libmp3lame',
-                        '-qscale:a', '2',
-                        mp3_file
-                    ]
-                    subprocess.run(convert_command, check=True)
-                    file_to_send = mp3_file
-                elif format == 'video' and video_format == 'mov':
-                    mov_file = file_path.replace('.mp4', '.mov')
-                    convert_command = [
-                        ffmpeg_location,
-                        '-n',  # Skip overwriting existing files
-                        '-i', file_path,
-                        '-c:v', 'copy',
-                        '-c:a', 'copy',
-                        mov_file
-                    ]
-                    subprocess.run(convert_command, check=True)
-                    file_to_send = mov_file
-                else:
-                    file_to_send = file_path
+            # Streaming download with tqdm progress bar
+            with requests.get(info_dict['url'], stream=True) as r:
+                r.raise_for_status()
+                with open(filename, 'wb') as f:
+                    chunk_size = 1024
+                    total_size = int(r.headers.get('content-length', 0))
+                    for chunk in tqdm(r.iter_content(chunk_size=chunk_size), total=total_size // chunk_size, unit='KB'):
+                        f.write(chunk)
 
-                socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
-                return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
-            else:
-                flash("File not found after download.")
-                return redirect(url_for('index'))
-    except subprocess.CalledProcessError as e:
-        flash(f"Error: {str(e)}")
-        return redirect(url_for('index'))
-    except yt_dlp.utils.DownloadError as e:
-        flash(f"Error: {str(e)}")
-        return redirect(url_for('index'))
+            # Post-processing: Convert to mp3 or mov if needed
+            if format == 'audio' and request.form.get('audio_format') == 'mp3':
+                mp3_file = filename.replace('.m4a', '.mp3')
+                convert_command = [
+                    ffmpeg_location,
+                    '-n',
+                    '-i', filename,
+                    '-codec:a', 'libmp3lame',
+                    '-qscale:a', '2',
+                    mp3_file
+                ]
+                subprocess.run(convert_command, check=True)
+                filename = mp3_file
+            
+            elif format == 'video' and request.form.get('video_format') == 'mov':
+                mov_file = filename.replace('.mp4', '.mov')
+                convert_command = [
+                    ffmpeg_location,
+                    '-n',
+                    '-i', filename,
+                    '-c:v', 'copy',
+                    '-c:a', 'copy',
+                    mov_file
+                ]
+                subprocess.run(convert_command, check=True)
+                filename = mov_file
+            
+            socketio.emit('download_complete', {'filename': os.path.basename(filename)})
+            return send_file(filename, as_attachment=True, download_name=os.path.basename(filename))
     except Exception as e:
         logger.error(f"An unexpected error occurred: {str(e)}")
         flash(f"An unexpected error occurred: {str(e)}")
         return redirect(url_for('index'))
 
-    return redirect(url_for('index'))  # Ensure there is a return statement in all paths
+    return redirect(url_for('index'))
 
 @app.route('/uploads/<path:filename>', methods=['GET', 'POST'])
 def upload(filename):
