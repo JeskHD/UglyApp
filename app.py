@@ -8,7 +8,6 @@ from urllib.parse import urlparse
 import sqlalchemy as sa
 import base64
 import logging
-from tqdm import tqdm  # Importing tqdm for progress bar in CLI
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
@@ -49,12 +48,6 @@ def progress_hook(d):
         socketio.emit('progress', {'status': 'downloading', 'percent': percent})
     elif d['status'] == 'finished':
         socketio.emit('progress', {'status': 'finished', 'filename': d['filename']})
-
-def tqdm_hook(d, pbar):
-    if d['status'] == 'downloading':
-        pbar.update(d['downloaded_bytes'] - pbar.n)  # Update the progress bar by the number of bytes downloaded since last update
-    elif d['status'] == 'finished':
-        pbar.close()  # Close the progress bar when finished
 
 @app.route('/')
 def index():
@@ -454,31 +447,150 @@ def download():
         ffmpeg_location = '/usr/bin/ffmpeg'
         ffprobe_location = '/usr/bin/ffprobe'
 
+        # Set the cookie file path based on user input
+        cookie_file = None
         ydl_opts = {
             'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
             'ffmpeg_location': ffmpeg_location,
             'ffprobe_location': ffprobe_location,
             'hls_use_mpegts': True,  # Ensure HLS processing for all formats
             'forceoverwrites': False,  # Skip existing files instead of overwriting
-            'progress_hooks': [],  # Placeholder for progress hooks
+            'progress_hooks': [progress_hook],
             'noprogress': True,
             'quiet': True,
         }
 
-        # Integrate tqdm progress bar
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(url, download=False)
-            total_bytes = info_dict.get('filesize', 0)
+        # Handle Twitter Spaces downloads separately
+        if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
+            cookie_file = 'cookies_netscape.txt'
+            audio_format = request.form.get('audio_format', 'm4a/mp3')
+            output_template = os.path.join(DOWNLOADS_DIR, '%(title)s')
             
-            with tqdm(total=total_bytes, unit='B', unit_scale=True, unit_divisor=1024) as pbar:
-                ydl_opts['progress_hooks'].append(lambda d: progress_hook(d))
-                ydl_opts['progress_hooks'].append(lambda d: tqdm_hook(d, pbar))
-                ydl.download([url])
+            command = [
+                '/root/UglyApp/venv/bin/twspace_dl',  # Use the full path to twspace_dl
+                '-i', url,
+                '-c', cookie_file,
+                '-o', output_template
+            ]
+            
+            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
-        # Send the downloaded file as before
-        file_path = ydl.prepare_filename(info_dict)
-        return send_file(file_path, as_attachment=True, download_name=os.path.basename(file_path))
+            while True:
+                output = process.stdout.readline()
+                if process.poll() is not None:
+                    break
+                if output:
+                    print(output.strip())
+                    socketio.emit('eta', {'data': output.strip()})
 
+            process.wait()
+
+            if process.returncode == 0:
+                # Find the most recently modified file in the DOWNLOADS_DIR
+                list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
+                latest_file = max(list_of_files, key=os.path.getmtime)
+                
+                if os.path.exists(latest_file):
+                    if audio_format == 'mp3' and latest_file.endswith('.m4a'):
+                        # Convert to MP3
+                        mp3_file = latest_file.replace('.m4a', '.mp3')
+                        convert_command = [
+                            ffmpeg_location,
+                            '-i', latest_file,
+                            '-codec:a', 'libmp3lame',
+                            '-qscale:a', '2',
+                            mp3_file
+                        ]
+                        subprocess.run(convert_command, check=True)
+                        latest_file = mp3_file
+
+                    socketio.emit('download_complete', {'filename': os.path.basename(latest_file)})
+                    return send_file(latest_file, as_attachment=True, download_name=os.path.basename(latest_file))
+                else:
+                    flash("File not found after download.")
+                    return redirect(url_for('index'))
+            else:
+                flash("Error during the download process.")
+                return redirect(url_for('index'))
+        
+        # Use cookies for YouTube downloads
+        elif 'youtube.com' in url:
+            cookie_file = 'youtube_cookies.txt'  # Update with your actual path
+            ydl_opts.update({
+                'cookiefile': cookie_file,
+                'username': 'oauth2',  # Comment this line if not using OAuth
+                'password': '',  # Comment this line if not using OAuth
+            })
+
+        # Use cookies for SoundCloud downloads
+        elif 'soundcloud.com' in url:
+            cookie_file = 'soundcloud_cookies.txt'  # Update with your actual path
+            ydl_opts.update({
+                'cookiefile': cookie_file,
+            })
+        
+        # Determine if downloading audio or video
+        if format == 'audio':
+            audio_format = request.form['audio_format']
+            ydl_opts.update({
+                'format': 'bestaudio/best',
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': audio_format,
+                    'preferredquality': '192',
+                }]
+            })
+        else:
+            video_format = request.form['video_format']
+            ydl_opts.update({
+                'format': 'bestvideo+bestaudio/best',
+                'merge_output_format': 'mp4'
+            })
+
+        # Download and process using yt-dlp
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(url, download=True)
+            file_path = ydl.prepare_filename(info_dict)
+
+            if format == 'audio':
+                file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
+            else:
+                if video_format == 'mov':
+                    file_path = file_path.replace('.mp4', f'.mp4')
+                else:
+                    file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
+                
+            if os.path.exists(file_path):
+                if format == 'audio' and audio_format == 'mp3':
+                    mp3_file = file_path.replace('.m4a', '.mp3')
+                    convert_command = [
+                        ffmpeg_location,
+                        '-i', file_path,
+                        '-codec:a', 'libmp3lame',
+                        '-qscale:a', '2',
+                        mp3_file
+                    ]
+                    subprocess.run(convert_command, check=True)
+                    file_to_send = mp3_file
+                elif format == 'video' and video_format == 'mov':
+                    mov_file = file_path.replace('.mp4', '.mov')
+                    convert_command = [
+                        ffmpeg_location,
+                        '-i', file_path,
+                        '-c:v', 'copy',
+                        '-c:a', 'copy',
+                        mov_file
+                    ]
+                    subprocess.run(convert_command, check=True)
+                    file_to_send = mov_file
+                else:
+                    file_to_send = file_path
+
+                socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
+                return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
+            else:
+                flash("File not found after download.")
+                return redirect(url_for('index'))
     except subprocess.CalledProcessError as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
