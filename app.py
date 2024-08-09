@@ -1,28 +1,32 @@
 import os
 import subprocess
 import yt_dlp
-from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app
+from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, Response
 from flask_socketio import SocketIO, emit
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
 import sqlalchemy as sa
 import base64
 import logging
+from asyncio import sleep
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'
+app.secret_key = 'your_secret_key'  # Needed for flashing messages
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 socketio = SocketIO(app, async_mode='threading')
 db = SQLAlchemy(app)
 
+# Ensure the downloads directory exists in the user's Downloads folder
 DOWNLOADS_DIR = os.path.join(os.path.expanduser("~"), 'Downloads')
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
+# Configure logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+# Example model for demonstration
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)
@@ -242,6 +246,7 @@ def index():
                     text-align: center;
                     margin-top: 10px;
                 }
+                /* Progress bar styles */
                 #progress-bar {
                     width: 80%;
                     background-color: #f3f3f3;
@@ -265,6 +270,7 @@ def index():
                     margin-top: 5px;
                     font-size: 16px;
                 }
+                /* Responsive Design */
                 @media (max-width: 800px) {
                     .topbar {
                         flex-direction: row;
@@ -331,13 +337,9 @@ def index():
             <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
             <script>
                 var socket = io();
-                var socketID = '';
-
                 socket.on('connect', function() {
                     console.log('Connected to server');
-                    socketID = socket.id;  // Store the socket ID
                 });
-
                 socket.on('download_complete', function(data) {
                     alert('Download complete: ' + data.filename);
                 });
@@ -350,22 +352,6 @@ def index():
                         document.getElementById('progress-text').innerText = 'Download Completed!';
                     }
                 });
-
-                function startDownload(format, url, audio_format = null, video_format = null) {
-                    fetch('/download', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            url: url,
-                            format: format,
-                            audio_format: audio_format,
-                            video_format: video_format,
-                            socketid: socketID  // Send the socket ID with the request
-                        })
-                    });
-                }
             </script>
         </head>
         <body>
@@ -398,14 +384,14 @@ def index():
                                 <p class="uglydesc">Download Ugly Bros' art, music, and videos swiftly with UglyDownloader. Quality and simplicity in one click.</p>
                                 <br>
                                 <div class="form-container">
-                                    <form onsubmit="event.preventDefault(); startDownload('audio', this.audio_url.value, this.audio_format.value);">
+                                    <form id="download-form" onsubmit="startDownload(); return false;">
                                         <div class="AllC">
                                             <input type="text" name="audio_url" placeholder="Enter audio URL" class="searchbox">
                                             <select name="audio_format" class="dropdown1">
                                                 <option value="mp3">MP3</option>
                                                 <option value="m4a">M4A</option>
                                             </select>
-                                            <button type="submit" class="btn1">Download Audio</button>
+                                            <button type="submit" name="format" value="audio" class="btn1">Download Audio</button>
                                             <br>
                                             <p class="or">OR</p><br>
                                             <input type="text" name="video_url" placeholder="Enter video URL" class="searchbox">
@@ -413,7 +399,7 @@ def index():
                                                 <option value="mp4">MP4</option>
                                                 <option value="mov">MOV</option>
                                             </select>
-                                            <button type="submit" class="btn2" onclick="startDownload('video', this.form.video_url.value, null, this.form.video_format.value);">Download Video</button>
+                                            <button type="submit" name="format" value="video" class="btn2">Download Video</button>
                                             <br><br>
                                     </form>
                                     <p class="url">Enter your desired URL and let it do the trick</p>
@@ -446,52 +432,52 @@ def index():
         logger.error(f"Error rendering page: {str(e)}")
         return f"Error rendering page: {str(e)}"
 
+@app.route('/progress/<socketid>', methods=['POST'])
+async def progress(socketid):
+    for x in range(1, 6):
+        socketio.emit('update progress', x * 20, to=socketid)
+        await sleep(2)
+    return Response(status=204)
+
 @app.route('/download', methods=['POST'])
 def download():
-    data = request.get_json()
-    url = data.get('url')
-    format = data.get('format')
-    audio_format = data.get('audio_format')
-    video_format = data.get('video_format')
-    socketid = data.get('socketid')
-
+    audio_url = request.form.get('audio_url')
+    video_url = request.form.get('video_url')
+    format = request.form['format']
+    url = audio_url if format == 'audio' else video_url
+    socketid = request.sid
+    
     if not is_valid_url(url):
         flash("Invalid URL. Please enter a valid URL.")
         return redirect(url_for('index'))
 
     try:
+        # Paths to ffmpeg and ffprobe
         ffmpeg_location = '/usr/bin/ffmpeg'
         ffprobe_location = '/usr/bin/ffprobe'
 
+        # Set the cookie file path based on user input
+        cookie_file = None
         ydl_opts = {
             'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
             'ffmpeg_location': ffmpeg_location,
             'ffprobe_location': ffprobe_location,
-            'hls_use_mpegts': True,
-            'forceoverwrites': False,
+            'hls_use_mpegts': True,  # Ensure HLS processing for all formats
+            'forceoverwrites': False,  # Skip existing files instead of overwriting
             'progress_hooks': [lambda d: progress_hook(d, socketid)],
             'noprogress': True,
             'quiet': True,
         }
 
-        if format == 'audio':
-            ydl_opts.update({
-                'format': 'bestaudio/best',
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': audio_format,
-                    'preferredquality': '192',
-                }]
-            })
-        else:
-            ydl_opts.update({
-                'format': 'bestvideo+bestaudio/best',
-                'merge_output_format': video_format,
-            })
-
+        # Download and process using yt-dlp
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             file_path = ydl.prepare_filename(info_dict)
+
+            if format == 'audio':
+                file_path = file_path.replace('.webm', f'.{request.form["audio_format"]}').replace('.opus', f'.{request.form["audio_format"]}')
+            elif format == 'video':
+                file_path = file_path.replace('.mp4', f'.{request.form["video_format"]}')
 
             if os.path.exists(file_path):
                 socketio.emit('download_complete', {'filename': os.path.basename(file_path)}, to=socketid)
@@ -499,7 +485,6 @@ def download():
             else:
                 flash("File not found after download.")
                 return redirect(url_for('index'))
-
     except subprocess.CalledProcessError as e:
         flash(f"Error: {str(e)}")
         return redirect(url_for('index'))
@@ -510,24 +495,6 @@ def download():
         logger.error(f"An unexpected error occurred: {str(e)}")
         flash(f"An unexpected error occurred: {str(e)}")
         return redirect(url_for('index'))
-
-    return redirect(url_for('index'))
-
-@app.route('/uploads/<path:filename>', methods=['GET', 'POST'])
-def upload(filename):
-    uploads = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
-    return send_from_directory(uploads, filename)
-
-# Database initialization logic for Render
-engine = sa.create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
-inspector = sa.inspect(engine)
-if not inspector.has_table("user"):
-    with app.app_context():
-        db.drop_all()
-        db.create_all()
-        app.logger.info('Initialized the database!')
-else:
-    app.logger.info('Database already contains the users table.')
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
