@@ -242,6 +242,21 @@ def index():
             text-align: center;
             margin-top: 10px;
         }
+        .progress {
+            background-color: #e0e0e0;
+            border-radius: 13px;
+            padding: 3px;
+            margin-top: 20px;
+        }
+        .progress-bar {
+            background-color: #76c7c0;
+            width: 0%;
+            height: 25px;
+            border-radius: 10px;
+            text-align: center;
+            line-height: 25px;
+            color: white;
+        }
         /* Responsive Design */
         @media (max-width: 800px) {
             .topbar {
@@ -313,8 +328,10 @@ def index():
             alert('Download complete: ' + data.filename);
         });
         socket.on('progress', function(data) {
+            console.log("Progress received:", data.progress);
             var progress = data.progress;
             document.getElementById("progressBar").style.width = progress + "%";
+            document.getElementById("progressBar").innerText = Math.round(progress) + "%";
         });
     </script>
 </head>
@@ -381,7 +398,7 @@ def index():
                             </div>
                         </div>
                         <div class="progress">
-                            <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                            <div id="progressBar" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
                         </div>
                     </div>
                 </article>
@@ -428,8 +445,10 @@ def download():
                 downloaded_size = d.get('downloaded_bytes', 0)
                 if total_size > 0:
                     progress = (downloaded_size / total_size) * 100
+                    print(f"Emitting progress: {progress}%")
                     socketio.emit('progress', {'progress': progress})
             elif d['status'] == 'finished':
+                print("Download finished, emitting 100% progress")
                 socketio.emit('progress', {'progress': 100})
         
         ydl_opts['progress_hooks'] = [progress_hook]
