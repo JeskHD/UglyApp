@@ -9,7 +9,7 @@ import sqlalchemy as sa
 import glob
 import base64
 import logging
-from tqdm import tqdm  # Import tqdm for progress bars
+from tqdm import tqdm
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
@@ -19,15 +19,12 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 socketio = SocketIO(app)
 db = SQLAlchemy(app)
 
-# Ensure the downloads directory exists in the user's Downloads folder
 DOWNLOADS_DIR = os.path.join(os.path.expanduser("~"), 'Downloads')
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
-# Configure logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# Example model for demonstration
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)
@@ -48,11 +45,10 @@ def get_base64_font(font_path):
 def index():
     try:
         background_base64 = get_base64_image('uglygif.gif')
-        logo_base64 = get_base64_image('uglylogo.png')
         font_base64 = get_base64_font('PORKH___.TTF.ttf')
 
         html_content = '''
-       <!DOCTYPE html>
+             <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -401,30 +397,26 @@ def download():
         return redirect(url_for('index'))
 
     try:
-        # Paths to ffmpeg and ffprobe
         ffmpeg_location = '/usr/bin/ffmpeg'
         ffprobe_location = '/usr/bin/ffprobe'
 
-        # Set the cookie file path based on user input
         cookie_file = None
         ydl_opts = {
             'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
             'ffmpeg_location': ffmpeg_location,
             'ffprobe_location': ffprobe_location,
-            'hls_use_mpegts': True,  # Ensure HLS processing for all formats
-            'nooverwrites': True,  # Skip existing files instead of overwriting
+            'hls_use_mpegts': True,
+            'nooverwrites': True,
         }
 
-        # Use tqdm for progress bar
         with tqdm(total=100, desc="Processing", unit="step") as pbar:
-            # Handle Twitter Spaces downloads separately
             if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
                 cookie_file = 'cookies_netscape.txt'
                 audio_format = request.form.get('audio_format', 'm4a/mp3')
                 output_template = os.path.join(DOWNLOADS_DIR, '%(title)s')
                 
                 command = [
-                    '/root/UglyApp/venv/bin/twspace_dl',  # Use the full path to twspace_dl
+                    '/root/UglyApp/venv/bin/twspace_dl',
                     '-i', url,
                     '-c', cookie_file,
                     '-o', output_template
@@ -438,23 +430,21 @@ def download():
                         break
                     if output:
                         print(output.strip())
-                        socketio.emit('eta', {'data': output.strip()})
-                        pbar.update(10)  # Update progress bar
+                        socketio.emit('log', {'message': output.strip()})
+                        pbar.update(10)
 
                 process.wait()
 
                 if process.returncode == 0:
-                    # Find the most recently modified file in the DOWNLOADS_DIR
                     list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
                     latest_file = max(list_of_files, key=os.path.getmtime)
                     
                     if os.path.exists(latest_file):
                         if audio_format == 'mp3' and latest_file.endswith('.m4a'):
-                            # Convert to MP3
                             mp3_file = latest_file.replace('.m4a', '.mp3')
                             convert_command = [
                                 ffmpeg_location,
-                                '-n',  # Skip overwriting existing files
+                                '-n',
                                 '-i', latest_file,
                                 '-codec:a', 'libmp3lame',
                                 '-qscale:a', '2',
@@ -464,7 +454,7 @@ def download():
                             latest_file = mp3_file
 
                         socketio.emit('download_complete', {'filename': os.path.basename(latest_file)})
-                        pbar.update(100)  # Complete progress bar
+                        pbar.update(100)
                         return send_file(latest_file, as_attachment=True, download_name=os.path.basename(latest_file))
                     else:
                         flash("File not found after download.")
@@ -473,23 +463,20 @@ def download():
                     flash("Error during the download process.")
                     return redirect(url_for('index'))
             
-            # Use cookies for YouTube downloads
             elif 'youtube.com' in url:
-                cookie_file = 'youtube_cookies.txt'  # Update with your actual path
+                cookie_file = 'youtube_cookies.txt'
                 ydl_opts.update({
                     'cookiefile': cookie_file,
-                    'username': 'oauth2',  # Comment this line if not using OAuth
-                    'password': '',  # Comment this line if not using OAuth
+                    'username': 'oauth2',
+                    'password': '',
                 })
 
-            # Use cookies for SoundCloud downloads
             elif 'soundcloud.com' in url:
-                cookie_file = 'soundcloud_cookies.txt'  # Update with your actual path
+                cookie_file = 'soundcloud_cookies.txt'
                 ydl_opts.update({
                     'cookiefile': cookie_file,
                 })
             
-            # Determine if downloading audio or video
             if format == 'audio':
                 audio_format = request.form['audio_format']
                 ydl_opts.update({
@@ -507,7 +494,6 @@ def download():
                     'merge_output_format': 'mp4'
                 })
 
-            # Download and process using yt-dlp
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info_dict = ydl.extract_info(url, download=True)
                 file_path = ydl.prepare_filename(info_dict)
@@ -525,7 +511,7 @@ def download():
                         mp3_file = file_path.replace('.m4a', '.mp3')
                         convert_command = [
                             ffmpeg_location,
-                            '-n',  # Skip overwriting existing files
+                            '-n',
                             '-i', file_path,
                             '-codec:a', 'libmp3lame',
                             '-qscale:a', '2',
@@ -537,7 +523,7 @@ def download():
                         mov_file = file_path.replace('.mp4', '.mov')
                         convert_command = [
                             ffmpeg_location,
-                            '-n',  # Skip overwriting existing files
+                            '-n',
                             '-i', file_path,
                             '-c:v', 'copy',
                             '-c:a', 'copy',
@@ -548,8 +534,8 @@ def download():
                     else:
                         file_to_send = file_path
 
-                    pbar.update(100)  # Complete progress bar
-                    socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
+                    socketio.emit('log', {'message': f"Download complete: {os.path.basename(file_to_send)}"})
+                    pbar.update(100)
                     return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
                 else:
                     flash("File not found after download.")
@@ -565,23 +551,7 @@ def download():
         flash(f"An unexpected error occurred: {str(e)}")
         return redirect(url_for('index'))
 
-    return redirect(url_for('index'))  # Ensure there is a return statement in all paths
-
-@app.route('/uploads/<path:filename>', methods=['GET', 'POST'])
-def upload(filename):
-    uploads = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
-    return send_from_directory(uploads, filename)
-
-# Database initialization logic for Render
-engine = sa.create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
-inspector = sa.inspect(engine)
-if not inspector.has_table("user"):
-    with app.app_context():
-        db.drop_all()
-        db.create_all()
-        app.logger.info('Initialized the database!')
-else:
-    app.logger.info('Database already contains the users table.')
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
