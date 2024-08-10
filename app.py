@@ -1,17 +1,15 @@
 from flask import Flask, render_template_string
 from flask_socketio import SocketIO, emit
 import eventlet
-import eventlet.wsgi
 import os
 
 app = Flask(__name__)
-app.secret_key = 'test_secret_key'
+app.secret_key = 'your_secret_key'
 socketio = SocketIO(app, async_mode='eventlet')
 
 @app.route('/')
 def index():
-    # A simple template with a button to test WebSocket communication
-    html_content = '''
+    return render_template_string('''
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -47,8 +45,7 @@ def index():
         <p id="response">No response yet</p>
     </body>
     </html>
-    '''
-    return render_template_string(html_content)
+    ''')
 
 @socketio.on('test_message')
 def handle_test_message(json):
@@ -56,6 +53,5 @@ def handle_test_message(json):
     emit('test_response', {'message': 'Hello from server'})
 
 if __name__ == '__main__':
-    # Use eventlet for production use
     eventlet.monkey_patch()
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    socketio.run(app, host='0.0.0.0', port=8000, debug=True)
