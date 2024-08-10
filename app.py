@@ -439,17 +439,17 @@ def download():
             'nooverwrites': True,  # Skip existing files instead of overwriting
         }
 
-        def progress_hook(d):
-            if d['status'] == 'downloading':
-                total_size = d.get('total_bytes', 0)
-                downloaded_size = d.get('downloaded_bytes', 0)
-                if total_size > 0:
-                    progress = (downloaded_size / total_size) * 100
-                    print(f"Emitting progress: {progress}%")
-                    socketio.emit('progress', {'progress': progress})
-            elif d['status'] == 'finished':
-                print("Download finished, emitting 100% progress")
-                socketio.emit('progress', {'progress': 100})
+       def progress_hook(d):
+    if d['status'] == 'downloading':
+        total_size = d.get('total_bytes', 0)
+        downloaded_size = d.get('downloaded_bytes', 0)
+        if total_size > 0:
+            progress = (downloaded_size / total_size) * 100
+            print(f"Progress: {progress}%")  # Debug print
+            socketio.emit('progress', {'progress': progress})
+    elif d['status'] == 'finished':
+        print("Download finished, emitting 100% progress")
+        socketio.emit('progress', {'progress': 100})
         
         ydl_opts['progress_hooks'] = [progress_hook]
 
