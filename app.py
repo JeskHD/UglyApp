@@ -2,6 +2,11 @@ from flask import Flask, render_template_string
 from flask_socketio import SocketIO, emit
 import eventlet
 import os
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -35,6 +40,33 @@ def index():
                     console.log('Sending test message to server');
                     socket.emit('test_message', {'data': 'Hello from client'});
                 });
+
+                // Capture any errors or disconnects
+                socket.on('disconnect', function() {
+                    console.error('Disconnected from server');
+                    document.getElementById('status').innerHTML = 'Disconnected from server';
+                });
+
+                socket.on('connect_error', function(error) {
+                    console.error('Connection error:', error);
+                    document.getElementById('status').innerHTML = 'Connection error: ' + error;
+                });
+
+                socket.on('connect_timeout', function() {
+                    console.error('Connection timed out');
+                    document.getElementById('status').innerHTML = 'Connection timed out';
+                });
+
+                socket.on('reconnect_attempt', function() {
+                    console.log('Attempting to reconnect...');
+                    document.getElementById('status').innerHTML = 'Attempting to reconnect...';
+                });
+
+                socket.on('reconnect_failed', function() {
+                    console.error('Reconnection failed');
+                    document.getElementById('status').innerHTML = 'Reconnection failed';
+                });
+
             });
         </script>
     </head>
@@ -49,9 +81,15 @@ def index():
 
 @socketio.on('test_message')
 def handle_test_message(json):
-    print(f'Received test message: {json}')
-    emit('test_response', {'message': 'Hello from server'})
+    try:
+        logger.debug(f'Received test message: {json}')
+        emit('test_response', {'message': 'Hello from server'})
+    except Exception as e:
+        logger.error(f"Error handling message: {str(e)}")
 
 if __name__ == '__main__':
-    eventlet.monkey_patch()
-    socketio.run(app, host='0.0.0.0', port=8000, debug=True)
+    try:
+        eventlet.monkey_patch()
+        socketio.run(app, host='0.0.0.0', port=8000, debug=True)
+    except Exception as e:
+        logger.error(f"Critical error on startup: {str(e)}")
