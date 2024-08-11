@@ -1,7 +1,6 @@
 from flask import Flask, render_template_string
 from flask_socketio import SocketIO, emit
 import eventlet
-import os
 import logging
 
 # Configure logging
@@ -10,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
-socketio = SocketIO(app, async_mode='eventlet')
+socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*")
 
 @app.route('/')
 def index():
@@ -41,7 +40,6 @@ def index():
                     socket.emit('test_message', {'data': 'Hello from client'});
                 });
 
-                // Capture any errors or disconnects
                 socket.on('disconnect', function() {
                     console.error('Disconnected from server');
                     document.getElementById('status').innerHTML = 'Disconnected from server';
@@ -66,7 +64,6 @@ def index():
                     console.error('Reconnection failed');
                     document.getElementById('status').innerHTML = 'Reconnection failed';
                 });
-
             });
         </script>
     </head>
