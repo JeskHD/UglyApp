@@ -290,6 +290,30 @@ def index():
                 transform: translateX(100%) scaleX(0.5);
             }
         }
+        
+        /* Added demo-container and progress-bar-value CSS */
+        body {
+            margin: 0;
+            padding: 25px;
+        }
+        .demo-container {
+            width: 300px;
+            margin: auto;
+        }
+        .progress-bar {
+            height: 4px;
+            background-color: rgba(5, 114, 206, 0.2);
+            width: 100%;
+            overflow: hidden;
+        }
+        .progress-bar-value {
+            width: 100%;
+            height: 100%;
+            background-color: rgb(5, 114, 206);
+            animation: indeterminateAnimation 1s infinite linear;
+            transform-origin: 0% 50%;
+        }
+
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
     <script type="text/javascript">
@@ -479,6 +503,14 @@ def index():
                         <div id="progressBarContainer" class="progress" style="display:none;">
                             <div id="progressBar" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
                         </div>
+
+                        <!-- Added Demo Container with Progress Bar -->
+                        <div class="demo-container">
+                            <div class="progress-bar">
+                                <div class="progress-bar-value"></div>
+                            </div>
+                        </div>
+
                     </div>
                 </article>
             </section>
