@@ -150,7 +150,7 @@ def index():
                     justify-content: center;
                     align-items: center;
                     text-align: center;
-                    padding-top: 100px; /* Adjusted to move content closer to the topbar */
+                    padding-top: 100px;
                 }
                 .Wrapper {
                     text-align: center;
@@ -291,7 +291,7 @@ def index():
                             progressBar.innerText = Math.round(progress) + "%";
                         }
                     });
-
+                
                     socket.on('download_complete', function(data) {
                         alert('Download complete: ' + data.filename);
                     });
@@ -641,11 +641,11 @@ else:
 @app.errorhandler(Exception)
 def handle_exception(e):
     logger.error("Unhandled exception", exc_info=True)
-         response = {
-            "message": "An internal error occurred.",
-            "details": str(e)
-        }
-        return jsonify(response), 500
+    response = {
+        "message": "An internal error occurred.",
+        "details": str(e)
+    }
+    return jsonify(response), 500
 
 if __name__ == '__main__':
     try:
