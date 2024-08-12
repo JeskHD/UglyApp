@@ -101,8 +101,19 @@ def handle_exception(e):
     }
     return jsonify(response), 500
 
+def debug_greenlet():
+    # Function to log the status of greenlets
+    greenlets = gevent.hub.get_hub().loop.greenlet.get_children()
+    for g in greenlets:
+        if g.dead:
+            logger.debug(f"Dead Greenlet: {g}")
+        else:
+            logger.debug(f"Active Greenlet: {g}")
+
 if __name__ == '__main__':
     try:
+        debug_greenlet()  # Check the greenlets at startup
         socketio.run(app, host='0.0.0.0', port=8000, debug=True)
     except Exception as e:
         logger.error(f"Critical error on startup: {str(e)}", exc_info=True)
+        debug_greenlet()  # Check the greenlets if there's a startup error
