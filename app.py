@@ -466,17 +466,33 @@ def download():
             'nooverwrites': True,  # Skip existing files instead of overwriting
         }
 
-        def progress_hook(d):
-            if d['status'] == 'downloading':
-                total_size = d.get('total_bytes') or d.get('total_bytes_estimate')
-                downloaded_size = d.get('downloaded_bytes', 0)
-            if total_size:
-                progress = (downloaded_size / total_size) * 100
-                print(f"Total Size: {total_size}, Downloaded: {downloaded_size}, Progress: {progress}%")
-                socketio.emit('progress', {'progress': progress})
-            elif d['status'] == 'finished':
-                print("Download finished, emitting 100% progress")
-                socketio.emit('progress', {'progress': 100})
+       def progress_hook(d):
+    try:
+        # Initialize total_size from 'total_bytes' or 'total_bytes_estimate'
+        total_size = d.get('total_bytes') or d.get('total_bytes_estimate')
+
+        # Ensure total_size is available before proceeding
+        if total_size:
+            downloaded_size = d.get('downloaded_bytes', 0)
+            progress = (downloaded_size / total_size) * 100
+
+            # Emit the progress to the client
+            socketio.emit('progress', {'progress': progress})
+
+            print(f"Total Size: {total_size}, Downloaded: {downloaded_size}, Progress: {progress}%")
+        else:
+            # If total_size isn't available, handle the case appropriately
+            print("Total size not available, skipping progress update.")
+
+        # Handle the finished status
+        if d['status'] == 'finished':
+            socketio.emit('progress', {'progress': 100})
+            print("Download finished, emitting 100% progress")
+
+    except Exception as e:
+        logger.error(f"Error in progress hook: {str(e)}")
+
+        
 
         ydl_opts['progress_hooks'] = [progress_hook]
 
