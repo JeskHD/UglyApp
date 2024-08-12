@@ -139,19 +139,24 @@ def index():
             position: relative;
             top: 2px;
         }
+        
         .bimage {
-            background: linear-gradient(rgba(255, 7, 156, 0.585), rgba(104, 97, 97, 0.5)), url("data:image/gif;base64,{{ background_base64 }}");
-            height: 800px;
-            width: 100%;
-            background-repeat: no-repeat;
-            background-position: center;
-            background-size: cover;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            padding-top: 100px; /* Adjusted to move content closer to the topbar */
+    background: linear-gradient(rgba(255, 7, 156, 0.585), rgba(104, 97, 97, 0.5)), 
+                url("data:image/gif;base64,{{ background_base64 }}");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding-top: 100px; /* Adjust this value if needed */
+    padding-bottom: 100px; /* Optional: Adds some space at the bottom */
+}
+
         }
         .Wrapper {
             text-align: center;
