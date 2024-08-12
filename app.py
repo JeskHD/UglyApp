@@ -12,6 +12,7 @@ import logging
 from tqdm import tqdm
 import gevent
 import gevent.monkey
+import time  # Import time module to measure time
 
 # Patch the standard library to make it cooperative with gevent
 gevent.monkey.patch_all()
@@ -346,7 +347,7 @@ def index():
         });
 
         socket.on('download_complete', function(data) {
-            alert('Download complete: ' + data.filename);
+            alert('Download complete: ' + data.filename + ' (Time: ' + data.time_taken + ' seconds)');
             // Hide the progress bar after download completes
             document.getElementById("progressBarContainer").style.display = "none";
             document.getElementById("indeterminateBar").style.display = "none";
@@ -558,6 +559,8 @@ def download():
             'nooverwrites': True,  # Skip existing files instead of overwriting
         }
 
+        start_time = time.time()  # Start time for download
+
         def progress_hook(d):
             try:
                 # Initialize total_size from 'total_bytes' or 'total_bytes_estimate'
@@ -631,7 +634,9 @@ def download():
                         subprocess.run(convert_command, check=True)
                         latest_file = mp3_file
 
-                    socketio.emit('download_complete', {'filename': os.path.basename(latest_file)})
+                    end_time = time.time()  # End time for download
+                    time_taken = end_time - start_time  # Calculate total time taken
+                    socketio.emit('download_complete', {'filename': os.path.basename(latest_file), 'time_taken': time_taken})
                     return send_file(latest_file, as_attachment=True, download_name=os.path.basename(latest_file))
                 else:
                     flash("File not found after download.")
@@ -696,7 +701,9 @@ def download():
                     file_path = file_path.replace('.mp4', '.mov')
 
             if os.path.exists(file_path):
-                socketio.emit('download_complete', {'filename': os.path.basename(file_path)})
+                end_time = time.time()  # End time for download
+                time_taken = end_time - start_time  # Calculate total time taken
+                socketio.emit('download_complete', {'filename': os.path.basename(file_path), 'time_taken': time_taken})
                 return send_file(file_path, as_attachment=True, download_name=os.path.basename(file_path))
             else:
                 flash("File not found after download.")
