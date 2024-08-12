@@ -1,6 +1,11 @@
 from flask import Flask, render_template_string
 from flask_socketio import SocketIO, emit
+import gevent
+import gevent.monkey
 import logging
+
+# Patch the standard library to make it cooperative with gevent
+gevent.monkey.patch_all()
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -8,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
-socketio = SocketIO(app, cors_allowed_origins="*")  # Removed async_mode
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 @app.route('/')
 def index():
