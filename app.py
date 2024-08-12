@@ -641,11 +641,11 @@ else:
 @app.errorhandler(Exception)
 def handle_exception(e):
     logger.error("Unhandled exception", exc_info=True)
-     response = {
-        "message": "An internal error occurred.",
-        "details": str(e)
-    }
-    return jsonify(response), 500
+         response = {
+            "message": "An internal error occurred.",
+            "details": str(e)
+        }
+        return jsonify(response), 500
 
 if __name__ == '__main__':
     try:
