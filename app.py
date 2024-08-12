@@ -57,7 +57,6 @@ def get_base64_font(font_path):
 def index():
     try:
         background_base64 = get_base64_image('uglygif.gif')
-        logo_base64 = get_base64_image('uglylogo.png')
         font_base64 = get_base64_font('PORKH___.TTF.ttf')
 
         html_content = '''
