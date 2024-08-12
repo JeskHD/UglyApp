@@ -250,7 +250,6 @@ def index():
             text-align: center;
             margin-top: 10px;
         }
-
         .progress {
             background-color: #e0e0e0;
             border-radius: 13px;
@@ -270,14 +269,17 @@ def index():
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
     <script type="text/javascript">
         document.addEventListener('DOMContentLoaded', function() {
-            var socket = io.connect('http://167.172.128.150', {
+            var socket = io.connect('http://' + window.location.hostname, {
                 transports: ['websocket'],
                 rejectUnauthorized: false
             });
 
             socket.on('connect', function() {
                 console.log('Connected to server');
-                document.getElementById('status').innerHTML = 'Connected to server';
+                var statusElement = document.getElementById('status');
+                if (statusElement) {
+                    statusElement.innerHTML = 'Connected to server';
+                }
             });
 
             socket.on('progress', function(data) {
@@ -296,37 +298,58 @@ def index():
 
             socket.on('test_response', function(data) {
                 console.log('Response from server:', data);
-                document.getElementById('response').innerHTML = 'Response from server: ' + data.message;
+                var responseElement = document.getElementById('response');
+                if (responseElement) {
+                    responseElement.innerHTML = 'Response from server: ' + data.message;
+                }
             });
 
-            document.getElementById('sendButton').addEventListener('click', function() {
-                console.log('Sending test message to server');
-                socket.emit('test_message', {'data': 'Hello from client'});
-            });
+            var sendButton = document.getElementById('sendButton');
+            if (sendButton) {
+                sendButton.addEventListener('click', function() {
+                    console.log('Sending test message to server');
+                    socket.emit('test_message', {'data': 'Hello from client'});
+                });
+            }
 
             socket.on('disconnect', function() {
                 console.error('Disconnected from server');
-                document.getElementById('status').innerHTML = 'Disconnected from server';
+                var statusElement = document.getElementById('status');
+                if (statusElement) {
+                    statusElement.innerHTML = 'Disconnected from server';
+                }
             });
 
             socket.on('connect_error', function(error) {
                 console.error('Connection error:', error);
-                document.getElementById('status').innerHTML = 'Connection error: ' + error;
+                var statusElement = document.getElementById('status');
+                if (statusElement) {
+                    statusElement.innerHTML = 'Connection error: ' + error;
+                }
             });
 
             socket.on('connect_timeout', function() {
                 console.error('Connection timed out');
-                document.getElementById('status').innerHTML = 'Connection timed out';
+                var statusElement = document.getElementById('status');
+                if (statusElement) {
+                    statusElement.innerHTML = 'Connection timed out';
+                }
             });
 
             socket.on('reconnect_attempt', function() {
                 console.log('Attempting to reconnect...');
-                document.getElementById('status').innerHTML = 'Attempting to reconnect...';
+                var statusElement = document.getElementById('status');
+                if (statusElement) {
+                    statusElement.innerHTML = 'Attempting to reconnect...';
+                }
             });
 
             socket.on('reconnect_failed', function() {
                 console.error('Reconnection failed');
-                document.getElementById('status').innerHTML = 'Reconnection failed';
+                var statusElement = document.getElementById('status');
+                if (statusElement) {
+                    statusElement.innerHTML = 'Reconnection failed';
+                }
             });
         });
     </script>
@@ -363,7 +386,7 @@ def index():
                         <br>
                         <div class="form-container">
                             <form action="/download" method="post" enctype="multipart/form-data">
-                               <div class="AllC">
+                                <div class="AllC">
                                     <input type="text" name="audio_url" placeholder="Enter audio URL" class="searchbox">
                                     <select name="audio_format" class="dropdown1">
                                         <option value="mp3">MP3</option>
@@ -554,40 +577,21 @@ def download():
                 file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
             else:
                 if video_format == 'mov':
-                    file_path = file_path.replace('.mp4', f'.mp4')
-                else:
-                    file_path = file_path.replace('.mp4', f'.{video_format}').replace('.m4a', f'.{video_format}')
-                
-            if os.path.exists(file_path):
-                if format == 'audio' and audio_format == 'mp3':
-                    mp3_file = file_path.replace('.m4a', '.mp3')
-                    convert_command = [
-                        ffmpeg_location,
-                        '-n',  # Skip overwriting existing files
-                        '-i', file_path,
-                        '-codec:a', 'libmp3lame',
-                        '-qscale:a', '2',
-                        mp3_file
-                    ]
-                    subprocess.run(convert_command, check=True)
-                    file_to_send = mp3_file
-                elif format == 'video' and video_format == 'mov':
-                    mov_file = file_path.replace('.mp4', '.mov')
+                    file_path = file_path.replace('.mp4', f'.mov')
                     convert_command = [
                         ffmpeg_location,
                         '-n',  # Skip overwriting existing files
                         '-i', file_path,
                         '-c:v', 'copy',
                         '-c:a', 'copy',
-                        mov_file
+                        file_path.replace('.mp4', '.mov')
                     ]
                     subprocess.run(convert_command, check=True)
-                    file_to_send = mov_file
-                else:
-                    file_to_send = file_path
+                    file_path = file_path.replace('.mp4', '.mov')
 
-                socketio.emit('download_complete', {'filename': os.path.basename(file_to_send)})
-                return send_file(file_to_send, as_attachment=True, download_name=os.path.basename(file_to_send))
+            if os.path.exists(file_path):
+                socketio.emit('download_complete', {'filename': os.path.basename(file_path)})
+                return send_file(file_path, as_attachment=True, download_name=os.path.basename(file_path))
             else:
                 flash("File not found after download.")
                 return redirect(url_for('index'))
