@@ -85,6 +85,7 @@ def index():
             font-family: "Poppins", sans-serif;
             width: 100%;
             overflow-x: hidden;
+            padding: 25px;
         }
         .topbar {
             font-family: "Montserrat", "Poppins", "Avenir";
@@ -293,10 +294,6 @@ def index():
         }
         
         /* Added demo-container and progress-bar-value CSS */
-        body {
-            margin: 0;
-            padding: 25px;
-        }
         .demo-container {
             width: 300px;
             margin: auto;
@@ -315,92 +312,20 @@ def index():
             transform-origin: 0% 50%;
         }
 
-    </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
-    <script type="text/javascript">
-    document.addEventListener('DOMContentLoaded', function() {
-    // Ensure socket is defined globally
-    var socket = io.connect(window.location.protocol + '//' + window.location.hostname + ':5000', {
-        transports: ['websocket'],
-        rejectUnauthorized: false
-    });
-
-    socket.on('connect', function() {
-        console.log('Connected to server');
-    });
-
-    // Bind the download buttons to socket emit event and show the progress bar
-    var audioButton = document.querySelector("button[name='format'][value='audio']");
-    var videoButton = document.querySelector("button[name='format'][value='video']");
-    
-    if (audioButton) {
-        audioButton.onclick = function() {
-            socket.emit('start_download');
-            showIndeterminateProgressBar(); // Show the progress bar
-        };
-    }
-
-    if (videoButton) {
-        videoButton.onclick = function() {
-            socket.emit('start_download');
-            showIndeterminateProgressBar(); // Show the progress bar
-        };
-    }
-
-    socket.on('progress', function(data) {
-        console.log("Progress received:", data.progress);
-        var progress = data.progress;
-        var progressBar = document.getElementById("progressBar");
-        if (progressBar) {
-            // Hide the indeterminate bar and show the determinate bar
-            document.getElementById("indeterminateBar").style.display = "none";
-            document.getElementById("progressBarContainer").style.display = "block";
-            progressBar.style.width = progress + "%";
-            progressBar.innerText = Math.round(progress) + "%";
+        /* Hide/show progress bar with checkbox */
+        #progress-toggle {
+            display: none;
         }
-    });
 
-    socket.on('download_complete', function(data) {
-        alert('Download complete: ' + data.filename);
-        // Hide the progress bar after download completes
-        hideProgressBar();
-    });
+        #progress-toggle:checked ~ .demo-container {
+            display: block;
+        }
 
-    function showIndeterminateProgressBar() {
-        document.getElementById("indeterminateBar").style.display = "block";
-        document.getElementById("progressBarContainer").style.display = "none";
-    }
+        .demo-container {
+            display: none;
+        }
 
-    function hideProgressBar() {
-        document.getElementById("indeterminateBar").style.display = "none";
-        document.getElementById("progressBarContainer").style.display = "none";
-    }
-
-    socket.on('disconnect', function() {
-        console.error('Disconnected from server');
-        hideProgressBar(); // Hide the progress bar if the server disconnects
-    });
-
-    socket.on('connect_error', function(error) {
-        console.error('Connection error:', error);
-        hideProgressBar(); // Hide the progress bar on connection error
-    });
-
-    socket.on('connect_timeout', function() {
-        console.error('Connection timed out');
-        hideProgressBar(); // Hide the progress bar on connection timeout
-    });
-
-    socket.on('reconnect_attempt', function() {
-        console.log('Attempting to reconnect...');
-    });
-
-    socket.on('reconnect_failed', function() {
-        console.error('Reconnection failed');
-        hideProgressBar(); // Hide the progress bar on reconnection failure
-    });
-});
-</script>
+    </style>
 </head>
 <body>
     <div class="topbar">
@@ -433,14 +358,17 @@ def index():
                         <p class="uglydesc">Download Ugly Bros' art, music, and videos swiftly with UglyDownloader. Quality and simplicity in one click.</p>
                         <br>
                         <div class="form-container">
-                            <form action="/download" method="post" enctype="multipart/form-data">
+                            <!-- Hidden checkbox to toggle progress bar visibility -->
+                            <input type="checkbox" id="progress-toggle">
+
+                            <form action="/download" method="post" enctype="multipart/form-data" onsubmit="document.getElementById('progress-toggle').checked = true;">
                                 <div class="AllC">
                                     <input type="text" name="audio_url" placeholder="Enter audio URL" class="searchbox">
                                     <select name="audio_format" class="dropdown1">
                                         <option value="mp3">MP3</option>
                                         <option value="m4a">M4A</option>
                                     </select>
-                                    <button type="submit" name="format" value="audio" class="btn1" onclick="socket.emit('start_download');">Download Audio</button>
+                                    <button type="submit" name="format" value="audio" class="btn1">Download Audio</button>
                                     <br>
                                     <p class="or">OR</p><br>
                                     <input type="text" name="video_url" placeholder="Enter video URL" class="searchbox">
@@ -448,7 +376,7 @@ def index():
                                         <option value="mp4">MP4</option>
                                         <option value="mov">MOV</option>
                                     </select>
-                                    <button type="submit" name="format" value="video" class="btn2" onclick="socket.emit('start_download');">Download Video</button>
+                                    <button type="submit" name="format" value="video" class="btn2">Download Video</button>
                                     <br><br>
                             </form>
                             <p class="url">Enter your desired URL and let it do the trick</p>
@@ -464,16 +392,8 @@ def index():
                                 {% endwith %}
                             </div>
                         </div>
-                        <!-- Indeterminate Progress Bar -->
-                        <div id="indeterminateBar" class="indeterminate-bar" style="display:none;">
-                            <div class="indeterminate-bar-value"></div>
-                        </div>
-                        <!-- Determinate Progress Bar -->
-                        <div id="progressBarContainer" class="progress" style="display:none;">
-                            <div id="progressBar" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
-                        </div>
 
-                        <!-- Added Demo Container with Progress Bar -->
+                        <!-- Demo Container with Progress Bar -->
                         <div class="demo-container">
                             <div class="progress-bar">
                                 <div class="progress-bar-value"></div>
