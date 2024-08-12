@@ -263,7 +263,7 @@ def index():
             margin: 20px auto;
             display: none; /* Hidden by default */
             position: relative;
-            top: 30px;
+            top: 100px;
         }
         .progress-bar {
             height: 4px;
