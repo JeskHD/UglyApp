@@ -65,6 +65,7 @@ def index():
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="HTML WEB DESIGN" content="Web Design">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ugly Downloader</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -74,8 +75,11 @@ def index():
     <style>
         @font-face {
             font-family: 'Porkys';
-            src: url(data:font/ttf;base64,{{ font_base64 }}) format('truetype');
+            src: Q==) format('woff');
+            font-weight: normal;
+            font-style: normal;
         }
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -85,7 +89,6 @@ def index():
             font-family: "Poppins", sans-serif;
             width: 100%;
             overflow-x: hidden;
-            padding: 25px;
         }
         .topbar {
             font-family: "Montserrat", "Poppins", "Avenir";
@@ -139,28 +142,25 @@ def index():
             position: relative;
             top: 2px;
         }
-        
         .bimage {
-    background: linear-gradient(rgba(255, 7, 156, 0.585), rgba(104, 97, 97, 0.5)), 
-                url("data:image/gif;base64,{{ background_base64 }}");
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: cover;
-    min-height: 100vh;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    padding-top: 100px; /* Adjust this value if needed */
-    padding-bottom: 100px; /* Optional: Adds some space at the bottom */
-}
-
+            background: linear-gradient(rgba(255, 7, 156, 0.585), rgba(104, 97, 97, 0.5)), url("data:image/gif;base64,{{ background_base64 }}");
+            min-height: 100vh;
+            width: 100%;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: cover;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding-top: 100px; /* Adjusted to move content closer to the topbar */
         }
         .Wrapper {
             text-align: center;
             padding: 20px;
+            width: 100%;
+            max-width: 1200px;
         }
         .UglyStay {
             color: rgb(255, 136, 237);
@@ -256,81 +256,126 @@ def index():
             text-align: center;
             margin-top: 10px;
         }
-        .progress {
-            background-color: #e0e0e0;
-            border-radius: 13px;
-            padding: 3px;
-            margin-top: 20px;
-            position: relative;
-            display: none; /* Initially hidden */
-        }
-        .progress-bar {
-            background-color: #76c7c0;
-            width: 0%;
-            height: 25px;
-            border-radius: 10px;
-            text-align: center;
-            line-height: 25px;
-            color: white;
-            transition: width 0.4s ease;
-        }
-        .indeterminate-bar {
-            background-color: rgba(255, 105, 180, 0.2); /* Pink background */
-            height: 4px;
-            overflow: hidden;
-        }
-        .indeterminate-bar-value {
-            width: 100%;
-            height: 100%;
-            background-color: rgb(255, 105, 180); /* Pink color */
-            animation: indeterminateAnimation 1s infinite linear;
-            transform-origin: 0% 50%;
-        }
-        @keyframes indeterminateAnimation {
-            0% {
-                transform: translateX(0) scaleX(0);
-            }
-            40% {
-                transform: translateX(0) scaleX(0.4);
-            }
-            100% {
-                transform: translateX(100%) scaleX(0.5);
-            }
-        }
         
-        /* Added demo-container and progress-bar-value CSS */
-        .demo-container {
-            width: 300px;
-            margin: auto;
+        /* Progress Bar Styles */
+        .progress-bar-container {
+            display: none; /* Hidden by default */
+            width: 100%;
+            max-width: 600px;
+            margin: 20px auto;
         }
         .progress-bar {
-            height: 4px;
-            background-color: rgba(5, 114, 206, 0.2);
             width: 100%;
+            height: 8px;
+            background-color: #ddd;
+            border-radius: 4px;
             overflow: hidden;
         }
-        .progress-bar-value {
-            width: 100%;
+        .progress-bar-inner {
             height: 100%;
-            background-color: rgb(5, 114, 206);
-            animation: indeterminateAnimation 1s infinite linear;
-            transform-origin: 0% 50%;
+            width: 0;
+            background-color: #fa50d3;
+            border-radius: 4px;
+            transition: width 1s linear;
         }
 
-        /* Hide/show progress bar with checkbox */
-        #progress-toggle {
-            display: none;
+        /* Responsive Design */
+        @media (max-width: 800px) {
+            .topbar {
+                flex-direction: row;
+                align-items: center;
+                padding: 10px 10px;
+            }
+            .topbar .menu-toggle {
+                display: block;
+            }
+            .topbar ul {
+                display: none;
+                flex-direction: column;
+                align-items: center;
+                width: 100%;
+                margin-top: 10px;
+            }
+            .topbar ul.active {
+                display: flex;
+                font-size: 10px;
+                top: 11px;
+                border: 1px solid white;
+                flex-direction: column;
+                position: absolute;
+                background-color: rgba(0, 0, 0, 0.8);
+                right: 10px;
+                top: 30px;
+                width: 200px;
+                padding: 10px;
+            }
+            .topbar h2 {
+                font-size: 24px;
+            }
+            .UglyStay {
+                font-size: 30px;
+                margin-top: 40px;
+                text-align: center;
+                position: relative;
+                right: 16px;
+            }
+            .uglydesc {
+                font-size: 16px;
+                margin: 20px 20px;
+                text-align: center;
+                position: relative;
+                right: 16px;
+            }
+            .form-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            .searchbox, .dropdown1, .dropdown2, .btn1, .btn2 {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            .or {
+                top: 0;
+                margin: 10px 0;
+            }
+            .url {
+                margin-top: 20px;
+                text-align: center;
+            }
         }
-
-        #progress-toggle:checked ~ .demo-container {
-            display: block;
-        }
-
-        .demo-container {
-            display: none;
-        }
-
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+    <script>
+        var socket = io();
+        socket.on('connect', function() {
+            console.log('Connected to server');
+        });
+        socket.on('download_complete', function(data) {
+            alert('Download complete: ' + data.filename);
+            document.querySelector('.progress-bar-inner').style.width = '100%';
+        });
+
+        document.addEventListener("DOMContentLoaded", function() {
+            var menuToggle = document.querySelector(".menu-toggle");
+            var menu = document.querySelector(".topbar ul");
+
+            menuToggle.addEventListener("click", function() {
+                menu.classList.toggle("active");
+            });
+
+            // Handle form submission to show the progress bar
+            var forms = document.querySelectorAll("form");
+            forms.forEach(function(form) {
+                form.addEventListener("submit", function() {
+                    document.querySelector('.progress-bar-container').style.display = 'block';
+                    document.querySelector('.progress-bar-inner').style.width = '0%';
+                    setTimeout(function() {
+                        document.querySelector('.progress-bar-inner').style.width = '100%';
+                    }, 100);
+                });
+            });
+        });
+    </script>
 </head>
 <body>
     <div class="topbar">
@@ -363,10 +408,7 @@ def index():
                         <p class="uglydesc">Download Ugly Bros' art, music, and videos swiftly with UglyDownloader. Quality and simplicity in one click.</p>
                         <br>
                         <div class="form-container">
-                            <!-- Hidden checkbox to toggle progress bar visibility -->
-                            <input type="checkbox" id="progress-toggle">
-
-                            <form action="/download" method="post" enctype="multipart/form-data" onsubmit="document.getElementById('progress-toggle').checked = true;">
+                            <form action="/download" method="post" enctype="multipart/form-data">
                                 <div class="AllC">
                                     <input type="text" name="audio_url" placeholder="Enter audio URL" class="searchbox">
                                     <select name="audio_format" class="dropdown1">
@@ -398,10 +440,10 @@ def index():
                             </div>
                         </div>
 
-                        <!-- Demo Container with Progress Bar -->
-                        <div class="demo-container">
+                        <!-- Progress Bar -->
+                        <div class="progress-bar-container">
                             <div class="progress-bar">
-                                <div class="progress-bar-value"></div>
+                                <div class="progress-bar-inner"></div>
                             </div>
                         </div>
 
