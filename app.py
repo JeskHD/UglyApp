@@ -269,7 +269,7 @@ def index():
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
     <script type="text/javascript">
         document.addEventListener('DOMContentLoaded', function() {
-            var socket = io.connect('http://' + window.location.hostname, {
+            var socket = io.connect('https://' + window.location.hostname, {
                 transports: ['websocket'],
                 rejectUnauthorized: false
             });
@@ -635,6 +635,6 @@ def handle_exception(e):
 
 if __name__ == '__main__':
     try:
-        socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+        socketio.run(app, host='0.0.0.0', port=5000, debug=True, ssl_context=('cert.pem', 'key.pem'))
     except Exception as e:
         logger.error(f"Critical error on startup: {str(e)}", exc_info=True)
