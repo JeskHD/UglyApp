@@ -282,7 +282,7 @@ def index():
                 }
             });
 
-            socket.on('progress', function(data) {
+             socket.on('progress', function(data) {
                 console.log("Progress received:", data.progress);
                 var progress = data.progress;
                 var progressBar = document.getElementById("progressBar");
@@ -291,7 +291,7 @@ def index():
                     progressBar.innerText = Math.round(progress) + "%";
                 }
             });
-
+        
             socket.on('download_complete', function(data) {
                 alert('Download complete: ' + data.filename);
             });
@@ -468,16 +468,16 @@ def download():
 
         def progress_hook(d):
             if d['status'] == 'downloading':
-                total_size = d.get('total_bytes', 0)
+                total_size = d.get('total_bytes') or d.get('total_bytes_estimate')
                 downloaded_size = d.get('downloaded_bytes', 0)
-                if total_size > 0:
-                    progress = (downloaded_size / total_size) * 100
-                    print(f"Emitting progress: {progress}%")
-                    socketio.emit('progress', {'progress': progress})
-            elif d['status'] == 'finished':
-                print("Download finished, emitting 100% progress")
-                socketio.emit('progress', {'progress': 100})
-        
+            if total_size:
+                progress = (downloaded_size / total_size) * 100
+                print(f"Total Size: {total_size}, Downloaded: {downloaded_size}, Progress: {progress}%")
+                socketio.emit('progress', {'progress': progress})
+        elif d['status'] == 'finished':
+            print("Download finished, emitting 100% progress")
+            socketio.emit('progress', {'progress': 100})
+
         ydl_opts['progress_hooks'] = [progress_hook]
 
         # Handle Twitter Spaces downloads separately
