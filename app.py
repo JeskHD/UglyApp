@@ -319,119 +319,87 @@ def index():
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
     <script type="text/javascript">
     document.addEventListener('DOMContentLoaded', function() {
-        // Ensure socket is defined globally
-        var socket = io.connect(window.location.protocol + '//' + window.location.hostname + ':5000', {
-            transports: ['websocket'],
-            rejectUnauthorized: false
-        });
-
-        socket.on('connect', function() {
-            console.log('Connected to server');
-            var statusElement = document.getElementById('status');
-            if (statusElement) {
-                statusElement.innerHTML = 'Connected to server';
-            }
-        });
-
-        socket.on('progress', function(data) {
-            console.log("Progress received:", data.progress);
-            var progress = data.progress;
-            var progressBar = document.getElementById("progressBar");
-            if (progressBar) {
-                // Hide the indeterminate bar and show the determinate bar
-                document.getElementById("indeterminateBar").style.display = "none";
-                document.getElementById("progressBarContainer").style.display = "block";
-                progressBar.style.width = progress + "%";
-                progressBar.innerText = Math.round(progress) + "%";
-            }
-        });
-
-        socket.on('download_complete', function(data) {
-            alert('Download complete: ' + data.filename + ' (Time: ' + data.time_taken + ' seconds)');
-            // Hide the progress bar after download completes
-            document.getElementById("progressBarContainer").style.display = "none";
-            document.getElementById("indeterminateBar").style.display = "none";
-        });
-
-        socket.on('test_response', function(data) {
-            console.log('Response from server:', data);
-            var responseElement = document.getElementById('response');
-            if (responseElement) {
-                responseElement.innerHTML = 'Response from server: ' + data.message;
-            }
-        });
-
-        var sendButton = document.getElementById('sendButton');
-        if (sendButton) {
-            sendButton.addEventListener('click', function() {
-                console.log('Sending test message to server');
-                socket.emit('test_message', {'data': 'Hello from client'});
-            });
-        }
-
-        // Bind the download buttons to socket emit event
-        var audioButton = document.querySelector("button[name='format'][value='audio']");
-        var videoButton = document.querySelector("button[name='format'][value='video']");
-        
-        if (audioButton) {
-            audioButton.onclick = function() {
-                socket.emit('start_download');
-            };
-        }
-
-        if (videoButton) {
-            videoButton.onclick = function() {
-                socket.emit('start_download');
-            };
-        }
-
-        socket.on('disconnect', function() {
-            console.error('Disconnected from server');
-            var statusElement = document.getElementById('status');
-            if (statusElement) {
-                statusElement.innerHTML = 'Disconnected from server';
-            }
-        });
-
-        socket.on('connect_error', function(error) {
-            console.error('Connection error:', error);
-            var statusElement = document.getElementById('status');
-            if (statusElement) {
-                statusElement.innerHTML = 'Connection error: ' + error;
-            }
-        });
-
-        socket.on('connect_timeout', function() {
-            console.error('Connection timed out');
-            var statusElement = document.getElementById('status');
-            if (statusElement) {
-                statusElement.innerHTML = 'Connection timed out';
-            }
-        });
-
-        socket.on('reconnect_attempt', function() {
-            console.log('Attempting to reconnect...');
-            var statusElement = document.getElementById('status');
-            if (statusElement) {
-                statusElement.innerHTML = 'Attempting to reconnect...';
-            }
-        });
-
-        socket.on('reconnect_failed', function() {
-            console.error('Reconnection failed');
-            var statusElement = document.getElementById('status');
-            if (statusElement) {
-                statusElement.innerHTML = 'Reconnection failed';
-            }
-        });
-
-        // Show indeterminate progress bar when the download starts
-        socket.on('start_download', function() {
-            document.getElementById("indeterminateBar").style.display = "block";
-            document.getElementById("progressBarContainer").style.display = "none";
-        });
-
+    // Ensure socket is defined globally
+    var socket = io.connect(window.location.protocol + '//' + window.location.hostname + ':5000', {
+        transports: ['websocket'],
+        rejectUnauthorized: false
     });
+
+    socket.on('connect', function() {
+        console.log('Connected to server');
+    });
+
+    // Bind the download buttons to socket emit event and show the progress bar
+    var audioButton = document.querySelector("button[name='format'][value='audio']");
+    var videoButton = document.querySelector("button[name='format'][value='video']");
+    
+    if (audioButton) {
+        audioButton.onclick = function() {
+            socket.emit('start_download');
+            showIndeterminateProgressBar(); // Show the progress bar
+        };
+    }
+
+    if (videoButton) {
+        videoButton.onclick = function() {
+            socket.emit('start_download');
+            showIndeterminateProgressBar(); // Show the progress bar
+        };
+    }
+
+    socket.on('progress', function(data) {
+        console.log("Progress received:", data.progress);
+        var progress = data.progress;
+        var progressBar = document.getElementById("progressBar");
+        if (progressBar) {
+            // Hide the indeterminate bar and show the determinate bar
+            document.getElementById("indeterminateBar").style.display = "none";
+            document.getElementById("progressBarContainer").style.display = "block";
+            progressBar.style.width = progress + "%";
+            progressBar.innerText = Math.round(progress) + "%";
+        }
+    });
+
+    socket.on('download_complete', function(data) {
+        alert('Download complete: ' + data.filename);
+        // Hide the progress bar after download completes
+        hideProgressBar();
+    });
+
+    function showIndeterminateProgressBar() {
+        document.getElementById("indeterminateBar").style.display = "block";
+        document.getElementById("progressBarContainer").style.display = "none";
+    }
+
+    function hideProgressBar() {
+        document.getElementById("indeterminateBar").style.display = "none";
+        document.getElementById("progressBarContainer").style.display = "none";
+    }
+
+    socket.on('disconnect', function() {
+        console.error('Disconnected from server');
+        hideProgressBar(); // Hide the progress bar if the server disconnects
+    });
+
+    socket.on('connect_error', function(error) {
+        console.error('Connection error:', error);
+        hideProgressBar(); // Hide the progress bar on connection error
+    });
+
+    socket.on('connect_timeout', function() {
+        console.error('Connection timed out');
+        hideProgressBar(); // Hide the progress bar on connection timeout
+    });
+
+    socket.on('reconnect_attempt', function() {
+        console.log('Attempting to reconnect...');
+    });
+
+    socket.on('reconnect_failed', function() {
+        console.error('Reconnection failed');
+        hideProgressBar(); // Hide the progress bar on reconnection failure
+    });
+});
 </script>
 </head>
 <body>
@@ -545,6 +513,9 @@ def download():
         return redirect(url_for('index'))
 
     try:
+        # Emit start_download event to client
+        socketio.emit('start_download')
+
         # Paths to ffmpeg and ffprobe
         ffmpeg_location = '/usr/bin/ffmpeg'
         ffprobe_location = '/usr/bin/ffprobe'
@@ -720,6 +691,7 @@ def download():
         return redirect(url_for('index'))
 
     return redirect(url_for('index'))  # Ensure there is a return statement in all paths
+
 
 @app.route('/uploads/<path:filename>', methods=['GET', 'POST'])
 def upload(filename):
