@@ -70,6 +70,7 @@ def index():
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
     <style>
         @font-face {
             font-family: 'Porkys';
@@ -294,7 +295,7 @@ def index():
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
     <script type="text/javascript">
         document.addEventListener('DOMContentLoaded', function() {
-            var socket = io.connect('http://' + window.location.hostname, {
+            var socket = io.connect(window.location.protocol + '//' + window.location.hostname + ':5000', {
                 transports: ['websocket'],
                 rejectUnauthorized: false
             });
@@ -430,7 +431,7 @@ def index():
                                         <option value="mp3">MP3</option>
                                         <option value="m4a">M4A</option>
                                     </select>
-                                    <button type="submit" name="format" value="audio" class="btn1" onclick="socket.emit('start_download');">Download Audio</button>
+                                    <button type="submit" name="format" value="audio" class="btn1">Download Audio</button>
                                     <br>
                                     <p class="or">OR</p><br>
                                     <input type="text" name="video_url" placeholder="Enter video URL" class="searchbox">
@@ -438,7 +439,7 @@ def index():
                                         <option value="mp4">MP4</option>
                                         <option value="mov">MOV</option>
                                     </select>
-                                    <button type="submit" name="format" value="video" class="btn2" onclick="socket.emit('start_download');">Download Video</button>
+                                    <button type="submit" name="format" value="video" class="btn2">Download Video</button>
                                     <br><br>
                             </form>
                             <p class="url">Enter your desired URL and let it do the trick</p>
