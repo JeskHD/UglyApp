@@ -255,6 +255,8 @@ def index():
             border-radius: 13px;
             padding: 3px;
             margin-top: 20px;
+            position: relative;
+            display: none; /* Initially hidden */
         }
         .progress-bar {
             background-color: #76c7c0;
@@ -265,6 +267,29 @@ def index():
             line-height: 25px;
             color: white;
             transition: width 0.4s ease;
+        }
+        .indeterminate-bar {
+            background-color: rgba(255, 105, 180, 0.2); /* Pink background */
+            height: 4px;
+            overflow: hidden;
+        }
+        .indeterminate-bar-value {
+            width: 100%;
+            height: 100%;
+            background-color: rgb(255, 105, 180); /* Pink color */
+            animation: indeterminateAnimation 1s infinite linear;
+            transform-origin: 0% 50%;
+        }
+        @keyframes indeterminateAnimation {
+            0% {
+                transform: translateX(0) scaleX(0);
+            }
+            40% {
+                transform: translateX(0) scaleX(0.4);
+            }
+            100% {
+                transform: translateX(100%) scaleX(0.5);
+            }
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
@@ -288,20 +313,26 @@ def index():
                 var progress = data.progress;
                 var progressBar = document.getElementById("progressBar");
                 if (progressBar) {
+                    // Hide the indeterminate bar and show the determinate bar
+                    document.getElementById("indeterminateBar").style.display = "none";
+                    document.getElementById("progressBarContainer").style.display = "block";
                     progressBar.style.width = progress + "%";
                     progressBar.innerText = Math.round(progress) + "%";
                 }
             });
-        
+
             socket.on('download_complete', function(data) {
                 alert('Download complete: ' + data.filename);
+                // Hide the progress bar after download completes
+                document.getElementById("progressBarContainer").style.display = "none";
+                document.getElementById("indeterminateBar").style.display = "none";
             });
 
             socket.on('test_response', function(data) {
                 console.log('Response from server:', data);
                 var responseElement = document.getElementById('response');
                 if (responseElement) {
-                    responseElement.innerHTML = 'Response from server: ' + data.message';
+                    responseElement.innerHTML = 'Response from server: ' + data.message;
                 }
             });
 
@@ -352,6 +383,13 @@ def index():
                     statusElement.innerHTML = 'Reconnection failed';
                 }
             });
+
+            // Show indeterminate progress bar when the download starts
+            socket.on('start_download', function() {
+                document.getElementById("indeterminateBar").style.display = "block";
+                document.getElementById("progressBarContainer").style.display = "none";
+            });
+
         });
     </script>
 </head>
@@ -393,7 +431,7 @@ def index():
                                         <option value="mp3">MP3</option>
                                         <option value="m4a">M4A</option>
                                     </select>
-                                    <button type="submit" name="format" value="audio" class="btn1">Download Audio</button>
+                                    <button type="submit" name="format" value="audio" class="btn1" onclick="socket.emit('start_download');">Download Audio</button>
                                     <br>
                                     <p class="or">OR</p><br>
                                     <input type="text" name="video_url" placeholder="Enter video URL" class="searchbox">
@@ -401,7 +439,7 @@ def index():
                                         <option value="mp4">MP4</option>
                                         <option value="mov">MOV</option>
                                     </select>
-                                    <button type="submit" name="format" value="video" class="btn2">Download Video</button>
+                                    <button type="submit" name="format" value="video" class="btn2" onclick="socket.emit('start_download');">Download Video</button>
                                     <br><br>
                             </form>
                             <p class="url">Enter your desired URL and let it do the trick</p>
@@ -417,7 +455,12 @@ def index():
                                 {% endwith %}
                             </div>
                         </div>
-                        <div class="progress">
+                        <!-- Indeterminate Progress Bar -->
+                        <div id="indeterminateBar" class="indeterminate-bar" style="display:none;">
+                            <div class="indeterminate-bar-value"></div>
+                        </div>
+                        <!-- Determinate Progress Bar -->
+                        <div id="progressBarContainer" class="progress" style="display:none;">
                             <div id="progressBar" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
                         </div>
                     </div>
