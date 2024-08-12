@@ -30,6 +30,7 @@ def index():
         <title>SocketIO Test</title>
         <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
         <script type="text/javascript">
+            localStorage.debug = 'socket.io-client:*'; // Enable debug logs in the browser
             document.addEventListener('DOMContentLoaded', function() {
                 var socket = io();
 
@@ -101,19 +102,8 @@ def handle_exception(e):
     }
     return jsonify(response), 500
 
-def debug_greenlet():
-    # Function to log the status of greenlets
-    greenlets = gevent.hub.get_hub().loop.greenlet.get_children()
-    for g in greenlets:
-        if g.dead:
-            logger.debug(f"Dead Greenlet: {g}")
-        else:
-            logger.debug(f"Active Greenlet: {g}")
-
 if __name__ == '__main__':
     try:
-        debug_greenlet()  # Check the greenlets at startup
         socketio.run(app, host='0.0.0.0', port=8000, debug=True)
     except Exception as e:
         logger.error(f"Critical error on startup: {str(e)}", exc_info=True)
-        debug_greenlet()  # Check the greenlets if there's a startup error
