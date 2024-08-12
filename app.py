@@ -262,9 +262,10 @@ def index():
             width: 300px;
             margin: 20px auto;
             display: none; /* Hidden by default */
-            position: relative;
-            top: 130px;
-            right: 500px;
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
         }
         .progress-bar {
             height: 4px;
@@ -355,6 +356,9 @@ def index():
                 margin-top: 20px;
                 text-align: center;
             }
+            .demo-container {
+                bottom: 30px;
+            }
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
@@ -366,6 +370,7 @@ def index():
         socket.on('download_complete', function(data) {
             alert('Download complete: ' + data.filename);
             document.querySelector('.demo-container').style.display = 'none'; // Hide progress bar when download completes
+            location.reload(); // Reload the page after download completion
         });
 
         document.addEventListener("DOMContentLoaded", function() {
