@@ -75,7 +75,7 @@ def index():
     <style>
         @font-face {
             font-family: 'Porkys';
-            src: Q==) format('woff');
+            src: url(Q==) format('woff');
             font-weight: normal;
             font-style: normal;
         }
@@ -89,6 +89,8 @@ def index():
             font-family: "Poppins", sans-serif;
             width: 100%;
             overflow-x: hidden;
+            margin: 0;
+            padding: 25px;
         }
         .topbar {
             font-family: "Montserrat", "Poppins", "Avenir";
@@ -256,27 +258,38 @@ def index():
             text-align: center;
             margin-top: 10px;
         }
-        
+
         /* Progress Bar Styles */
-        .progress-bar-container {
-            display: none; /* Hidden by default */
-            width: 100%;
-            max-width: 600px;
-            margin: 20px auto;
+        .demo-container {
+            width: 300px;
+            margin: auto;
         }
+
         .progress-bar {
+            height: 4px;
+            background-color: rgba(5, 114, 206, 0.2);
             width: 100%;
-            height: 8px;
-            background-color: #ddd;
-            border-radius: 4px;
             overflow: hidden;
         }
-        .progress-bar-inner {
+
+        .progress-bar-value {
+            width: 100%;
             height: 100%;
-            width: 0;
-            background-color: #fa50d3;
-            border-radius: 4px;
-            transition: width 1s linear;
+            background-color: rgb(5, 114, 206);
+            animation: indeterminateAnimation 1s infinite linear;
+            transform-origin: 0% 50%;
+        }
+
+        @keyframes indeterminateAnimation {
+            0% {
+                transform: translateX(0) scaleX(0);
+            }
+            40% {
+                transform: translateX(0) scaleX(0.4);
+            }
+            100% {
+                transform: translateX(100%) scaleX(0.5);
+            }
         }
 
         /* Responsive Design */
@@ -344,38 +357,6 @@ def index():
             }
         }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
-    <script>
-        var socket = io();
-        socket.on('connect', function() {
-            console.log('Connected to server');
-        });
-        socket.on('download_complete', function(data) {
-            alert('Download complete: ' + data.filename);
-            document.querySelector('.progress-bar-inner').style.width = '100%';
-        });
-
-        document.addEventListener("DOMContentLoaded", function() {
-            var menuToggle = document.querySelector(".menu-toggle");
-            var menu = document.querySelector(".topbar ul");
-
-            menuToggle.addEventListener("click", function() {
-                menu.classList.toggle("active");
-            });
-
-            // Handle form submission to show the progress bar
-            var forms = document.querySelectorAll("form");
-            forms.forEach(function(form) {
-                form.addEventListener("submit", function() {
-                    document.querySelector('.progress-bar-container').style.display = 'block';
-                    document.querySelector('.progress-bar-inner').style.width = '0%';
-                    setTimeout(function() {
-                        document.querySelector('.progress-bar-inner').style.width = '100%';
-                    }, 100);
-                });
-            });
-        });
-    </script>
 </head>
 <body>
     <div class="topbar">
@@ -441,12 +422,11 @@ def index():
                         </div>
 
                         <!-- Progress Bar -->
-                        <div class="progress-bar-container">
+                        <div class="demo-container">
                             <div class="progress-bar">
-                                <div class="progress-bar-inner"></div>
+                                <div class="progress-bar-value"></div>
                             </div>
                         </div>
-
                     </div>
                 </article>
             </section>
