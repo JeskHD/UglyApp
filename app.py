@@ -1,6 +1,5 @@
 from flask import Flask, render_template_string
 from flask_socketio import SocketIO, emit
-import eventlet
 import logging
 
 # Configure logging
@@ -9,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
-socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*")
+socketio = SocketIO(app, async_mode='gevent', cors_allowed_origins="*")
 
 @app.route('/')
 def index():
@@ -86,7 +85,6 @@ def handle_test_message(json):
 
 if __name__ == '__main__':
     try:
-        eventlet.monkey_patch()
         socketio.run(app, host='0.0.0.0', port=8000, debug=True)
     except Exception as e:
         logger.error(f"Critical error on startup: {str(e)}")
