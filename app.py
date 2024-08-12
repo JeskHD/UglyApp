@@ -466,8 +466,8 @@ def download():
             'nooverwrites': True,  # Skip existing files instead of overwriting
         }
 
-       def progress_hook(d):
-    try:
+    def progress_hook(d):
+        try:
         # Initialize total_size from 'total_bytes' or 'total_bytes_estimate'
         total_size = d.get('total_bytes') or d.get('total_bytes_estimate')
 
