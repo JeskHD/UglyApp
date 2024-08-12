@@ -262,6 +262,8 @@ def index():
             width: 300px;
             margin: 20px auto;
             display: none; /* Hidden by default */
+            position: relative;
+            top: 30px;
         }
         .progress-bar {
             height: 4px;
@@ -452,7 +454,6 @@ def index():
                                 <div class="progress-bar-value"></div>
                             </div>
                         </div>
-
                     </div>
                 </article>
             </section>
