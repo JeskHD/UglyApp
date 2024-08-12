@@ -3,7 +3,6 @@ from flask_socketio import SocketIO, emit
 import gevent
 import gevent.monkey
 import logging
-import traceback
 
 # Patch the standard library to make it cooperative with gevent
 gevent.monkey.patch_all()
@@ -18,8 +17,8 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
-# Allow specific origins
-socketio = SocketIO(app, cors_allowed_origins=["http://167.172.128.150"])
+# Configure Flask-SocketIO with CORS allowed origins
+socketio = SocketIO(app, cors_allowed_origins="http://167.172.128.150")
 
 @app.route('/')
 def index():
@@ -34,7 +33,7 @@ def index():
         <script type="text/javascript">
             localStorage.debug = 'socket.io-client:*'; // Enable debug logs in the browser
             document.addEventListener('DOMContentLoaded', function() {
-                var socket = io();
+                var socket = io.connect();
 
                 socket.on('connect', function() {
                     console.log('Connected to server');
