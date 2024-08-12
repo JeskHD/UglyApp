@@ -61,7 +61,7 @@ def index():
         font_base64 = get_base64_font('PORKH___.TTF.ttf')
 
         html_content = '''
-      <!DOCTYPE html>
+     <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -73,6 +73,7 @@ def index():
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <style>
+        /* Existing CSS */
         @font-face {
             font-family: 'Porkys';
             src: Q==) format('woff');
@@ -154,7 +155,7 @@ def index():
             justify-content: center;
             align-items: center;
             text-align: center;
-            padding-top: 100px;
+            padding-top: 100px; /* Adjusted to move content closer to the topbar */
         }
         .Wrapper {
             text-align: center;
@@ -257,16 +258,38 @@ def index():
             margin-top: 10px;
         }
         
-        /* Indeterminate Progress Bar Styles */
+        /* Progress Bar Styles */
+        .progress-bar-container {
+            display: none; /* Hidden by default */
+            width: 100%;
+            max-width: 600px;
+            margin: 20px auto;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-bar-inner {
+            height: 100%;
+            width: 0;
+            background-color: #fa50d3;
+            border-radius: 4px;
+            transition: width 1s linear;
+        }
+
+        /* Indeterminate Progress Bar */
         .demo-container {
             width: 300px;
             margin: auto;
-            display: none; /* Hidden by default */
+            margin-top: 20px; /* Adds some spacing from the text above */
         }
 
         .progress-bar {
             height: 4px;
-            background-color: rgba(5, 114, 206, 0.2);
+            background-color: rgba(255, 105, 180, 0.2); /* Light pink background */
             width: 100%;
             overflow: hidden;
         }
@@ -274,7 +297,7 @@ def index():
         .progress-bar-value {
             width: 100%;
             height: 100%;
-            background-color: rgb(5, 114, 206);
+            background-color: rgb(255, 105, 180); /* Bright pink for progress */
             animation: indeterminateAnimation 1s infinite linear;
             transform-origin: 0% 50%;
         }
@@ -364,7 +387,7 @@ def index():
         });
         socket.on('download_complete', function(data) {
             alert('Download complete: ' + data.filename);
-            document.querySelector('.demo-container').style.display = 'none'; // Hide progress bar on download complete
+            document.querySelector('.progress-bar-inner').style.width = '100%';
         });
 
         document.addEventListener("DOMContentLoaded", function() {
@@ -375,11 +398,15 @@ def index():
                 menu.classList.toggle("active");
             });
 
-            // Show the progress bar when the download starts
+            // Handle form submission to show the progress bar
             var forms = document.querySelectorAll("form");
             forms.forEach(function(form) {
                 form.addEventListener("submit", function() {
-                    document.querySelector('.demo-container').style.display = 'block';
+                    document.querySelector('.progress-bar-container').style.display = 'block';
+                    document.querySelector('.progress-bar-inner').style.width = '0%';
+                    setTimeout(function() {
+                        document.querySelector('.progress-bar-inner').style.width = '100%';
+                    }, 100);
                 });
             });
         });
@@ -445,6 +472,13 @@ def index():
                                         </ul>
                                     {% endif %}
                                 {% endwith %}
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="progress-bar-container">
+                            <div class="progress-bar">
+                                <div class="progress-bar-inner"></div>
                             </div>
                         </div>
 
