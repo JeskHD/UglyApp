@@ -1,14 +1,18 @@
-from flask import Flask, render_template_string
+from flask import Flask, render_template_string, jsonify
 from flask_socketio import SocketIO, emit
 import gevent
 import gevent.monkey
 import logging
+import traceback
 
 # Patch the standard library to make it cooperative with gevent
 gevent.monkey.patch_all()
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s [in %(pathname)s:%(lineno)d]'
+)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
@@ -86,10 +90,19 @@ def handle_test_message(json):
         logger.debug(f'Received test message: {json}')
         emit('test_response', {'message': 'Hello from server'})
     except Exception as e:
-        logger.error(f"Error handling message: {str(e)}")
+        logger.error(f"Error handling message: {str(e)}", exc_info=True)
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    logger.error("Unhandled exception", exc_info=True)
+    response = {
+        "message": "An internal error occurred.",
+        "details": str(e)
+    }
+    return jsonify(response), 500
 
 if __name__ == '__main__':
     try:
         socketio.run(app, host='0.0.0.0', port=8000, debug=True)
     except Exception as e:
-        logger.error(f"Critical error on startup: {str(e)}")
+        logger.error(f"Critical error on startup: {str(e)}", exc_info=True)
