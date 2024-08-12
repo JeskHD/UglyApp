@@ -474,9 +474,9 @@ def download():
                 progress = (downloaded_size / total_size) * 100
                 print(f"Total Size: {total_size}, Downloaded: {downloaded_size}, Progress: {progress}%")
                 socketio.emit('progress', {'progress': progress})
-        elif d['status'] == 'finished':
-            print("Download finished, emitting 100% progress")
-            socketio.emit('progress', {'progress': 100})
+            elif d['status'] == 'finished':
+                print("Download finished, emitting 100% progress")
+                socketio.emit('progress', {'progress': 100})
 
         ydl_opts['progress_hooks'] = [progress_hook]
 
