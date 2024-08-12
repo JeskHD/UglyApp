@@ -33,7 +33,10 @@ def index():
         <script type="text/javascript">
             localStorage.debug = 'socket.io-client:*'; // Enable debug logs in the browser
             document.addEventListener('DOMContentLoaded', function() {
-                var socket = io.connect();
+                var socket = io.connect('http://167.172.128.150', {
+                    transports: ['websocket'],  // Use only WebSocket transport
+                    rejectUnauthorized: false  // Disable SSL verification if needed
+                });
 
                 socket.on('connect', function() {
                     console.log('Connected to server');
