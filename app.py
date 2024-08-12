@@ -682,7 +682,7 @@ if not inspector.has_table("user"):
 else:
     app.logger.info('Database already contains the users table.')
 
-@app.errorhandler(Exception)
+@app.errorhandler(Exception
 def handle_exception(e):
     logger.error("Unhandled exception", exc_info=True)
     response = {
