@@ -75,7 +75,7 @@ def index():
     <style>
         @font-face {
             font-family: 'Porkys';
-            src: url(Q==) format('woff');
+            src: Q==) format('woff');
             font-weight: normal;
             font-style: normal;
         }
@@ -89,8 +89,6 @@ def index():
             font-family: "Poppins", sans-serif;
             width: 100%;
             overflow-x: hidden;
-            margin: 0;
-            padding: 25px;
         }
         .topbar {
             font-family: "Montserrat", "Poppins", "Avenir";
@@ -156,7 +154,7 @@ def index():
             justify-content: center;
             align-items: center;
             text-align: center;
-            padding-top: 100px; /* Adjusted to move content closer to the topbar */
+            padding-top: 100px;
         }
         .Wrapper {
             text-align: center;
@@ -258,11 +256,12 @@ def index():
             text-align: center;
             margin-top: 10px;
         }
-
-        /* Progress Bar Styles */
+        
+        /* Indeterminate Progress Bar Styles */
         .demo-container {
             width: 300px;
             margin: auto;
+            display: none; /* Hidden by default */
         }
 
         .progress-bar {
@@ -357,6 +356,34 @@ def index():
             }
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+    <script>
+        var socket = io();
+        socket.on('connect', function() {
+            console.log('Connected to server');
+        });
+        socket.on('download_complete', function(data) {
+            alert('Download complete: ' + data.filename);
+            document.querySelector('.demo-container').style.display = 'none'; // Hide progress bar on download complete
+        });
+
+        document.addEventListener("DOMContentLoaded", function() {
+            var menuToggle = document.querySelector(".menu-toggle");
+            var menu = document.querySelector(".topbar ul");
+
+            menuToggle.addEventListener("click", function() {
+                menu.classList.toggle("active");
+            });
+
+            // Show the progress bar when the download starts
+            var forms = document.querySelectorAll("form");
+            forms.forEach(function(form) {
+                form.addEventListener("submit", function() {
+                    document.querySelector('.demo-container').style.display = 'block';
+                });
+            });
+        });
+    </script>
 </head>
 <body>
     <div class="topbar">
@@ -421,12 +448,13 @@ def index():
                             </div>
                         </div>
 
-                        <!-- Progress Bar -->
+                        <!-- Indeterminate Progress Bar -->
                         <div class="demo-container">
                             <div class="progress-bar">
                                 <div class="progress-bar-value"></div>
                             </div>
                         </div>
+
                     </div>
                 </article>
             </section>
