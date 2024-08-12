@@ -269,7 +269,7 @@ def index():
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
     <script type="text/javascript">
         document.addEventListener('DOMContentLoaded', function() {
-            var socket = io.connect('https://' + window.location.hostname, {
+            var socket = io.connect('wss://' + window.location.hostname, {
                 transports: ['websocket'],
                 rejectUnauthorized: false
             });
