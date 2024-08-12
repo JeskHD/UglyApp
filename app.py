@@ -65,7 +65,6 @@ def index():
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="HTML WEB DESIGN" content="Web Design">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ugly Downloader</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -251,6 +250,7 @@ def index():
             text-align: center;
             margin-top: 10px;
         }
+
         .progress {
             background-color: #e0e0e0;
             border-radius: 13px;
@@ -266,79 +266,32 @@ def index():
             line-height: 25px;
             color: white;
         }
-        /* Responsive Design */
-        @media (max-width: 800px) {
-            .topbar {
-                flex-direction: row;
-                align-items: center;
-                padding: 10px 10px;
-            }
-            .topbar .menu-toggle {
-                display: block;
-            }
-            .topbar ul {
-                display: none;
-                flex-direction: column;
-                align-items: center;
-                width: 100%;
-                margin-top: 10px;
-            }
-            .topbar ul.active {
-                display: flex;
-                font-size: 10px;
-                top: 11px;
-                border: 1px solid white;
-                flex-direction: column;
-                position: absolute;
-                background-color: rgba(0, 0, 0, 0.8);
-                right: 10px;
-                top: 60px;
-                width: 200px;
-                padding: 10px;
-            }
-            .topbar h2 {
-                font-size: 24px;
-            }
-            .UglyStay {
-                font-size: 30px;
-                margin-top: 80px;
-                text-align: center;
-            }
-            .uglydesc {
-                font-size: 16px;
-                margin: 20px 20px;
-                text-align: center;
-            }
-            .form-container {
-                flex-direction: column;
-                align-items: center;
-            }
-            .searchbox, .dropdown1, .dropdown2, .btn1, .btn2 {
-                width: 100%;
-                margin-bottom: 10px;
-            }
-            .or {
-                top: 0;
-                margin: 10px 0;
-            }
-            .url {
-                margin-top: 20px;
-                text-align: center;
-            }
-        }
     </style>
-    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
     <script type="text/javascript">
-        localStorage.debug = 'socket.io-client:*'; // Enable debug logs in the browser
         document.addEventListener('DOMContentLoaded', function() {
             var socket = io.connect('http://167.172.128.150', {
-                transports: ['websocket'],  // Use only WebSocket transport
-                rejectUnauthorized: false  // Disable SSL verification if needed
+                transports: ['websocket'],
+                rejectUnauthorized: false
             });
 
             socket.on('connect', function() {
                 console.log('Connected to server');
                 document.getElementById('status').innerHTML = 'Connected to server';
+            });
+
+            socket.on('progress', function(data) {
+                console.log("Progress received:", data.progress);
+                var progress = data.progress;
+                var progressBar = document.getElementById("progressBar");
+                if (progressBar) {
+                    progressBar.style.width = progress + "%";
+                    progressBar.innerText = Math.round(progress) + "%";
+                }
+            });
+
+            socket.on('download_complete', function(data) {
+                alert('Download complete: ' + data.filename);
             });
 
             socket.on('test_response', function(data) {
@@ -410,7 +363,7 @@ def index():
                         <br>
                         <div class="form-container">
                             <form action="/download" method="post" enctype="multipart/form-data">
-                                <div class="AllC">
+                               <div class="AllC">
                                     <input type="text" name="audio_url" placeholder="Enter audio URL" class="searchbox">
                                     <select name="audio_format" class="dropdown1">
                                         <option value="mp3">MP3</option>
