@@ -12,7 +12,7 @@ import logging
 from tqdm import tqdm
 import gevent
 import gevent.monkey
-import time
+import time  # Import time module to measure time
 
 # Patch the standard library to make it cooperative with gevent
 gevent.monkey.patch_all()
@@ -531,7 +531,6 @@ def download():
                 if d['status'] == 'finished':
                     socketio.emit('progress', {'progress': 100})
                     print("Download finished, emitting 100% progress")
-                    socketio.emit('download_complete', {'filename': os.path.basename(d.get('filename'))})
 
             except Exception as e:
                 logger.error(f"Error in progress hook: {str(e)}")
@@ -586,9 +585,7 @@ def download():
                     end_time = time.time()  # End time for download
                     time_taken = end_time - start_time  # Calculate total time taken
                     socketio.emit('download_complete', {'filename': os.path.basename(latest_file), 'time_taken': time_taken})
-                    
-                    # Instead of downloading directly, render a link to the file
-                    return render_template_string('<p>Download complete: <a href="{{ url_for("upload", filename="' + os.path.basename(latest_file) + '") }}">{{ "' + os.path.basename(latest_file) + '" }}</a></p>')
+                    return render_template_string('<p>Download complete: <a href="{{ url_for("download_file", filename="' + os.path.basename(latest_file) + '") }}">{{ "' + os.path.basename(latest_file) + '" }}</a></p>')
                 else:
                     flash("File not found after download.")
                     return redirect(url_for('index'))
@@ -653,9 +650,7 @@ def download():
                 end_time = time.time()  # End time for download
                 time_taken = end_time - start_time  # Calculate total time taken
                 socketio.emit('download_complete', {'filename': os.path.basename(file_path), 'time_taken': time_taken})
-                
-                # Instead of downloading directly, render a link to the file
-                return render_template_string('<p>Download complete: <a href="{{ url_for("upload", filename="' + os.path.basename(file_path) + '") }}">{{ "' + os.path.basename(file_path) + '" }}</a></p>')
+                return render_template_string('<p>Download complete: <a href="{{ url_for("download_file", filename="' + os.path.basename(file_path) + '") }}">{{ "' + os.path.basename(file_path) + '" }}</a></p>')
             else:
                 flash("File not found after download.")
                 return redirect(url_for('index'))
@@ -674,9 +669,8 @@ def download():
 
 
 @app.route('/uploads/<path:filename>', methods=['GET', 'POST'])
-def upload(filename):
-    uploads = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
-    return send_from_directory(uploads, filename)
+def download_file(filename):
+    return send_from_directory(DOWNLOADS_DIR, filename)
 
 # Database initialization logic for Render
 engine = sa.create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
