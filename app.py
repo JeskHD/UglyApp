@@ -12,7 +12,7 @@ import logging
 from tqdm import tqdm
 import gevent
 import gevent.monkey
-import time  # Import time module to measure time
+import time
 
 # Patch the standard library to make it cooperative with gevent
 gevent.monkey.patch_all()
@@ -59,6 +59,8 @@ def index():
     try:
         background_base64 = get_base64_image('uglygif.gif')
         font_base64 = get_base64_font('PORKH___.TTF.ttf')
+
+        download_link = request.args.get('download_link')
 
         html_content = '''
      <!DOCTYPE html>
@@ -368,14 +370,7 @@ def index():
         socket.on('download_complete', function(data) {
             alert('Download complete: ' + data.filename);
             document.querySelector('.demo-container').style.display = 'none'; // Hide progress bar when download completes
-            // Create a link element
-            const downloadLink = document.createElement('a');
-            downloadLink.href = '/uploads/' + data.filename;
-            downloadLink.textContent = 'Click here to download: ' + data.filename;
-            downloadLink.style.color = 'white';
-            downloadLink.style.display = 'block';
-            downloadLink.style.marginTop = '20px';
-            document.querySelector('.Wrapper').appendChild(downloadLink);
+            window.location.href = '/?download_link=' + encodeURIComponent('/uploads/' + data.filename);
         });
 
         document.addEventListener("DOMContentLoaded", function() {
@@ -457,6 +452,11 @@ def index():
                                     {% endif %}
                                 {% endwith %}
                             </div>
+                            {% if download_link %}
+                                <div style="margin-top: 20px;">
+                                    <a href="{{ download_link }}" style="color: white;">Click here to download: {{ download_link.split('/')[-1] }}</a>
+                                </div>
+                            {% endif %}
                         </div>
 
                         <!-- Indeterminate Progress Bar -->
