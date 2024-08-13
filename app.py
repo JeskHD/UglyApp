@@ -368,6 +368,7 @@ def index():
         socket.on('download_complete', function(data) {
             alert('Download complete: ' + data.filename);
             document.querySelector('.demo-container').style.display = 'none'; // Hide progress bar when download completes
+            location.reload();  // Reload the page after the download is complete
         });
 
         document.addEventListener("DOMContentLoaded", function() {
@@ -531,6 +532,7 @@ def download():
                 if d['status'] == 'finished':
                     socketio.emit('progress', {'progress': 100})
                     print("Download finished, emitting 100% progress")
+                    socketio.emit('download_complete', {'filename': os.path.basename(d.get('filename'))})
 
             except Exception as e:
                 logger.error(f"Error in progress hook: {str(e)}")
