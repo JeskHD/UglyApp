@@ -260,11 +260,13 @@ def index():
         /* Progress Bar Styles */
         .demo-container {
             width: 300px;
-            margin: 20px auto;
+            margin: 0 auto; /* Center the progress bar */
             display: none; /* Hidden by default */
-            position: relative;
-            top: 130px;
-            right: 500px;
+            position: fixed;
+            top: 90%; /* Adjust to be fixed near the bottom of the page */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2000; /* Ensure it stays above other content */
         }
         .progress-bar {
             height: 4px;
@@ -596,8 +598,6 @@ def download():
             cookie_file = 'youtube_cookies.txt'  # Update with your actual path
             ydl_opts.update({
                 'cookiefile': cookie_file,
-                'username': 'oauth2',  # Comment this line if not using OAuth
-                'password': '',  # Comment this line if not using OAuth
             })
 
         # Use cookies for SoundCloud downloads
