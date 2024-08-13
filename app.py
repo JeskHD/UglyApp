@@ -262,7 +262,7 @@ def index():
             width: 300px;
             margin: 0 auto; /* Center the progress bar */
             display: none; /* Hidden by default */
-            position: relative;
+            position: fixed;
             bottom: 30%; /* Adjust to be fixed near the bottom of the page */
             left: 2%;
             transform: translateX(-50%);
