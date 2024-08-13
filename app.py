@@ -12,7 +12,7 @@ import logging
 from tqdm import tqdm
 import gevent
 import gevent.monkey
-import time  # Import time module to measure time
+import time
 
 # Patch the standard library to make it cooperative with gevent
 gevent.monkey.patch_all()
@@ -262,10 +262,6 @@ def index():
             width: 300px;
             margin: 0 auto; /* Center the progress bar */
             display: none; /* Hidden by default */
-            position: fixed;
-            top: 90%; /* Adjust to be fixed near the bottom of the page */
-            left: 50%;
-            transform: translateX(-50%);
             z-index: 2000; /* Ensure it stays above other content */
         }
         .progress-bar {
@@ -273,6 +269,7 @@ def index():
             background-color: rgba(255, 120, 223, 0.2);
             width: 100%;
             overflow: hidden;
+            margin-top: 20px;
         }
         .progress-bar-value {
             width: 100%;
@@ -356,6 +353,9 @@ def index():
             .url {
                 margin-top: 20px;
                 text-align: center;
+            }
+            .progress-bar {
+                margin-top: 10px; /* Adjust for mobile view */
             }
         }
     </style>
