@@ -2,15 +2,17 @@ import os
 import subprocess
 import yt_dlp
 from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory, jsonify
+from flask_socketio import SocketIO, emit
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
 import sqlalchemy as sa
 import glob
 import base64
 import logging
+from tqdm import tqdm
 import gevent
 import gevent.monkey
-import time
+import time  # Import time module to measure time
 
 # Patch the standard library to make it cooperative with gevent
 gevent.monkey.patch_all()
@@ -27,6 +29,8 @@ app.secret_key = 'your_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Configure Flask-SocketIO with CORS allowed origins
+socketio = SocketIO(app, cors_allowed_origins="*")
 db = SQLAlchemy(app)
 
 # Ensure the downloads directory exists in the user's Downloads folder
@@ -136,7 +140,7 @@ def index():
             height: 65px;
             width: auto;
             position: relative;
-            top: 2px.
+            top: 2px;
         }
         .bimage {
             background: linear-gradient(rgba(255, 7, 156, 0.585), rgba(104, 97, 97, 0.5)), url("data:image/gif;base64,{{ background_base64 }}");
@@ -150,7 +154,7 @@ def index():
             justify-content: center;
             align-items: center;
             text-align: center;
-            padding-top: 100px;
+            padding-top: 100px; /* Adjusted to move content closer to the topbar */
         }
         .Wrapper {
             text-align: center;
@@ -172,7 +176,7 @@ def index():
             margin: 20px 10px;
             font-size: 18px;
             text-align: center;
-            width: 100%.
+            width: 100%;
         }
         .form-container {
             display: flex;
@@ -203,7 +207,7 @@ def index():
             border: none;
             font-family: "Poppins", sans-serif;
             background-color: #ff78df;
-            color: white.
+            color: white;
         }
         .btn1, .btn2 {
             height: 38px;
@@ -213,7 +217,7 @@ def index():
             color: white;
             border: none;
             cursor: pointer;
-            font-family: "Poppins", sans-serif.
+            font-family: "Poppins", sans-serif;
         }
         .btn1:active, .btn2:active {
             color: #fb85df;
@@ -227,7 +231,7 @@ def index():
             top: 15px;
             color: white;
             font-size: 18px;
-            margin: 10px 0.
+            margin: 10px 0;
         }
         .url {
             text-shadow: 0px 3px 5px 0 #c255a7;
@@ -235,22 +239,22 @@ def index():
             font-size: 14px;
             margin-top: 10px;
             width: 100%;
-            text-align: center.
+            text-align: center;
         }
         .sp li:hover {
-            color: #1d9bf0 !important.
+            color: #1d9bf0 !important;
         }
         .ua {
             font-family: 'Porkys';
             color: #f50da1;
             font-size: 40px;
-            text-shadow: 1px 1px 2px #27f1e6.
+            text-shadow: 1px 1px 2px #27f1e6;
         }
         .flashes {
             color: red;
             list-style: none;
             text-align: center;
-            margin-top: 10px.
+            margin-top: 10px;
         }
 
         /* Progress Bar Styles */
@@ -258,23 +262,22 @@ def index():
             width: 300px;
             margin: 20px auto;
             display: none; /* Hidden by default */
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%).
+            position: relative;
+            top: 130px;
+            right: 500px;
         }
         .progress-bar {
             height: 4px;
             background-color: rgba(255, 120, 223, 0.2);
             width: 100%;
-            overflow: hidden.
+            overflow: hidden;
         }
         .progress-bar-value {
             width: 100%;
             height: 100%;
             background-color: rgb(255, 120, 223);
             animation: indeterminateAnimation 1s infinite linear;
-            transform-origin: 0% 50%.
+            transform-origin: 0% 50%;
         }
 
         @keyframes indeterminateAnimation {
@@ -285,7 +288,7 @@ def index():
                 transform: translateX(0) scaleX(0.4);
             }
             100% {
-                transform: translateX(100%) scaleX(0.5).
+                transform: translateX(100%) scaleX(0.5);
             }
         }
 
@@ -294,17 +297,17 @@ def index():
             .topbar {
                 flex-direction: row;
                 align-items: center;
-                padding: 10px 10px.
+                padding: 10px 10px;
             }
             .topbar .menu-toggle {
-                display: block.
+                display: block;
             }
             .topbar ul {
                 display: none;
                 flex-direction: column;
                 align-items: center;
                 width: 100%;
-                margin-top: 10px.
+                margin-top: 10px;
             }
             .topbar ul.active {
                 display: flex;
@@ -317,61 +320,67 @@ def index():
                 right: 10px;
                 top: 30px;
                 width: 200px;
-                padding: 10px.
+                padding: 10px;
             }
             .topbar h2 {
-                font-size: 24px.
+                font-size: 24px;
             }
             .UglyStay {
                 font-size: 30px;
                 margin-top: 40px;
                 text-align: center;
                 position: relative;
-                right: 16px.
+                right: 16px;
             }
             .uglydesc {
                 font-size: 16px;
                 margin: 20px 20px;
                 text-align: center;
                 position: relative;
-                right: 16px.
+                right: 16px;
             }
             .form-container {
                 flex-direction: column;
-                align-items: center.
+                align-items: center;
             }
             .searchbox, .dropdown1, .dropdown2, .btn1, .btn2 {
                 width: 100%;
-                margin-bottom: 10px.
+                margin-bottom: 10px;
             }
             .or {
                 top: 0;
-                margin: 10px 0.
+                margin: 10px 0;
             }
             .url {
                 margin-top: 20px;
-                text-align: center.
-            }
-            .demo-container {
-                bottom: 30px.
+                text-align: center;
             }
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
     <script>
+        var socket = io();
+        socket.on('connect', function() {
+            console.log('Connected to server');
+        });
+        socket.on('download_complete', function(data) {
+            alert('Download complete: ' + data.filename);
+            document.querySelector('.demo-container').style.display = 'none'; // Hide progress bar when download completes
+        });
+
         document.addEventListener("DOMContentLoaded", function() {
+            var menuToggle = document.querySelector(".menu-toggle");
+            var menu = document.querySelector(".topbar ul");
+
+            menuToggle.addEventListener("click", function() {
+                menu.classList.toggle("active");
+            });
+
+            // Show the indeterminate progress bar on form submit
             var forms = document.querySelectorAll("form");
             forms.forEach(function(form) {
                 form.addEventListener("submit", function() {
                     document.querySelector('.demo-container').style.display = 'block';
-
-                    var iframe = document.createElement('iframe');
-                    iframe.style.display = 'none';
-                    iframe.onload = function() {
-                        document.querySelector('.demo-container').style.display = 'none';
-                        location.reload();
-                    };
-                    iframe.src = form.action;
-                    document.body.appendChild(iframe);
                 });
             });
         });
@@ -408,7 +417,7 @@ def index():
                         <p class="uglydesc">Download Ugly Bros' art, music, and videos swiftly with UglyDownloader. Quality and simplicity in one click.</p>
                         <br>
                         <div class="form-container">
-                            <form action="/download" method="post" enctype="multipart/form-data" target="hidden_iframe">
+                            <form action="/download" method="post" enctype="multipart/form-data">
                                 <div class="AllC">
                                     <input type="text" name="audio_url" placeholder="Enter audio URL" class="searchbox">
                                     <select name="audio_format" class="dropdown1">
@@ -459,6 +468,14 @@ def index():
         logger.error(f"Error rendering page: {str(e)}")
         return f"Error rendering page: {str(e)}"
 
+@socketio.on('test_message')
+def handle_test_message(json):
+    try:
+        logger.debug(f'Received test message: {json}')
+        emit('test_response', {'message': 'Hello from server'})
+    except Exception as e:
+        logger.error(f"Error handling message: {str(e)}", exc_info=True)
+
 @app.route('/download', methods=['POST'])
 def download():
     audio_url = request.form.get('audio_url')
@@ -471,61 +488,90 @@ def download():
         return redirect(url_for('index'))
 
     try:
+        # Emit start_download event to client
+        socketio.emit('start_download')
+
         # Paths to ffmpeg and ffprobe
         ffmpeg_location = '/usr/bin/ffmpeg'
         ffprobe_location = '/usr/bin/ffprobe'
 
+        # Set the cookie file path based on user input
+        cookie_file = None
         ydl_opts = {
             'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
             'ffmpeg_location': ffmpeg_location,
             'ffprobe_location': ffprobe_location,
-            'hls_use_mpegts': True,
-            'nooverwrites': True,
+            'hls_use_mpegts': True,  # Ensure HLS processing for all formats
+            'nooverwrites': True,  # Skip existing files instead of overwriting
         }
 
-        start_time = time.time()
+        start_time = time.time()  # Start time for download
 
         def progress_hook(d):
             try:
+                # Initialize total_size from 'total_bytes' or 'total_bytes_estimate'
                 total_size = d.get('total_bytes') or d.get('total_bytes_estimate')
+
+                # Ensure total_size is available before proceeding
                 if total_size:
                     downloaded_size = d.get('downloaded_bytes', 0)
                     progress = (downloaded_size / total_size) * 100
+
+                    # Emit the progress to the client
+                    socketio.emit('progress', {'progress': progress})
+
                     print(f"Total Size: {total_size}, Downloaded: {downloaded_size}, Progress: {progress}%")
+                else:
+                    # If total_size isn't available, handle the case appropriately
+                    print("Total size not available, skipping progress update.")
+
+                # Handle the finished status
                 if d['status'] == 'finished':
-                    print("Download finished")
+                    socketio.emit('progress', {'progress': 100})
+                    print("Download finished, emitting 100% progress")
+
             except Exception as e:
                 logger.error(f"Error in progress hook: {str(e)}")
 
         ydl_opts['progress_hooks'] = [progress_hook]
 
+        # Handle Twitter Spaces downloads separately
         if "twitter.com/i/spaces" in url or "x.com/i/spaces" in url:
             cookie_file = 'cookies_netscape.txt'
             audio_format = request.form.get('audio_format', 'm4a/mp3')
             output_template = os.path.join(DOWNLOADS_DIR, '%(title)s')
+            
             command = [
-                '/root/UglyApp/venv/bin/twspace_dl',
+                '/root/UglyApp/venv/bin/twspace_dl',  # Use the full path to twspace_dl
                 '-i', url,
                 '-c', cookie_file,
                 '-o', output_template
             ]
+            
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
             while True:
                 output = process.stdout.readline()
                 if process.poll() is not None:
                     break
                 if output:
                     print(output.strip())
+                    socketio.emit('eta', {'data': output.strip()})
+
             process.wait()
+
             if process.returncode == 0:
+                # Find the most recently modified file in the DOWNLOADS_DIR
                 list_of_files = glob.glob(os.path.join(DOWNLOADS_DIR, '*'))
                 latest_file = max(list_of_files, key=os.path.getmtime)
+                
                 if os.path.exists(latest_file):
                     if audio_format == 'mp3' and latest_file.endswith('.m4a'):
+                        # Convert to MP3
                         mp3_file = latest_file.replace('.m4a', '.mp3')
                         convert_command = [
                             ffmpeg_location,
-                            '-n',
+                            '-n',  # Skip overwriting existing files
                             '-i', latest_file,
                             '-codec:a', 'libmp3lame',
                             '-qscale:a', '2',
@@ -534,8 +580,9 @@ def download():
                         subprocess.run(convert_command, check=True)
                         latest_file = mp3_file
 
-                    end_time = time.time()
-                    time_taken = end_time - start_time
+                    end_time = time.time()  # End time for download
+                    time_taken = end_time - start_time  # Calculate total time taken
+                    socketio.emit('download_complete', {'filename': os.path.basename(latest_file), 'time_taken': time_taken})
                     return send_file(latest_file, as_attachment=True, download_name=os.path.basename(latest_file))
                 else:
                     flash("File not found after download.")
@@ -543,19 +590,24 @@ def download():
             else:
                 flash("Error during the download process.")
                 return redirect(url_for('index'))
-
+        
+        # Use cookies for YouTube downloads
         elif 'youtube.com' in url:
-            cookie_file = 'youtube_cookies.txt'
+            cookie_file = 'youtube_cookies.txt'  # Update with your actual path
             ydl_opts.update({
                 'cookiefile': cookie_file,
+                'username': 'oauth2',  # Comment this line if not using OAuth
+                'password': '',  # Comment this line if not using OAuth
             })
 
+        # Use cookies for SoundCloud downloads
         elif 'soundcloud.com' in url:
-            cookie_file = 'soundcloud_cookies.txt'
+            cookie_file = 'soundcloud_cookies.txt'  # Update with your actual path
             ydl_opts.update({
                 'cookiefile': cookie_file,
             })
-
+        
+        # Determine if downloading audio or video
         if format == 'audio':
             audio_format = request.form['audio_format']
             ydl_opts.update({
@@ -573,6 +625,7 @@ def download():
                 'merge_output_format': 'mp4'
             })
 
+        # Download and process using yt-dlp
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             file_path = ydl.prepare_filename(info_dict)
@@ -584,7 +637,7 @@ def download():
                     file_path = file_path.replace('.mp4', f'.mov')
                     convert_command = [
                         ffmpeg_location,
-                        '-n',
+                        '-n',  # Skip overwriting existing files
                         '-i', file_path,
                         '-c:v', 'copy',
                         '-c:a', 'copy',
@@ -594,8 +647,9 @@ def download():
                     file_path = file_path.replace('.mp4', '.mov')
 
             if os.path.exists(file_path):
-                end_time = time.time()
-                time_taken = end_time - start_time
+                end_time = time.time()  # End time for download
+                time_taken = end_time - start_time  # Calculate total time taken
+                socketio.emit('download_complete', {'filename': os.path.basename(file_path), 'time_taken': time_taken})
                 return send_file(file_path, as_attachment=True, download_name=os.path.basename(file_path))
             else:
                 flash("File not found after download.")
@@ -611,7 +665,8 @@ def download():
         flash(f"An unexpected error occurred: {str(e)}")
         return redirect(url_for('index'))
 
-    return redirect(url_for('index'))
+    return redirect(url_for('index'))  # Ensure there is a return statement in all paths
+
 
 @app.route('/uploads/<path:filename>', methods=['GET', 'POST'])
 def upload(filename):
@@ -640,6 +695,6 @@ def handle_exception(e):
 
 if __name__ == '__main__':
     try:
-        app.run(host='0.0.0.0', port=5000, debug=True)
+        socketio.run(app, host='0.0.0.0', port=5000, debug=True)
     except Exception as e:
         logger.error(f"Critical error on startup: {str(e)}", exc_info=True)
