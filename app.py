@@ -1,7 +1,7 @@
 import os
 import subprocess
 import yt_dlp
-from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory, jsonify
+from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory, jsonify, session
 from flask_socketio import SocketIO, emit
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
@@ -12,7 +12,7 @@ import logging
 from tqdm import tqdm
 import gevent
 import gevent.monkey
-import time  # Import time module to measure time
+import time
 
 # Patch the standard library to make it cooperative with gevent
 gevent.monkey.patch_all()
@@ -59,6 +59,8 @@ def index():
     try:
         background_base64 = get_base64_image('uglygif.gif')
         font_base64 = get_base64_font('PORKH___.TTF.ttf')
+
+        download_link = session.pop('download_link', None)
 
         html_content = '''
      <!DOCTYPE html>
@@ -368,6 +370,11 @@ def index():
         socket.on('download_complete', function(data) {
             alert('Download complete: ' + data.filename);
             document.querySelector('.demo-container').style.display = 'none'; // Hide progress bar when download completes
+            var downloadLink = document.createElement('a');
+            downloadLink.href = '/uploads/' + data.filename;
+            downloadLink.innerText = 'Click here to download ' + data.filename;
+            downloadLink.style.color = 'white';
+            document.getElementById('download-link-container').appendChild(downloadLink);
         });
 
         document.addEventListener("DOMContentLoaded", function() {
@@ -438,6 +445,7 @@ def index():
                                     <br><br>
                             </form>
                             <p class="url">Enter your desired URL and let it do the trick</p>
+                            <div id="download-link-container" style="margin-top: 20px;"></div>
                             <div class="message">
                                 {% with messages = get_flashed_messages() %}
                                     {% if messages %}
@@ -465,7 +473,7 @@ def index():
 </body>
 </html>
         '''
-        return render_template_string(html_content, background_base64=background_base64, font_base64=font_base64)
+        return render_template_string(html_content, background_base64=background_base64, font_base64=font_base64, download_link=download_link)
     except Exception as e:
         logger.error(f"Error rendering page: {str(e)}")
         return f"Error rendering page: {str(e)}"
@@ -531,6 +539,7 @@ def download():
                 if d['status'] == 'finished':
                     socketio.emit('progress', {'progress': 100})
                     print("Download finished, emitting 100% progress")
+                    socketio.emit('download_complete', {'filename': os.path.basename(d['filename'])})
 
             except Exception as e:
                 logger.error(f"Error in progress hook: {str(e)}")
@@ -585,7 +594,7 @@ def download():
                     end_time = time.time()  # End time for download
                     time_taken = end_time - start_time  # Calculate total time taken
                     socketio.emit('download_complete', {'filename': os.path.basename(latest_file), 'time_taken': time_taken})
-                    return render_template_string('<p>Download complete: <a href="{{ url_for("download_file", filename="' + os.path.basename(latest_file) + '") }}">{{ "' + os.path.basename(latest_file) + '" }}</a></p>')
+                    return send_file(latest_file, as_attachment=True, download_name=os.path.basename(latest_file))
                 else:
                     flash("File not found after download.")
                     return redirect(url_for('index'))
@@ -650,7 +659,7 @@ def download():
                 end_time = time.time()  # End time for download
                 time_taken = end_time - start_time  # Calculate total time taken
                 socketio.emit('download_complete', {'filename': os.path.basename(file_path), 'time_taken': time_taken})
-                return render_template_string('<p>Download complete: <a href="{{ url_for("download_file", filename="' + os.path.basename(file_path) + '") }}">{{ "' + os.path.basename(file_path) + '" }}</a></p>')
+                return send_file(file_path, as_attachment=True, download_name=os.path.basename(file_path))
             else:
                 flash("File not found after download.")
                 return redirect(url_for('index'))
@@ -669,8 +678,9 @@ def download():
 
 
 @app.route('/uploads/<path:filename>', methods=['GET', 'POST'])
-def download_file(filename):
-    return send_from_directory(DOWNLOADS_DIR, filename)
+def upload(filename):
+    uploads = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
+    return send_from_directory(uploads, filename)
 
 # Database initialization logic for Render
 engine = sa.create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
@@ -688,7 +698,8 @@ def handle_exception(e):
     logger.error("Unhandled exception", exc_info=True)
     response = {
         "message": "An internal error occurred.",
-        "details": str(e)}
+        "details": str(e)
+    }
     return jsonify(response), 500
 
 if __name__ == '__main__':
