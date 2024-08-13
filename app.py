@@ -366,6 +366,7 @@ def index():
         socket.on('download_complete', function(data) {
             alert('Download complete: ' + data.filename);
             document.querySelector('.demo-container').style.display = 'none'; // Hide progress bar when download completes
+            location.reload();  // Reload the page after the download is complete
         });
 
         document.addEventListener("DOMContentLoaded", function() {
@@ -381,16 +382,6 @@ def index():
             forms.forEach(function(form) {
                 form.addEventListener("submit", function() {
                     document.querySelector('.demo-container').style.display = 'block';
-
-                    // Use iframe to prevent page reload during download
-                    var iframe = document.createElement('iframe');
-                    iframe.style.display = 'none';
-                    iframe.onload = function() {
-                        document.querySelector('.demo-container').style.display = 'none';
-                        location.reload();  // Reload the page after the download is complete
-                    };
-                    iframe.src = form.action;
-                    document.body.appendChild(iframe);
                 });
             });
         });
@@ -539,6 +530,7 @@ def download():
                 if d['status'] == 'finished':
                     socketio.emit('progress', {'progress': 100})
                     print("Download finished, emitting 100% progress")
+                    socketio.emit('download_complete', {'filename': d.get('filename', 'unknown')})
 
             except Exception as e:
                 logger.error(f"Error in progress hook: {str(e)}")
