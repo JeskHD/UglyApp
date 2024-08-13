@@ -12,7 +12,7 @@ import logging
 from tqdm import tqdm
 import gevent
 import gevent.monkey
-import time
+import time  # Import time module to measure time
 
 # Patch the standard library to make it cooperative with gevent
 gevent.monkey.patch_all()
@@ -59,8 +59,6 @@ def index():
     try:
         background_base64 = get_base64_image('uglygif.gif')
         font_base64 = get_base64_font('PORKH___.TTF.ttf')
-
-        download_link = request.args.get('download_link')
 
         html_content = '''
      <!DOCTYPE html>
@@ -370,7 +368,6 @@ def index():
         socket.on('download_complete', function(data) {
             alert('Download complete: ' + data.filename);
             document.querySelector('.demo-container').style.display = 'none'; // Hide progress bar when download completes
-            window.location.href = '/?download_link=' + encodeURIComponent('/uploads/' + data.filename);
         });
 
         document.addEventListener("DOMContentLoaded", function() {
@@ -452,11 +449,6 @@ def index():
                                     {% endif %}
                                 {% endwith %}
                             </div>
-                            {% if download_link %}
-                                <div style="margin-top: 20px;">
-                                    <a href="{{ download_link }}" style="color: white;">Click here to download: {{ download_link.split('/')[-1] }}</a>
-                                </div>
-                            {% endif %}
                         </div>
 
                         <!-- Indeterminate Progress Bar -->
@@ -539,7 +531,6 @@ def download():
                 if d['status'] == 'finished':
                     socketio.emit('progress', {'progress': 100})
                     print("Download finished, emitting 100% progress")
-                    socketio.emit('download_complete', {'filename': os.path.basename(d.get('filename'))})
 
             except Exception as e:
                 logger.error(f"Error in progress hook: {str(e)}")
@@ -594,7 +585,7 @@ def download():
                     end_time = time.time()  # End time for download
                     time_taken = end_time - start_time  # Calculate total time taken
                     socketio.emit('download_complete', {'filename': os.path.basename(latest_file), 'time_taken': time_taken})
-                    return '', 204
+                    return render_template_string('<p>Download complete: <a href="{{ url_for("download_file", filename="' + os.path.basename(latest_file) + '") }}">{{ "' + os.path.basename(latest_file) + '" }}</a></p>')
                 else:
                     flash("File not found after download.")
                     return redirect(url_for('index'))
@@ -659,7 +650,7 @@ def download():
                 end_time = time.time()  # End time for download
                 time_taken = end_time - start_time  # Calculate total time taken
                 socketio.emit('download_complete', {'filename': os.path.basename(file_path), 'time_taken': time_taken})
-                return '', 204
+                return render_template_string('<p>Download complete: <a href="{{ url_for("download_file", filename="' + os.path.basename(file_path) + '") }}">{{ "' + os.path.basename(file_path) + '" }}</a></p>')
             else:
                 flash("File not found after download.")
                 return redirect(url_for('index'))
@@ -678,9 +669,8 @@ def download():
 
 
 @app.route('/uploads/<path:filename>', methods=['GET', 'POST'])
-def upload(filename):
-    uploads = os.path.join(current_app.root_path, app.config['UPLOAD_FOLDER'])
-    return send_from_directory(uploads, filename)
+def download_file(filename):
+    return send_from_directory(DOWNLOADS_DIR, filename)
 
 # Database initialization logic for Render
 engine = sa.create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
@@ -698,8 +688,7 @@ def handle_exception(e):
     logger.error("Unhandled exception", exc_info=True)
     response = {
         "message": "An internal error occurred.",
-        "details": str(e)
-    }
+        "details": str(e)}
     return jsonify(response), 500
 
 if __name__ == '__main__':
