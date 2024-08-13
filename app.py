@@ -12,7 +12,7 @@ import logging
 from tqdm import tqdm
 import gevent
 import gevent.monkey
-import time  # Import time module to measure time
+import time
 
 # Patch the standard library to make it cooperative with gevent
 gevent.monkey.patch_all()
@@ -368,7 +368,6 @@ def index():
         socket.on('download_complete', function(data) {
             alert('Download complete: ' + data.filename);
             document.querySelector('.demo-container').style.display = 'none'; // Hide progress bar when download completes
-            location.reload();  // Reload the page after the download is complete
         });
 
         document.addEventListener("DOMContentLoaded", function() {
@@ -587,7 +586,9 @@ def download():
                     end_time = time.time()  # End time for download
                     time_taken = end_time - start_time  # Calculate total time taken
                     socketio.emit('download_complete', {'filename': os.path.basename(latest_file), 'time_taken': time_taken})
-                    return send_file(latest_file, as_attachment=True, download_name=os.path.basename(latest_file))
+                    
+                    # Instead of downloading directly, render a link to the file
+                    return render_template_string('<p>Download complete: <a href="{{ url_for("upload", filename="' + os.path.basename(latest_file) + '") }}">{{ "' + os.path.basename(latest_file) + '" }}</a></p>')
                 else:
                     flash("File not found after download.")
                     return redirect(url_for('index'))
@@ -652,7 +653,9 @@ def download():
                 end_time = time.time()  # End time for download
                 time_taken = end_time - start_time  # Calculate total time taken
                 socketio.emit('download_complete', {'filename': os.path.basename(file_path), 'time_taken': time_taken})
-                return send_file(file_path, as_attachment=True, download_name=os.path.basename(file_path))
+                
+                # Instead of downloading directly, render a link to the file
+                return render_template_string('<p>Download complete: <a href="{{ url_for("upload", filename="' + os.path.basename(file_path) + '") }}">{{ "' + os.path.basename(file_path) + '" }}</a></p>')
             else:
                 flash("File not found after download.")
                 return redirect(url_for('index'))
@@ -691,8 +694,7 @@ def handle_exception(e):
     logger.error("Unhandled exception", exc_info=True)
     response = {
         "message": "An internal error occurred.",
-        "details": str(e)
-    }
+        "details": str(e)}
     return jsonify(response), 500
 
 if __name__ == '__main__':
