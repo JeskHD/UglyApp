@@ -176,7 +176,7 @@ def index():
             margin: 20px 10px;
             font-size: 18px;
             text-align: center;
-            width: 100%;
+            width: 100%.
         }
         .form-container {
             display: flex;
@@ -368,6 +368,7 @@ def index():
         socket.on('download_complete', function(data) {
             alert('Download complete: ' + data.filename);
             document.querySelector('.demo-container').style.display = 'none'; // Hide progress bar when download completes
+            location.reload(); // Reload the page after download completion
         });
 
         document.addEventListener("DOMContentLoaded", function() {
@@ -598,6 +599,8 @@ def download():
             cookie_file = 'youtube_cookies.txt'  # Update with your actual path
             ydl_opts.update({
                 'cookiefile': cookie_file,
+                'username': 'oauth2',  # Comment this line if not using OAuth
+                'password': '',  # Comment this line if not using OAuth
             })
 
         # Use cookies for SoundCloud downloads
