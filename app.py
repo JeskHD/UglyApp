@@ -61,7 +61,7 @@ def index():
         font_base64 = get_base64_font('PORKH___.TTF.ttf')
 
         html_content = '''
-     <!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
