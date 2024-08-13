@@ -51,7 +51,7 @@ def get_base64_image(image_path):
         return base64.b64encode(image_file.read()).decode('utf-8')
 
 def get_base64_font(font_path):
-    with open(font_path, "rb") as font_file:
+    with open(font_path, "rb") as font_file):
         return base64.b64encode(font_file.read()).decode('utf-8')
 
 @app.route('/')
@@ -259,14 +259,11 @@ def index():
 
         /* Progress Bar Styles */
         .demo-container {
-            width: 300px;
-            margin: 0 auto; /* Center the progress bar */
-            display: none; /* Hidden by default */
-            position: absolute;
-            top: 95%; /* Adjust to be fixed near the bottom of the page */
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 2000; /* Ensure it stays above other content */
+            width: 100%;  /* Full width of the container */
+            margin: 0 auto;  /* Center the progress bar */
+            display: none;  /* Hidden by default */
+            position: relative;  /* Relative to its parent container */
+            top: 0;
         }
         .progress-bar {
             height: 4px;
