@@ -1,7 +1,7 @@
 import os
 import subprocess
 import yt_dlp
-from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory, session
+from flask import Flask, request, send_file, render_template_string, redirect, url_for, flash, current_app, send_from_directory, jsonify, session
 from flask_socketio import SocketIO, emit
 from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import urlparse
@@ -12,7 +12,7 @@ import logging
 from tqdm import tqdm
 import gevent
 import gevent.monkey
-import time
+import time  # Import time module to measure time
 
 # Patch the standard library to make it cooperative with gevent
 gevent.monkey.patch_all()
@@ -59,8 +59,7 @@ def index():
     try:
         background_base64 = get_base64_image('uglygif.gif')
         font_base64 = get_base64_font('PORKH___.TTF.ttf')
-
-        download_link = session.pop('download_link', None)
+        download_link = session.get('download_link', None)
 
         html_content = '''
      <!DOCTYPE html>
@@ -284,6 +283,18 @@ def index():
             transform-origin: 0% 50%;
         }
 
+        @keyframes indeterminateAnimation {
+            0% {
+                transform: translateX(0) scaleX(0);
+            }
+            40% {
+                transform: translateX(0) scaleX(0.4);
+            }
+            100% {
+                transform: translateX(100%) scaleX(0.5);
+            }
+        }
+
         /* Responsive Design */
         @media (max-width: 800px) {
             .topbar {
@@ -348,14 +359,6 @@ def index():
                 text-align: center;
             }
         }
-        .download-link {
-            color: white;
-            text-align: center;
-            display: block;
-            margin-top: 30px;
-            font-size: 18px;
-            text-decoration: underline;
-        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
     <script>
@@ -364,7 +367,9 @@ def index():
             console.log('Connected to server');
         });
         socket.on('download_complete', function(data) {
+            alert('Download complete: ' + data.filename);
             document.querySelector('.demo-container').style.display = 'none'; // Hide progress bar when download completes
+            location.reload();  // Reload the page after the download is complete
         });
 
         document.addEventListener("DOMContentLoaded", function() {
@@ -435,9 +440,6 @@ def index():
                                     <br><br>
                             </form>
                             <p class="url">Enter your desired URL and let it do the trick</p>
-                            {% if download_link %}
-                            <a href="{{ download_link }}" class="download-link">Download complete: Click here to download your file</a>
-                            {% endif %}
                             <div class="message">
                                 {% with messages = get_flashed_messages() %}
                                     {% if messages %}
@@ -449,6 +451,11 @@ def index():
                                     {% endif %}
                                 {% endwith %}
                             </div>
+                            {% if download_link %}
+                                <p class="url" style="color: white;">
+                                    Download complete: <a href="{{ download_link }}" style="color: #ff78df;">Click here to download your file</a>
+                                </p>
+                            {% endif %}
                         </div>
 
                         <!-- Indeterminate Progress Bar -->
@@ -531,7 +538,6 @@ def download():
                 if d['status'] == 'finished':
                     socketio.emit('progress', {'progress': 100})
                     print("Download finished, emitting 100% progress")
-                    session['download_link'] = f"/uploads/{os.path.basename(d.get('filename'))}"
                     socketio.emit('download_complete', {'filename': os.path.basename(d.get('filename'))})
 
             except Exception as e:
@@ -586,7 +592,8 @@ def download():
 
                     end_time = time.time()  # End time for download
                     time_taken = end_time - start_time  # Calculate total time taken
-                    session['download_link'] = f"/uploads/{os.path.basename(latest_file)}"
+                    download_link = url_for('upload', filename=os.path.basename(latest_file))
+                    session['download_link'] = download_link
                     socketio.emit('download_complete', {'filename': os.path.basename(latest_file), 'time_taken': time_taken})
                     return redirect(url_for('index'))
                 else:
@@ -652,7 +659,8 @@ def download():
             if os.path.exists(file_path):
                 end_time = time.time()  # End time for download
                 time_taken = end_time - start_time  # Calculate total time taken
-                session['download_link'] = f"/uploads/{os.path.basename(file_path)}"
+                download_link = url_for('upload', filename=os.path.basename(file_path))
+                session['download_link'] = download_link
                 socketio.emit('download_complete', {'filename': os.path.basename(file_path), 'time_taken': time_taken})
                 return redirect(url_for('index'))
             else:
