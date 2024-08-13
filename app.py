@@ -176,7 +176,7 @@ def index():
             margin: 20px 10px;
             font-size: 18px;
             text-align: center;
-            width: 100%.
+            width: 100%;
         }
         .form-container {
             display: flex;
@@ -260,13 +260,11 @@ def index():
         /* Progress Bar Styles */
         .demo-container {
             width: 300px;
-            margin: 0 auto; /* Center the progress bar */
+            margin: 20px auto;
             display: none; /* Hidden by default */
-            position: fixed;
-            top: 90%; /* Adjust to be fixed near the bottom of the page */
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 2000; /* Ensure it stays above other content */
+            position: relative;
+            top: 130px;
+            right: 500px;
         }
         .progress-bar {
             height: 4px;
@@ -368,7 +366,6 @@ def index():
         socket.on('download_complete', function(data) {
             alert('Download complete: ' + data.filename);
             document.querySelector('.demo-container').style.display = 'none'; // Hide progress bar when download completes
-            location.reload(); // Reload the page after download completion
         });
 
         document.addEventListener("DOMContentLoaded", function() {
@@ -384,6 +381,16 @@ def index():
             forms.forEach(function(form) {
                 form.addEventListener("submit", function() {
                     document.querySelector('.demo-container').style.display = 'block';
+
+                    // Use iframe to prevent page reload during download
+                    var iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.onload = function() {
+                        document.querySelector('.demo-container').style.display = 'none';
+                        location.reload();  // Reload the page after the download is complete
+                    };
+                    iframe.src = form.action;
+                    document.body.appendChild(iframe);
                 });
             });
         });
@@ -420,7 +427,7 @@ def index():
                         <p class="uglydesc">Download Ugly Bros' art, music, and videos swiftly with UglyDownloader. Quality and simplicity in one click.</p>
                         <br>
                         <div class="form-container">
-                            <form action="/download" method="post" enctype="multipart/form-data">
+                            <form action="/download" method="post" enctype="multipart/form-data" target="hidden_iframe">
                                 <div class="AllC">
                                     <input type="text" name="audio_url" placeholder="Enter audio URL" class="searchbox">
                                     <select name="audio_format" class="dropdown1">
