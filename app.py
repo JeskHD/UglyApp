@@ -260,11 +260,13 @@ def index():
         /* Progress Bar Styles */
         .demo-container {
             width: 300px;
-            margin: 20px auto;
+            margin: 0 auto; /* Center the progress bar */
             display: none; /* Hidden by default */
-            position: relative;
-            top: 130px;
-            right: 500px;
+            position: fixed;
+            top: 90%; /* Adjust to be fixed near the bottom of the page */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2000; /* Ensure it stays above other content */
         }
         .progress-bar {
             height: 4px;
@@ -366,7 +368,6 @@ def index():
         socket.on('download_complete', function(data) {
             alert('Download complete: ' + data.filename);
             document.querySelector('.demo-container').style.display = 'none'; // Hide progress bar when download completes
-            location.reload();  // Reload the page after the download is complete
         });
 
         document.addEventListener("DOMContentLoaded", function() {
@@ -418,7 +419,7 @@ def index():
                         <p class="uglydesc">Download Ugly Bros' art, music, and videos swiftly with UglyDownloader. Quality and simplicity in one click.</p>
                         <br>
                         <div class="form-container">
-                            <form action="/download" method="post" enctype="multipart/form-data" target="hidden_iframe">
+                            <form action="/download" method="post" enctype="multipart/form-data">
                                 <div class="AllC">
                                     <input type="text" name="audio_url" placeholder="Enter audio URL" class="searchbox">
                                     <select name="audio_format" class="dropdown1">
@@ -530,7 +531,6 @@ def download():
                 if d['status'] == 'finished':
                     socketio.emit('progress', {'progress': 100})
                     print("Download finished, emitting 100% progress")
-                    socketio.emit('download_complete', {'filename': d.get('filename', 'unknown')})
 
             except Exception as e:
                 logger.error(f"Error in progress hook: {str(e)}")
@@ -598,8 +598,6 @@ def download():
             cookie_file = 'youtube_cookies.txt'  # Update with your actual path
             ydl_opts.update({
                 'cookiefile': cookie_file,
-                'username': 'oauth2',  # Comment this line if not using OAuth
-                'password': '',  # Comment this line if not using OAuth
             })
 
         # Use cookies for SoundCloud downloads
