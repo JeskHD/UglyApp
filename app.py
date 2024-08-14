@@ -639,17 +639,9 @@ def download():
                 file_path = file_path.replace('.webm', f'.{audio_format}').replace('.opus', f'.{audio_format}')
             else:
                 if video_format == 'mov':
-                    file_path = file_path.replace('.mp4', f'.mov')
-                    convert_command = [
-                        ffmpeg_location,
-                        '-n',  # Skip overwriting existing files
-                        '-i', file_path,
-                        '-c:v', 'copy',
-                        '-c:a', 'copy',
-                        file_path.replace('.mp4', '.mov')
-                    ]
-                    subprocess.run(convert_command, check=True)
-                    file_path = file_path.replace('.mp4', '.mov')
+                    mov_file_path = file_path.replace('.mp4', f'.mov')
+                    os.rename(file_path, mov_file_path)  # Rename MP4 to MOV
+                    file_path = mov_file_path
 
             if os.path.exists(file_path):
                 end_time = time.time()  # End time for download
