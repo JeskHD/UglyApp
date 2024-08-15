@@ -347,11 +347,11 @@ def index():
                     }
                     .or {
                         top: 0;
-                        margin: 10px 0;
+                        margin: 10px 0.
                     }
                     .url {
-                        margin-top: 20px;
-                        text-align: center;
+                        margin-top: 20px.
+                        text-align: center.
                     }
                 }
             </style>
@@ -502,6 +502,7 @@ def download():
 
         # Set the cookie file path based on user input
         cookie_file = None
+        oauth_token = None
         ydl_opts = {
             'outtmpl': os.path.join(DOWNLOADS_DIR, '%(title)s.%(ext)s'),
             'ffmpeg_location': ffmpeg_location,
@@ -596,17 +597,24 @@ def download():
                 flash("Error during the download process.")
                 return redirect(url_for('index'))
         
-        # Use cookies for YouTube downloads
+        # Use OAuth or cookies for YouTube downloads
         elif 'youtube.com' in url:
             cookie_file = 'youtube_cookies.txt'  # Update with your actual path
+            # Use OAuth token if provided
+            oauth_token = 'your_youtube_oauth_token_here'
             ydl_opts.update({
                 'cookiefile': cookie_file,
+                'username': 'oauth',
+                'password': oauth_token,
             })
 
         # Handle SoundCloud downloads separately
         elif 'soundcloud.com' in url:
+            oauth_token = '2-296444-305390293-twKSbaP7rSKONC'  # Replace with actual OAuth token
             ydl_opts.update({
                 'nocheckcertificate': True,  # Disable certificate checks if necessary
+                'username': 'oauth',
+                'password': oauth_token,
             })
         
         # Determine if downloading audio or video
